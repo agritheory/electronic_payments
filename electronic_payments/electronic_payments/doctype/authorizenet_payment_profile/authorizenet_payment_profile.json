@@ -1,0 +1,82 @@
+{
+ "creation": "2022-12-20 15:12:17.682485",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "customer",
+  "payment_type",
+  "reference",
+  "payment_profile_id",
+  "customer_profile",
+  "retain"
+ ],
+ "fields": [
+  {
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Customer",
+   "options": "Customer",
+   "read_only": 1
+  },
+  {
+   "fieldname": "payment_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Payment Type",
+   "options": "Card\nACH",
+   "read_only": 1
+  },
+  {
+   "fieldname": "payment_profile_id",
+   "fieldtype": "Data",
+   "label": "Payment Profile ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "customer_profile",
+   "fieldtype": "Data",
+   "label": "Customer Profile",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "retain",
+   "fieldtype": "Check",
+   "label": "Retain"
+  },
+  {
+   "fieldname": "reference",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Reference",
+   "read_only": 1
+  }
+ ],
+ "in_create": 1,
+ "modified": "2022-12-20 15:13:00.691648",
+ "modified_by": "Administrator",
+ "module": "Electronic Payments",
+ "name": "AuthorizeNet Payment Profile",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "read_only": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "track_changes": 1,
+ "track_seen": 1
+}
