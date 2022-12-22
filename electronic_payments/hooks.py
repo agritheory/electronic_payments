@@ -3,7 +3,7 @@ from . import __version__ as app_version
 app_name = "electronic_payments"
 app_title = "Electronic Payments"
 app_publisher = "AgriTheory"
-app_description = "Customized Electronic Payment s Utility"
+app_description = "Electronic Payments Utilities for ERPNext"
 app_icon = "octicon octicon-file-directory"
 app_color = "grey"
 app_email = "support@agritheory.dev"

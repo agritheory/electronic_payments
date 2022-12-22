@@ -9,7 +9,7 @@ from electronic_payments import __version__ as version
 setup(
 	name="electronic_payments",
 	version=version,
-	description="Customized Electronic Payment s Utility",
+	description="Electronic payments utilities for ERPNext",
 	author="AgriTheory",
 	author_email="support@agritheory.dev",
 	packages=find_packages(),
