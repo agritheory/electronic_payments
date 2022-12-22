@@ -1,0 +1,18 @@
+include MANIFEST.in
+include requirements.txt
+include *.json
+include *.md
+include *.py
+include *.txt
+recursive-include electronic_payments *.css
+recursive-include electronic_payments *.csv
+recursive-include electronic_payments *.html
+recursive-include electronic_payments *.ico
+recursive-include electronic_payments *.js
+recursive-include electronic_payments *.json
+recursive-include electronic_payments *.md
+recursive-include electronic_payments *.png
+recursive-include electronic_payments *.py
+recursive-include electronic_payments *.svg
+recursive-include electronic_payments *.txt
+recursive-exclude electronic_payments *.pyc
