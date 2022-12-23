@@ -7,7 +7,6 @@ An application with electronic payments utilities for ERPNext.
 ### Installation Guide
 
 First, set up a new bench and substitute a path to the python version to use. Python should be 3.8 latest for V13 and 3.10 latest for V14. These instructions use [pyenv](https://github.com/pyenv/pyenv) for managing environments.
-
 ```shell
 # Version 13
 bench init --frappe-branch version-13 {{ bench name }} --python ~/.pyenv/versions/3.8.12/bin/python3
@@ -31,6 +30,17 @@ bench get-app erpnext --branch version-13
 bench get-app payments
 bench get-app erpnext --branch version-14
 ```
+**Important note for benches installed with Python 3.10 or later:**
+
+If you created a bench using Python 3.10 or later, you must make the following manual fix to the Authorize.net package. The current state of the package does NOT support Python 3.10 ([see GitHub issue](https://github.com/AuthorizeNet/sdk-python/issues/154)) and the timing for this to be resolved is unknown.
+```
+# Activate the bench environment:
+source env/bin/activate
+
+# Install authorizenet package
+pip install authorizenet
+```
+Open the file `env/lib/python3.10/site-packages/pyxb/binding/content.py` and change line 799 from `import collections` to `import collections.abc as collections` and save your changes.
 
 Download the Electronic Payments application
 ```shell
