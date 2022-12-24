@@ -68,6 +68,14 @@ doctype_js = {
 # before_uninstall = "electronic_payments.uninstall.before_uninstall"
 # after_uninstall = "electronic_payments.uninstall.after_uninstall"
 
+# Migration 
+# ------------
+
+# before_migrate = "electronic_payments.uninstall.before_uninstall"
+after_migrate = 'electronic_payments.customize.load_customizations'
+
+
+
 # Desk Notifications
 # ------------------
 # See frappe.core.notifications.get_notification_config
