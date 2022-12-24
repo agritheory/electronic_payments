@@ -70,6 +70,22 @@ def create_bank_and_bank_account(settings):
 		mop.append('accounts', {'company': settings.company, 'default_account': settings.company_account})
 		mop.save()
 
+	if not frappe.db.exists('Mode of Payment', 'Authorize.net Token'):
+		mop = frappe.new_doc('Mode of Payment')
+		mop.mode_of_payment = 'Authorize.net Token'
+		mop.enabled = 1
+		mop.type = 'Electronic'
+		mop.append('accounts', {'company': settings.company, 'default_account': settings.company_account})
+		mop.save()
+
+	if not frappe.db.exists('Mode of Payment', 'Stripe Token'):
+		mop = frappe.new_doc('Mode of Payment')
+		mop.mode_of_payment = 'Stripe Token'
+		mop.enabled = 1
+		mop.type = 'Electronic'
+		mop.append('accounts', {'company': settings.company, 'default_account': settings.company_account})
+		mop.save()
+
 	frappe.db.set_value('Mode of Payment', 'Wire Transfer', 'type', 'General')
 	frappe.db.set_value('Mode of Payment', 'Credit Card', 'type', 'General')
 	frappe.db.set_value('Mode of Payment', 'Bank Draft', 'type', 'General')
