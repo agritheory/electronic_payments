@@ -1,4 +1,5 @@
 import datetime
+import random
 
 import frappe
 from frappe.desk.page.setup_wizard.setup_wizard import setup_complete
@@ -44,15 +45,29 @@ tax_authority = [
 	("Local Tax Authority", "Payroll Taxes", "Check", 0.00),
 ]
 
+customers = [
+	"Andromeda Fruit Market",
+	"Betelgeuse Bakery Suppliers",
+	"Cassiopeia Restaurant Group",
+	"Delphinus Food Distributors",
+	"Grus Goodies",
+	"Hydra Produce Co",
+	"Phoenix Fruit, Ltd"
+]
+
+
 def create_test_data():
 	settings = frappe._dict({
 		'day': datetime.date(int(frappe.defaults.get_defaults().get('fiscal_year')), 1 ,1),
 		'company': frappe.defaults.get_defaults().get('company'),
 		'company_account': frappe.get_value("Account",
 			{"account_type": "Bank", "company": frappe.defaults.get_defaults().get('company'), "is_group": 0}),
+		"warehouse": frappe.get_value("Warehouse",
+			{"warehouse_name": "Finished Goods", "company": frappe.defaults.get_defaults().get('company')})
 		})
 	create_bank_and_bank_account(settings)
 	create_suppliers(settings)
+	create_customers(customers)
 	create_items(settings)
 	create_invoices(settings)
 	config_expense_claim(settings)
@@ -136,6 +151,16 @@ def create_suppliers(settings):
 		biz.default_price_list = "Standard Buying"
 		biz.save()
 
+def create_customers(customers):
+	for customer in customers:
+		cust = frappe.new_doc("Customer")
+		cust.customer_name = customer
+		cust.customer_type = "Company"
+		cust.customer_group = "Commercial"
+		cust.territory = "United States"
+		cust.tax_id = "04-" +  '{:05d}'.format(random.randint(100,99999)) # Tax ID number
+		cust.save()
+
 def create_items(settings):
 	for supplier in suppliers + tax_authority:
 		item = frappe.new_doc("Item")
@@ -149,6 +174,48 @@ def create_items(settings):
 		item.append("supplier_items", {"supplier": supplier[0]})
 		item.append("item_defaults", {"company": settings.company, "default_warehouse": "", "default_supplier": supplier[0]})
 		item.save()
+	
+	fruits = [
+		"Cloudberry",
+		"Gooseberry",
+		"Damson plum",
+		"Tayberry",
+		"Hairless rambutan",
+		"Kaduka lime",
+		"Hackberry"
+	]
+
+	for fruit in fruits:
+		item = frappe.new_doc("Item")
+		item.item_code, item.item_name = fruit.title(), fruit.title()
+		item.item_group = "Products"
+		item.stock_uom = "Box"
+		item.maintain_stock = 1
+		item.include_item_in_manufacturing = 0
+		item.valuation_rate = round(random.uniform(5,15), 2)
+		item.default_warehouse = settings["warehouse"]
+		item.description = fruit + " - Box" # Description
+		item.default_material_request_type = "Purchase"
+		item.valuation_method = "FIFO"
+		item.is_purchase_item = 1
+		# item.append("supplier_items", {"supplier": random.choice(suppliers)})
+		item.save()
+		buying_item_price = frappe.new_doc("Item Price")
+		buying_item_price.item_code = item.item_code
+		buying_item_price.uom = item.stock_uom
+		buying_item_price.price_list = "Standard Buying"
+		buying_item_price.buying = 1
+		buying_item_price.valid_from = "2018-1-1"
+		buying_item_price.price_list_rate = round(random.uniform(5,15), 2)
+		buying_item_price.save()
+		selling_item_price = frappe.new_doc("Item Price")
+		selling_item_price.item_code = item.item_code
+		selling_item_price.uom = item.stock_uom
+		selling_item_price.price_list = "Standard Selling"
+		selling_item_price.selling = 1
+		selling_item_price.valid_from = "2018-1-1"
+		selling_item_price.price_list_rate = round(buying_item_price.price_list_rate * 1.5, 2)
+		selling_item_price.save()
 
 def create_invoices(settings):
 	# first month - already paid
