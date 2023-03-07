@@ -9,6 +9,7 @@ electronic_payments.electronic_payments = frm => {
 		}
 		let d = new frappe.ui.Dialog({
 			title: __("Electronic Payments"),
+			size: "extra-large",
 			fields: [
 				{ fieldname: 'ht', fieldtype: 'HTML', options: render_frm_data(frm) },
 				{ fieldname: 'sec_1', fieldtype: 'Section Break' },
@@ -122,7 +123,6 @@ electronic_payments.electronic_payments = frm => {
 		})
 		d.set_required_fields(mop_options)
 		d.show()
-		d.$wrapper.find('.modal-dialog').css({width: '80%'})
 	})
 }
 
