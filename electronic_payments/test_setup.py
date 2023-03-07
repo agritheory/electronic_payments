@@ -1,10 +1,12 @@
 import datetime
+import random
 import types
 
 import frappe
 from frappe.desk.page.setup_wizard.setup_wizard import setup_complete
 from erpnext.setup.utils import enable_all_roles_and_domains, set_defaults_for_tests
 from erpnext.accounts.doctype.account.account import update_account_number
+
 
 def before_test():
 	frappe.clear_cache()
@@ -196,6 +198,58 @@ employees = [
 	'55975')
 ]
 
+customers = [
+	("Andromeda Fruit Market", {
+		'address_line1': '3606 Cookie Plaza',
+		'city': 'Concord',
+		'state': 'NH',
+		'country': 'United States',
+		'pincode': '03301'
+	}),
+	("Betelgeuse Bakery Suppliers", {
+		'address_line1': '920 Meade St',
+		'city': 'Bow',
+		'state': 'NH',
+		'country': 'United States',
+		'pincode': '03304'
+	}),
+	("Cassiopeia Restaurant Group", {
+		'address_line1': '29 Navi Avenue',
+		'city': 'Salem',
+		'state': 'MA',
+		'country': 'United States',
+		'pincode': '01970'
+	}),
+	("Delphinus Food Distributors", {
+		'address_line1': '680 Rotanev Rotary',
+		'city': 'Rockport',
+		'state': 'MA',
+		'country': 'United States',
+		'pincode': '01966'
+	}),
+	("Grus Goodies", {
+		'address_line1': '80 Alnair Circle',
+		'city': 'Quincy',
+		'state': 'MA',
+		'country': 'United States',
+		'pincode': '02169'
+	}),
+	("Phoenix Fruit, Ltd", {
+		'address_line1': '530 Ankaa Blvd',
+		'city': 'Braintree',
+		'state': 'MA',
+		'country': 'United States',
+		'pincode': '02184'
+	}),
+	("Hydra Produce Co", {
+		'address_line1': "444 Rue d'Alphard",
+		'city': 'Montreal',
+		'state': 'Quebec',
+		'country': 'Canada',
+		'pincode': 'H1Y3A4'
+	})
+]
+
 
 def create_test_data():
 	setup_accounts()
@@ -204,10 +258,13 @@ def create_test_data():
 		'company': frappe.defaults.get_defaults().get('company'),
 		'company_account': frappe.get_value("Account",
 			{"account_type": "Bank", "company": frappe.defaults.get_defaults().get('company'), "is_group": 0}),
+		"warehouse": frappe.get_value("Warehouse",
+			{"warehouse_name": "Finished Goods", "company": frappe.defaults.get_defaults().get('company')})
 		})
 	create_bank_and_bank_account(settings)
 	create_payment_terms_templates(settings)
 	create_suppliers(settings)
+	create_customers(customers)
 	create_items(settings)
 	create_invoices(settings)
 	config_expense_claim(settings)
@@ -277,6 +334,7 @@ def create_bank_and_bank_account(settings):
 	doc.save()
 	doc.submit()
 
+
 def setup_accounts():
 	frappe.rename_doc('Account', '1000 - Application of Funds (Assets) - CFC', '1000 - Assets - CFC', force=True)
 	frappe.rename_doc('Account', '2000 - Source of Funds (Liabilities) - CFC', '2000 - Liabilities - CFC', force=True)
@@ -332,7 +390,7 @@ def create_suppliers(settings):
 		biz.payment_terms = supplier[4]
 		biz.save()
 
-		addr = frappe.new_doc('Address')
+    addr = frappe.new_doc('Address')
 		addr.address_title = f"{supplier[0]} - {supplier[5]['city']}"
 		addr.address_type = 'Billing'
 		addr.address_line1 = supplier[5]['address_line1']
@@ -361,6 +419,31 @@ def create_suppliers(settings):
 	addr.save()
 
 
+def create_customers(customers):
+	for customer in customers:
+		cust = frappe.new_doc("Customer")
+		cust.customer_name = customer[0]
+		cust.customer_type = "Company"
+		cust.customer_group = "Commercial"
+		cust.territory = "All Territories"
+		cust.tax_id = "04-" +  '{:05d}'.format(random.randint(100,99999)) # Tax ID number
+		cust.save()
+
+		addr = frappe.new_doc('Address')
+		addr.address_title = f"{customer[0]} - {customer[1]['city']}"
+		addr.address_type = 'Shipping'
+		addr.address_line1 = customer[1]['address_line1']
+		addr.city = customer[1]['city']
+		addr.state = customer[1]['state']
+		addr.country = customer[1]['country']
+		addr.pincode = customer[1]['pincode']
+		addr.append('links', {
+			'link_doctype': 'Customer',
+			'link_name': customer[0]
+		})
+		addr.save()
+
+
 def create_items(settings):
 	for supplier in suppliers + tax_authority:
 		item = frappe.new_doc("Item")
@@ -374,6 +457,49 @@ def create_items(settings):
 		item.append("supplier_items", {"supplier": supplier[0]})
 		item.append("item_defaults", {"company": settings.company, "default_warehouse": "", "default_supplier": supplier[0]})
 		item.save()
+	
+	fruits = [
+		"Cloudberry",
+		"Gooseberry",
+		"Damson plum",
+		"Tayberry",
+		"Hairless rambutan",
+		"Kaduka lime",
+		"Hackberry"
+	]
+
+	for fruit in fruits:
+		item = frappe.new_doc("Item")
+		item.item_code, item.item_name = fruit.title(), fruit.title()
+		item.item_group = "Products"
+		item.stock_uom = "Box"
+		item.maintain_stock = 1
+		item.include_item_in_manufacturing = 0
+		item.valuation_rate = round(random.uniform(5,15), 2)
+		item.default_warehouse = settings["warehouse"]
+		item.description = fruit + " - Box" # Description
+		item.default_material_request_type = "Purchase"
+		item.valuation_method = "FIFO"
+		item.is_purchase_item = 1
+		# item.append("supplier_items", {"supplier": random.choice(suppliers)})
+		item.save()
+		buying_item_price = frappe.new_doc("Item Price")
+		buying_item_price.item_code = item.item_code
+		buying_item_price.uom = item.stock_uom
+		buying_item_price.price_list = "Standard Buying"
+		buying_item_price.buying = 1
+		buying_item_price.valid_from = "2018-1-1"
+		buying_item_price.price_list_rate = round(random.uniform(5,15), 2)
+		buying_item_price.save()
+		selling_item_price = frappe.new_doc("Item Price")
+		selling_item_price.item_code = item.item_code
+		selling_item_price.uom = item.stock_uom
+		selling_item_price.price_list = "Standard Selling"
+		selling_item_price.selling = 1
+		selling_item_price.valid_from = "2018-1-1"
+		selling_item_price.price_list_rate = round(buying_item_price.price_list_rate * 1.5, 2)
+		selling_item_price.save()
+
 
 def create_invoices(settings):
 	# first month - already paid
