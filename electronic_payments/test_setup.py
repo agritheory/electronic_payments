@@ -6,6 +6,7 @@ from frappe.desk.page.setup_wizard.setup_wizard import setup_complete
 from erpnext.setup.utils import enable_all_roles_and_domains, set_defaults_for_tests
 from erpnext.accounts.doctype.account.account import update_account_number
 
+
 def before_test():
 	frappe.clear_cache()
 	today = frappe.utils.getdate()
@@ -46,13 +47,55 @@ tax_authority = [
 ]
 
 customers = [
-	"Andromeda Fruit Market",
-	"Betelgeuse Bakery Suppliers",
-	"Cassiopeia Restaurant Group",
-	"Delphinus Food Distributors",
-	"Grus Goodies",
-	"Hydra Produce Co",
-	"Phoenix Fruit, Ltd"
+	("Andromeda Fruit Market", {
+		'address_line1': '3606 Cookie Plaza',
+		'city': 'Concord',
+		'state': 'NH',
+		'country': 'United States',
+		'pincode': '03301'
+	}),
+	("Betelgeuse Bakery Suppliers", {
+		'address_line1': '920 Meade St',
+		'city': 'Bow',
+		'state': 'NH',
+		'country': 'United States',
+		'pincode': '03304'
+	}),
+	("Cassiopeia Restaurant Group", {
+		'address_line1': '29 Navi Avenue',
+		'city': 'Salem',
+		'state': 'MA',
+		'country': 'United States',
+		'pincode': '01970'
+	}),
+	("Delphinus Food Distributors", {
+		'address_line1': '680 Rotanev Rotary',
+		'city': 'Rockport',
+		'state': 'MA',
+		'country': 'United States',
+		'pincode': '01966'
+	}),
+	("Grus Goodies", {
+		'address_line1': '80 Alnair Circle',
+		'city': 'Quincy',
+		'state': 'MA',
+		'country': 'United States',
+		'pincode': '02169'
+	}),
+	("Phoenix Fruit, Ltd", {
+		'address_line1': '530 Ankaa Blvd',
+		'city': 'Braintree',
+		'state': 'MA',
+		'country': 'United States',
+		'pincode': '02184'
+	}),
+	("Hydra Produce Co", {
+		'address_line1': "444 Rue d'Alphard",
+		'city': 'Montreal',
+		'state': 'Quebec',
+		'country': 'Canada',
+		'pincode': 'H1Y3A4'
+	})
 ]
 
 
@@ -137,6 +180,7 @@ def create_bank_and_bank_account(settings):
 	doc.save()
 	doc.submit()
 
+
 def create_suppliers(settings):
 	for supplier in suppliers + tax_authority:
 		biz = frappe.new_doc("Supplier")
@@ -151,15 +195,31 @@ def create_suppliers(settings):
 		biz.default_price_list = "Standard Buying"
 		biz.save()
 
+
 def create_customers(customers):
 	for customer in customers:
 		cust = frappe.new_doc("Customer")
-		cust.customer_name = customer
+		cust.customer_name = customer[0]
 		cust.customer_type = "Company"
 		cust.customer_group = "Commercial"
-		cust.territory = "United States"
+		cust.territory = "All Territories"
 		cust.tax_id = "04-" +  '{:05d}'.format(random.randint(100,99999)) # Tax ID number
 		cust.save()
+
+		addr = frappe.new_doc('Address')
+		addr.address_title = f"{customer[0]} - {customer[1]['city']}"
+		addr.address_type = 'Shipping'
+		addr.address_line1 = customer[1]['address_line1']
+		addr.city = customer[1]['city']
+		addr.state = customer[1]['state']
+		addr.country = customer[1]['country']
+		addr.pincode = customer[1]['pincode']
+		addr.append('links', {
+			'link_doctype': 'Customer',
+			'link_name': customer[0]
+		})
+		addr.save()
+
 
 def create_items(settings):
 	for supplier in suppliers + tax_authority:
@@ -216,6 +276,7 @@ def create_items(settings):
 		selling_item_price.valid_from = "2018-1-1"
 		selling_item_price.price_list_rate = round(buying_item_price.price_list_rate * 1.5, 2)
 		selling_item_price.save()
+
 
 def create_invoices(settings):
 	# first month - already paid
