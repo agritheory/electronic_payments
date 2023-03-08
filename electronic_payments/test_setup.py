@@ -390,7 +390,7 @@ def create_suppliers(settings):
 		biz.payment_terms = supplier[4]
 		biz.save()
 
-    addr = frappe.new_doc('Address')
+		addr = frappe.new_doc('Address')
 		addr.address_title = f"{supplier[0]} - {supplier[5]['city']}"
 		addr.address_type = 'Billing'
 		addr.address_line1 = supplier[5]['address_line1']

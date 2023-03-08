@@ -14,34 +14,39 @@ from frappe.utils.data import today
 from frappe.model.document import Document
 
 
+# TODO: move to electronic_payments/__init__.py
 @frappe.whitelist()
 def process(doc, data):
 	if isinstance(data, str):
 		doc = json.loads(doc)
 		doc = frappe.get_doc(doc['doctype'], doc['name'])
 		data = frappe._dict(json.loads(data))
-	authorize = frappe.get_doc('AuthorizeNet Settings', doc.company)
-	if data.mode_of_payment == 'New Card' and data.save_data == 'Charge now':
-		return authorize.process_credit_card(doc, data)
-	elif data.mode_of_payment == 'New ACH' and data.save_data == 'Charge now':
-		return authorize.debit_bank_account(doc, data)
-	elif data.mode_of_payment == 'Saved Payment Method':
-		return authorize.charge_customer_profile(doc, data)
-	elif data.save_data != 'Charge now':
-		data["customer_profile"] = authorize.create_customer_profile(doc, data)
-		payment_profile = authorize.create_customer_payment_profile(doc, data)
-		if payment_profile.get('error'):
+	eps = frappe.get_doc('Electronic Payments Settings', doc.company)
+	if eps.provider = 'Authorize.Net':
+		# TODO: Move this to a separate function
+		if data.mode_of_payment == 'New Card' and data.save_data == 'Charge now':
+			return eps.process_credit_card(doc, data)
+		elif data.mode_of_payment == 'New ACH' and data.save_data == 'Charge now':
+			return eps.debit_bank_account(doc, data)
+		elif data.mode_of_payment == 'Saved Payment Method':
+			return eps.charge_customer_profile(doc, data)
+		elif data.save_data != 'Charge now':
+			data["customer_profile"] = eps.create_customer_profile(doc, data)
+			payment_profile = eps.create_customer_payment_profile(doc, data)
+			if payment_profile.get('error'):
+				return payment_profile
+			if payment_profile.retain == 0:
+				frappe.db.set_value(doc.doctype, doc.name, 'pre_authorization_token', payment_profile.payment_profile_id)
+			else:
+				frappe.db.set_value('Customer', doc.customer, 'electronic_payment_profile', payment_profile.customer_profile)
 			return payment_profile
-		if payment_profile.retain == 0:
-			frappe.db.set_value(doc.doctype, doc.name, 'pre_authorization_token', payment_profile.payment_profile_id)
 		else:
-			frappe.db.set_value('Customer',doc.customer, 'authorize_customer_profile', payment_profile.customer_profile)
-		return payment_profile
-	else:
-		frappe.throw('Invalid options')
+			frappe.throw('Invalid options')
+	if eps.provider = 'Stripe':
+		... # do stripe stuff
 
 
-class AuthorizeNetSettings(Document):
+class ElectronicPaymentSettings(Document):
 	def merchant_auth(self):
 		merchantAuth = apicontractsv1.merchantAuthenticationType()
 		merchantAuth.name = self.get_password('api_key') # get_password
@@ -99,7 +104,7 @@ class AuthorizeNetSettings(Document):
 		else:
 			customer_profile_id = data.get('customer_profile')
 		payment_profile_id = frappe.get_value(
-			'AuthorizeNet Payment Profile',
+			'Electronic Payment Profile',
 			{'payment_type': data.mode_of_payment.replace('New ', ''), 'customer': doc.customer},
 			'payment_profile_id'
 		)
@@ -144,7 +149,7 @@ class AuthorizeNetSettings(Document):
 		response = controller.getresponse()
 
 		if response.messages.resultCode == "Ok":
-			payment_profile = frappe.new_doc('AuthorizeNet Payment Profile')
+			payment_profile = frappe.new_doc('Electronic Payment Profile')
 			payment_profile.payment_type = data.mode_of_payment.replace('New ', '')
 			payment_profile.customer = doc.customer
 			payment_profile.reference = f"**** **** **** {card_number[-4:]}" if card_number else f"*{data.get('account_number')[-4:]}"
@@ -163,12 +168,12 @@ class AuthorizeNetSettings(Document):
 			customer_profile_id = data.get('customer_profile')
 		if not customer_profile_id:
 			customer_profile_id = frappe.get_value(
-				'AuthorizeNet Payment Profile',
+				'Electronic Payment Profile',
 				{'customer': doc.customer},
 				'customer_profile'
 			)	
 		payment_profile_id = frappe.get_value(
-			'AuthorizeNet Payment Profile',
+			'Electronic Payment Profile',
 			{'customer': doc.customer},
 			'payment_profile_id'
 		)
@@ -197,8 +202,8 @@ class AuthorizeNetSettings(Document):
 		if response is not None:
 			if response.messages.resultCode == "Ok":
 				if hasattr(response.transactionResponse, 'messages') == True:
-					if not frappe.get_value('AuthorizeNet Payment Profile', {'customer': doc.customer}, 'retain'):
-						frappe.get_doc('AuthorizeNet Payment Profile', {'customer': doc.customer}).delete()
+					if not frappe.get_value('Electronic Payment Profile', {'customer': doc.customer}, 'retain'):
+						frappe.get_doc('Electronic Payment Profile', {'customer': doc.customer}).delete()
 					create_payment_entry(doc, data, response.transactionResponse.transId)
 					return {"message": "Success", "transaction_id": str(response.transactionResponse.transId)}
 				else:
@@ -228,7 +233,7 @@ class AuthorizeNetSettings(Document):
 		pass
 
 def create_payment_entry(doc, data, transaction_id):
-	settings = frappe.get_doc('AuthorizeNet Settings', doc.company)
+	settings = frappe.get_doc('Electronic Payments Settings', doc.company)
 	pe = frappe.new_doc('Payment Entry')
 	pe.mode_of_payment = settings.mode_of_payment
 	pe.payment_type = 'Receive'
@@ -252,8 +257,8 @@ def create_payment_entry(doc, data, transaction_id):
 
 @frappe.whitelist()
 def fetch_transactions():
-	for settings in frappe.get_all('AuthorizeNet Settings'):
-		settings = frappe.get_doc('AuthorizeNet Settings', settings)
+	for settings in frappe.get_all('Electronic Payments Settings'):
+		settings = frappe.get_doc('Electronic Payments Settings', settings)
 		sorting = apicontractsv1.TransactionListSorting()
 		sorting.orderBy = apicontractsv1.TransactionListOrderFieldEnum.id
 		sorting.orderDescending = True

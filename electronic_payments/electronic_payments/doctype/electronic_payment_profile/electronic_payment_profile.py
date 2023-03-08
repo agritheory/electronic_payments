@@ -6,7 +6,7 @@ from __future__ import unicode_literals
 # import frappe
 from frappe.model.document import Document
 
-class AuthorizeNetPaymentProfile(Document):
+class ElectronicPaymentProfile(Document):
 	def validate(self):
 		if not len(self.reference) == 4:
 			return

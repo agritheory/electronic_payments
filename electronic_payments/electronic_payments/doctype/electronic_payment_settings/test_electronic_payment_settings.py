@@ -7,5 +7,5 @@ from __future__ import unicode_literals
 # import frappe
 import unittest
 
-class TestAuthorizeNetPaymentProfile(unittest.TestCase):
+class TestElectronicPaymentSettings(unittest.TestCase):
 	pass

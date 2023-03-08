@@ -1,11 +1,13 @@
 {
- "autoname": "field:company",
+ "actions": [],
+ "autoname": "format:{company}-{provider}",
  "creation": "2022-12-20 13:22:13.760162",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
   "company",
+  "provider",
   "ref_id",
   "column_break_3",
   "api_key",
@@ -61,12 +63,19 @@
   {
    "fieldname": "column_break_3",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "provider",
+   "fieldtype": "Select",
+   "label": "Provider",
+   "options": "\nAuthorize.net\nStripe"
   }
  ],
- "modified": "2022-12-20 13:43:49.648319",
+ "links": [],
+ "modified": "2023-03-08 14:22:05.667632",
  "modified_by": "Administrator",
  "module": "Electronic Payments",
- "name": "AuthorizeNet Settings",
+ "name": "Electronic Payment Settings",
  "owner": "Administrator",
  "permissions": [
   {

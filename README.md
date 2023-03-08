@@ -77,6 +77,17 @@ Optional: install a [demo Company and its data](./exampledata.md) to test the El
 bench execute 'electronic_payments.test_setup.before_test'
 ```
 
+To run the Stripe mock, start the docker container:
+```shell
+docker run --rm -it -p 12111-12112:12111-12112 stripe/stripe-mock:latest
+```
+The endpoint should be configured in the Electronic Payments Settings with the following values:
+```json
+# values here / TBD
+
+```
+
+
 ### License
 
 MIT
