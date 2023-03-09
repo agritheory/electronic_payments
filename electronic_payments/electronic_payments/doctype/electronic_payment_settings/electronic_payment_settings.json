@@ -10,6 +10,7 @@
   "provider",
   "ref_id",
   "column_break_3",
+  "endpoint",
   "api_key",
   "transaction_key",
   "section_break_5",
@@ -69,10 +70,15 @@
    "fieldtype": "Select",
    "label": "Provider",
    "options": "\nAuthorize.net\nStripe"
+  },
+  {
+   "fieldname": "endpoint",
+   "fieldtype": "Data",
+   "label": "Endpoint"
   }
  ],
  "links": [],
- "modified": "2023-03-08 14:22:05.667632",
+ "modified": "2023-03-08 15:45:14.853154",
  "modified_by": "Administrator",
  "module": "Electronic Payments",
  "name": "Electronic Payment Settings",

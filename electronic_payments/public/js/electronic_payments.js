@@ -25,8 +25,8 @@ electronic_payments.electronic_payments = frm => {
 				{
 					fieldname: 'save_data', label: 'Charge Now?', fieldtype: 'Select', options: [
 						'Charge now',
-						'Save payment data for this transaction',
-						'Save payment data for this customer',
+						'Save payment data for only this transaction',
+						'Retain payment data for this party',
 					],
 				},
 				{ fieldname: 'col_1', fieldtype: 'Column Break' },
@@ -138,7 +138,7 @@ function render_frm_data(frm){
 async function process(frm, dialog){
 	let values = dialog.get_values()
 	console.log(values)
-	await frappe.xcall("electronic_payments.electronic_payments.doctype.authorizenet_settings.authorizenet_settings.process", {doc: frm.doc, data: values})
+	await frappe.xcall("electronic_payments.electronic_payments.process", {doc: frm.doc, data: values})
 	.then((r) => {
 		console.log(r)
 		if(r.message == 'Success'){
@@ -154,7 +154,7 @@ async function process(frm, dialog){
 
 async function payment_options(frm){
 	let payment_profile = ''
-	await frappe.db.get_value('AuthorizeNet Payment Profile', {customer: frm.doc.customer}, ['payment_profile_id', 'reference', 'payment_type'])
+	await frappe.db.get_value('Electronic Payment Profile', {party: frm.doc.customer}, ['payment_profile_id', 'reference', 'payment_type'])
 	.then(r => {payment_profile = r.message})
 	console.log(frm.doc.pre_authorization_token, payment_profile)
 	if (frm.doc.pre_authorization_token || payment_profile.hasOwnProperty('payment_profile_id')) {
