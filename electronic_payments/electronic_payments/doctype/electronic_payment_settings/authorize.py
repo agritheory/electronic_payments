@@ -7,9 +7,14 @@ import datetime
 import authorizenet
 from authorizenet import apicontractsv1
 from authorizenet.apicontrollers import *
+# TODO: fix circular import error when trying to import create_payment_entry
+# from electronic_payments.electronic_payments.doctype.electronic_payment_settings.electronic_payment_settings import create_payment_entry
 
 
 class AuthorizeNet():
+	def get_password(self):
+		pass
+
 	def merchant_auth(self):
 		merchantAuth = apicontractsv1.merchantAuthenticationType()
 		merchantAuth.name = self.get_password('api_key') # get_password
@@ -20,10 +25,12 @@ class AuthorizeNet():
 		card_number = data.get('card_number')
 		creditCard = apicontractsv1.creditCardType()
 		creditCard.cardNumber = card_number.replace(' ', '')
-		creditCard.expirationDate = data.get('card_expiration_date') 
+		creditCard.expirationDate = data.get('card_expiration_date')
+		creditCard.cardCode = data.get('card_cvc')
 		payment = apicontractsv1.paymentType()
-		
-		payment.creditCard = apicontractsv1.transactionRequestType()
+		payment.creditCard = creditCard
+
+		transactionrequest = apicontractsv1.transactionRequestType()
 		transactionrequest.transactionType ="authCaptureTransaction"
 		transactionrequest.amount = data.get('amount')
 		transactionrequest.payment = payment
@@ -38,7 +45,7 @@ class AuthorizeNet():
 
 		response = createtransactioncontroller.getresponse()
 		if response.messages.resultCode == "Ok":
-			return {'transaction_id': response.transactionResponse.transId}
+			return {'message': 'Success', 'transaction_id': response.transactionResponse.transId}
 		else:
 			# frappe.log_error
 			return {'error': response.messages.resultCode}
@@ -56,6 +63,7 @@ class AuthorizeNet():
 		response = controller.getresponse()
 
 		if response.messages.resultCode == "Ok":
+				frappe.db.set_value('Customer', doc.customer, 'electronic_payment_profile', response.customerProfileId)
 				return response.customerProfileId
 		else:
 			# frappe.log_error(message='', title='')
@@ -63,7 +71,7 @@ class AuthorizeNet():
 
 	def create_customer_payment_profile(self, doc, data):
 		if not data.get('customer_profile'):
-			customer_profile_id = frappe.get_value('Customer', doc.customer, 'authorize_customer_profile')
+			customer_profile_id = frappe.get_value('Customer', doc.customer, 'electronic_payment_profile')
 		else:
 			customer_profile_id = data.get('customer_profile')
 		payment_profile_id = frappe.get_value(
@@ -72,16 +80,17 @@ class AuthorizeNet():
 			'payment_profile_id'
 		)
 		# if data.get('save_data') # TODO: check if customer wants payment method saved
-		frappe.db.set_value('Customer', doc.customer, 'authorize_customer_profile', payment_profile_id)
+		# frappe.db.set_value('Customer', doc.customer, 'electronic_payment_profile', payment_profile_id)  # TODO: commented because field is used to save customer ID in other areas
 		merchantAuth = self.merchant_auth()
 		payment = apicontractsv1.paymentType()
-		profile = apicontractsv1.customerPaymentProfileType()
+		profile = apicontractsv1.customerProfilePaymentType()
 		card_number = data.get('card_number')
 		card_number = card_number.replace(' ', '')
 		if data.mode_of_payment.replace('New ', '') == 'Card':
 			creditCard = apicontractsv1.creditCardType()
 			creditCard.cardNumber = card_number
 			creditCard.expirationDate = data.get('card_expiration_date')
+			creditCard.cardCode = data.get('card_cvc')
 			payment.creditCard = creditCard
 			billTo = apicontractsv1.customerAddressType()
 			billTo.firstName = ' '.join(data.get('cardholder_name').split(' ')[0:-1])
@@ -113,11 +122,12 @@ class AuthorizeNet():
 
 		if response.messages.resultCode == "Ok":
 			payment_profile = frappe.new_doc('Electronic Payment Profile')
+			payment_profile.party_type = 'Customer'
+			payment_profile.party = doc.customer
 			payment_profile.payment_type = data.mode_of_payment.replace('New ', '')
-			payment_profile.customer = doc.customer
 			payment_profile.reference = f"**** **** **** {card_number[-4:]}" if card_number else f"*{data.get('account_number')[-4:]}"
 			payment_profile.payment_profile_id = str(response.customerPaymentProfileId)
-			payment_profile.customer_profile = str(customer_profile_id)
+			payment_profile.party_profile = str(customer_profile_id)
 			payment_profile.retain = 1 if data.save_data == 'Save payment data for this customer' else 0
 			payment_profile.save()
 			return payment_profile
@@ -126,14 +136,14 @@ class AuthorizeNet():
 
 	def charge_customer_profile(self, doc, data):
 		if not data.get('customer_profile'):
-			customer_profile_id = frappe.get_value('Customer', doc.customer, 'authorize_customer_profile')
+			customer_profile_id = frappe.get_value('Customer', doc.customer, 'electronic_payment_profile')
 		else: 
 			customer_profile_id = data.get('customer_profile')
 		if not customer_profile_id:
 			customer_profile_id = frappe.get_value(
 				'Electronic Payment Profile',
 				{'customer': doc.customer},
-				'customer_profile'
+				'party_profile'
 			)	
 		payment_profile_id = frappe.get_value(
 			'Electronic Payment Profile',
@@ -165,9 +175,9 @@ class AuthorizeNet():
 		if response is not None:
 			if response.messages.resultCode == "Ok":
 				if hasattr(response.transactionResponse, 'messages') == True:
-					if not frappe.get_value('Electronic Payment Profile', {'customer': doc.customer}, 'retain'):
-						frappe.get_doc('Electronic Payment Profile', {'customer': doc.customer}).delete()
-					create_payment_entry(doc, data, response.transactionResponse.transId)
+					if not frappe.get_value('Electronic Payment Profile', {'customer': doc.customer, 'payment_profile_id': payment_profile_id}, 'retain'):
+						frappe.get_doc('Electronic Payment Profile', {'customer': doc.customer, 'payment_profile_id': payment_profile_id}).delete()
+					create_payment_entry(doc, data, response.transactionResponse.transId)  # TODO: fix circular import above
 					return {"message": "Success", "transaction_id": str(response.transactionResponse.transId)}
 				else:
 					if hasattr(response.transactionResponse, 'errors') == True:
