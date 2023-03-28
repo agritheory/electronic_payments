@@ -6,6 +6,9 @@ import uuid
 from decimal import *
 import datetime
 
+from authorizenet import apicontractsv1
+from authorizenet.apicontrollers import *
+
 from electronic_payments.electronic_payments.doctype.electronic_payment_settings.authorize import AuthorizeNet
 from electronic_payments.electronic_payments.doctype.electronic_payment_settings.stripe import Stripe
 
@@ -26,29 +29,6 @@ class ElectronicPaymentSettings(Document):
 			return Stripe(self)
 
 
-def create_payment_entry(doc, data, transaction_id):
-	settings = frappe.get_doc('Electronic Payments Settings', doc.company)
-	pe = frappe.new_doc('Payment Entry')
-	pe.mode_of_payment = settings.mode_of_payment
-	pe.payment_type = 'Receive'
-	pe.posting_date = today()
-	pe.party_type = 'Customer'
-	pe.party = doc.customer
-	pe.paid_to = settings.clearing_account
-	pe.paid_amount = doc.grand_total
-	pe.received_amount = doc.grand_total
-	pe.reference_no = str(transaction_id)
-	pe.reference_date = pe.posting_date
-	pe.append('references', {
-		'reference_doctype': doc.doctype,
-		'reference_name': doc.name,
-		'allocated_amount': doc.grand_total,
-	})
-	pe.save()
-	pe.submit()
-	frappe.db.set_value(doc.doctype, doc.name, 'remarks', str(transaction_id))
-	return
-
 @frappe.whitelist()
 def fetch_transactions():
 	for settings in frappe.get_all('Electronic Payments Settings'):
@@ -64,12 +44,13 @@ def fetch_transactions():
 		transactionListRequest.merchantAuthentication = settings.merchant_auth()
 		abbr = frappe.get_value('Company', settings.company, 'abbr')
 		transactionListRequest.refId = f"{today()} {abbr}"
-		# transactionListRequest.batchId = "4606008"  # is this required
 		transactionListRequest.sorting = sorting
 		transactionListRequest.paging = paging
 
 		transactionListController = getTransactionListController(transactionListRequest)
 		transactionListController.execute()
+		response = transactionListController.getresponse()
+
 		if response is not None:
 			if response.messages.resultCode == apicontractsv1.messageTypeEnum.Ok:
 				if hasattr(response, 'transactions'):
@@ -84,7 +65,7 @@ def process_transactions(settings, response):
 			'account': '',
 			'party_type': '',
 			'party': '',
-			'clearance_date': batch.settlementTimeLocal,
+			'clearance_date': batch.settlementTimeLocal,  # TODO: import batch
 			'amount': entry.statistics.statistic.chargeAmount
 		})
 	return response

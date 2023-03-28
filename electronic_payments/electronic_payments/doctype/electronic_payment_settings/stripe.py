@@ -1,7 +1,9 @@
 import frappe
+from frappe import _
+from frappe.utils.password import get_decrypted_password
+
 import stripe
-# TODO: fix circular import error when trying to import create_payment_entry
-# from electronic_payments.electronic_payments.doctype.electronic_payment_settings.electronic_payment_settings import create_payment_entry
+from electronic_payments.electronic_payments.doctype.electronic_payment_settings.common import create_payment_entry
 
 """
 # Information assumed to be in data object:
@@ -46,11 +48,12 @@ Notes:
 
 
 class Stripe():
-	def __init__(self):
-		stripe.api_key = self.get_password('api_key')
-
-	def get_password(self):
-		pass
+	def get_password(self, company):
+		settings = frappe.get_doc('Electronic Payment Settings', {'company': company})
+		if not settings:
+			frappe.msgprint(_(f'No Electronic Payment Settings found for {company}-Stripe'))
+		else:
+			stripe.api_key = get_decrypted_password(settings.doctype, settings.name, 'api_key')
 	
 	def currency_multiplier(self, currency):
 		zero_decimal = (
@@ -62,6 +65,7 @@ class Stripe():
 		return 100 if currency not in zero_decimal else 1
 
 	def generate_token(self, doc, data):
+		self.get_password(doc.company)
 		try:
 			if data.mode_of_payment.replace('New ', '') == 'Card':
 				card_number = data.get('card_number')
@@ -85,7 +89,7 @@ class Stripe():
 						'account_number': str(data.get('account_number')),
 					},
 				)
-			return response.id  # TODO: unclear in docs if token use just passes the ID
+			return response.id
 		except Exception as e:
 			try:
 				frappe.log_error(frappe.get_traceback(), f'{e.code}: {e.type}. {e.message}')
@@ -95,6 +99,7 @@ class Stripe():
 				return {'error': f'{e}'}
 
 	def process_credit_card(self, doc, data):
+		self.get_password(doc.company)
 		try:
 			currency = frappe.defaults.get_global_default('currency').lower()
 			response = stripe.Charge.create(
@@ -104,7 +109,7 @@ class Stripe():
 				description=doc.name  # optional
 			)
 			if response.status == 'succeeded':
-				create_payment_entry(doc, data, response.transactionResponse.transId)  # TODO: fix circular import
+				create_payment_entry(doc, data, response.id)
 				return {'message': 'Success', 'transaction_id': response.id}
 			elif response.status == 'pending':
 				# TODO: is there confirmation if it eventually goes through? How to handle?
@@ -120,6 +125,7 @@ class Stripe():
 				return {'error': f'{e}'}
 
 	def create_customer_profile(self, doc, data):
+		self.get_password(doc.company)
 		try:
 			response = stripe.Customer.create(
 				name=doc.customer
@@ -135,6 +141,7 @@ class Stripe():
 				return {'error': f'{e}'}
 
 	def create_customer_payment_profile(self, doc, data):
+		self.get_password(doc.company)
 		if not data.get('customer_profile'):
 			customer_profile_id = frappe.get_value('Customer', doc.customer, 'electronic_payment_profile')
 		else:
@@ -166,6 +173,7 @@ class Stripe():
 				return {'error': f'{e}'}
 
 	def charge_customer_profile(self, doc, data):
+		self.get_password(doc.company)
 		if not data.get('customer_profile'):
 			customer_profile_id = frappe.get_value('Customer', doc.customer, 'electronic_payment_profile')
 		else: 
@@ -183,7 +191,7 @@ class Stripe():
 		)
 
 		try:
-			currency = data.get('currency').lower()
+			currency = frappe.defaults.get_global_default('currency').lower()
 			response = stripe.Charge.create(
 				amount=int(doc.grand_total * self.currency_multiplier(currency)),
 				currency=currency,
@@ -194,7 +202,7 @@ class Stripe():
 			if response.status == 'succeeded':
 				if not frappe.get_value('Electronic Payment Profile', {'customer': doc.customer, 'payment_profile_id': payment_profile_id}, 'retain'):
 					frappe.get_doc('Electronic Payment Profile', {'customer': doc.customer, 'payment_profile_id': payment_profile_id}).delete()
-				create_payment_entry(doc, data, response.transactionResponse.transId)  # TODO: fix circular import
+				create_payment_entry(doc, data, response.id)
 				return {'message': 'Success', 'transaction_id': response.id}
 			elif response.status == 'pending':
 				# TODO: is there confirmation if it eventually goes through? How to handle?
@@ -209,13 +217,21 @@ class Stripe():
 				frappe.log_error(frappe.get_traceback(), f'{e}')
 				return {'error': f'{e}'}
 
-	def refund_credit_card(self, transaction_id):
+	def refund_credit_card(self, doc, data):
+		"""
+		TODO: clarify where this function is called and what data can be passed
+		Function needs: transaction ID of original charge and amount to refund
+		    (amount technically only needed if it's a partial refund, will default to entire charge)
+		"""
+		self.get_password(doc.company)
 		try:
+			currency = frappe.defaults.get_global_default('currency').lower()
 			response = stripe.Refund.create(
-				charge=transaction_id
+				charge=data.get('transaction_id'),
+				amount=int(data.get('amount') * self.currency_multiplier(currency))
 			)
 			if response.status == 'succeeded':
-				# TODO: reverse payment entry
+				# TODO: reverse/cancel payment entry
 				return {'message': 'Success', 'transaction_id': response.id}
 			elif response.status == 'pending':
 				# TODO: is there confirmation if it eventually goes through? How to handle?
@@ -230,6 +246,6 @@ class Stripe():
 				frappe.log_error(frappe.get_traceback(), f'{e}')
 				return {'error': f'{e}'}
 
-	def void_transaction(self, transaction_id):
+	def void_transaction(self, doc, data):
 		# No separate workflow for this in Stripe
-		self.refund_credit_card(transaction_id)
+		self.refund_credit_card(doc, data)
