@@ -36,6 +36,7 @@ class AuthorizeNet():
 		transactionrequest = apicontractsv1.transactionRequestType()
 		transactionrequest.transactionType ="authCaptureTransaction"
 		transactionrequest.amount = data.get('amount')
+		transactionrequest.currencyCode = frappe.defaults.get_global_default('currency')
 		transactionrequest.payment = payment
 		
 		createtransactionrequest = apicontractsv1.createTransactionRequest()
@@ -163,6 +164,7 @@ class AuthorizeNet():
 		transactionrequest = apicontractsv1.transactionRequestType()
 		transactionrequest.transactionType = "authCaptureTransaction"
 		transactionrequest.amount = str(doc.grand_total)
+		transactionrequest.currencyCode = frappe.defaults.get_global_default('currency')
 		transactionrequest.profile = profileToCharge
 
 		createtransactionrequest = apicontractsv1.createTransactionRequest()
