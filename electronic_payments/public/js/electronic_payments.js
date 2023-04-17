@@ -137,8 +137,9 @@ function render_frm_data(frm){
 
 async function process(frm, dialog){
 	let values = dialog.get_values()
+	console.log('In JS process')
 	console.log(values)
-	await frappe.xcall("electronic_payments.electronic_payments.process", {doc: frm.doc, data: values})
+	await frappe.xcall("electronic_payments.electronic_payments.doctype.electronic_payment_settings.electronic_payment_settings.process", {doc: frm.doc, data: values})
 	.then((r) => {
 		console.log(r)
 		if(r.message == 'Success'){

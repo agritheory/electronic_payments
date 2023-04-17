@@ -24,9 +24,23 @@ class ElectronicPaymentSettings(Document):
 
 	def client(self):
 		if self.provider == 'Authorize.Net':
-			return AuthorizeNet(self)
+			return AuthorizeNet()
 		if self.provider == 'Stripe':
-			return Stripe(self)
+			print('Returning Stripe')
+			return Stripe()
+
+
+@frappe.whitelist()
+def process(doc, data):
+	print('In EPS process')
+	doc = frappe._dict(json.loads(doc)) if isinstance(doc, str) else doc
+	data = frappe._dict(json.loads(data)) if isinstance(data, str) else data
+	settings = frappe.get_doc('Electronic Payment Settings', {'company': doc.company})
+	if not settings:
+		frappe.msgprint(_(f'No Electronic Payment Settings found for {doc.company}'))
+	client = settings.client()
+	response = client.process_transaction(doc, data)
+	return response
 
 
 @frappe.whitelist()
