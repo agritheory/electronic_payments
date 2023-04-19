@@ -117,10 +117,10 @@ class Stripe():
 			return {'message': 'Success', 'transaction_id': response.id}
 		except Exception as e:
 			try:
-				frappe.log_error(frappe.get_traceback(), f'{e.code}: {e.type}. {e.message}')
+				frappe.log_error(message=frappe.get_traceback(), title=f'{e.code}: {e.type}. {e.message}')
 				return {'error': f'{e.code}: {e.type}. {e.message}'}  # e.code has status code, e.type is one of 4 error types, e.message is a human-readable message providing more details about the error
 			except:  # non-Stripe error, something else went wrong
-				frappe.log_error(frappe.get_traceback(), f'{e}')
+				frappe.log_error(message=frappe.get_traceback(), title=f'{e}')
 				return {'error': f'{e}'}
 
 
@@ -149,10 +149,10 @@ class Stripe():
 				return customer_id
 		except Exception as e:
 			try:
-				frappe.log_error(frappe.get_traceback(), f'{e.code}: {e.type}. {e.message}')
+				frappe.log_error(message=frappe.get_traceback(), title=f'{e.code}: {e.type}. {e.message}')
 				return {'error': f'{e.code}: {e.type}. {e.message}'}  # e.code has status code, e.type is one of 4 error types, e.message is a human-readable message providing more details about the error
 			except:  # non-Stripe error, something else went wrong
-				frappe.log_error(frappe.get_traceback(), f'{e}')
+				frappe.log_error(message=frappe.get_traceback(), title=f'{e}')
 				return {'error': f'{e}'}
 
 
@@ -191,10 +191,10 @@ class Stripe():
 				return pm_response
 		except Exception as e:
 			try:
-				frappe.log_error(frappe.get_traceback(), f'{e.code}: {e.type}. {e.message}')
+				frappe.log_error(message=frappe.get_traceback(), title=f'{e.code}: {e.type}. {e.message}')
 				return {'error': f'{e.code}: {e.type}. {e.message}'}  # e.code has status code, e.type is one of 4 error types, e.message is a human-readable message providing more details about the error
 			except:  # non-Stripe error, something else went wrong
-				frappe.log_error(frappe.get_traceback(), f'{e}')
+				frappe.log_error(message=frappe.get_traceback(), title=f'{e}')
 				return {'error': f'{e}'}
 
 
@@ -212,10 +212,10 @@ class Stripe():
 				return {'message': 'Success', 'transaction_id': response.id}
 		except Exception as e:
 			try:
-				frappe.log_error(frappe.get_traceback(), f'{e.code}: {e.type}. {e.message}')
+				frappe.log_error(message=frappe.get_traceback(), title=f'{e.code}: {e.type}. {e.message}')
 				return {'error': f'{e.code}: {e.type}. {e.message}'}
 			except:  # non-Stripe error, something else went wrong
-				frappe.log_error(frappe.get_traceback(), f'{e}')
+				frappe.log_error(message=frappe.get_traceback(), title=f'{e}')
 				return {'error': f'{e}'}
 
 
@@ -257,10 +257,10 @@ class Stripe():
 				return pm_response
 		except Exception as e:
 			try:
-				frappe.log_error(frappe.get_traceback(), f'{e.code}: {e.type}. {e.message}')
+				frappe.log_error(message=frappe.get_traceback(), title=f'{e.code}: {e.type}. {e.message}')
 				return {'error': f'{e.code}: {e.type}. {e.message}'}
 			except:  # non-Stripe error, something else went wrong
-				frappe.log_error(frappe.get_traceback(), f'{e}')
+				frappe.log_error(message=frappe.get_traceback(), title=f'{e}')
 				return {'error': f'{e}'}
 
 
@@ -309,10 +309,10 @@ class Stripe():
 				return {'error': 'Payment failed'}
 		except Exception as e:
 			try:
-				frappe.log_error(frappe.get_traceback(), f'{e.code}: {e.type}. {e.message}')
+				frappe.log_error(message=frappe.get_traceback(), title=f'{e.code}: {e.type}. {e.message}')
 				return {'error': f'{e.code}: {e.type}. {e.message}'}
 			except:  # non-Stripe error, something else went wrong
-				frappe.log_error(frappe.get_traceback(), f'{e}')
+				frappe.log_error(message=frappe.get_traceback(), title=f'{e}')
 				return {'error': f'{e}'}
 
 
@@ -341,10 +341,10 @@ class Stripe():
 				return {'error': f'Refund {response.status}'}
 		except Exception as e:
 			try:
-				frappe.log_error(frappe.get_traceback(), f'{e.code}: {e.type}. {e.message}')
+				frappe.log_error(message=frappe.get_traceback(), title=f'{e.code}: {e.type}. {e.message}')
 				return {'error': f'{e.code}: {e.type}. {e.message}'}
 			except:  # non-Stripe error, something else went wrong
-				frappe.log_error(frappe.get_traceback(), f'{e}')
+				frappe.log_error(message=frappe.get_traceback(), title=f'{e}')
 				return {'error': f'{e}'}
 
 
