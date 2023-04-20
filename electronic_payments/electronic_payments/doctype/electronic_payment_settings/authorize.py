@@ -69,18 +69,18 @@ class AuthorizeNet():
 		createtransactioncontroller.execute()
 
 		response = createtransactioncontroller.getresponse()
-		error_message = None
+		error_message = ''
 
 		if response is not None:
 			if response.messages.resultCode == "Ok":
-				create_payment_entry(doc, data, response.transactionResponse.transId)
-				return {'message': 'Success', 'transaction_id': response.transactionResponse.transId}
+				create_payment_entry(doc, data, str(response.transactionResponse.transId))
+				return {'message': 'Success', 'transaction_id': str(response.transactionResponse.transId)}
 			else:
 				if hasattr(response, 'transactionResponse') and hasattr(
 						response.transactionResponse, 'errors'):
-					error_message = response.transactionResponse.errors.error[0].errorText
+					error_message = str(response.transactionResponse.errors.error[0].errorText)
 				else:
-					error_message = response.messages.message[0]['text'].text
+					error_message = str(response.messages.message[0]['text'].text)
 		else:
 			error_message = 'No response'
 		
@@ -105,10 +105,9 @@ class AuthorizeNet():
 			response = controller.getresponse()
 
 			if response.messages.resultCode == "Ok":
-				print(f'Customer profile created - type: {type(response.customerProfileId)}')
 				customer_profile_id = str(response.customerProfileId)
 				frappe.db.set_value('Customer', doc.customer, 'electronic_payment_profile', customer_profile_id)
-				return {'message': 'Success', 'transaction_id': response.customerProfileId}
+				return {'message': 'Success', 'transaction_id': customer_profile_id}
 			else:
 				error_message = str(response.messages.message[0]['text'].text)
 				frappe.log_error(message=frappe.get_traceback(), title=error_message)
@@ -222,7 +221,7 @@ class AuthorizeNet():
 		createtransactioncontroller.execute()
 
 		response = createtransactioncontroller.getresponse()
-		error_message = None
+		error_message = ''
 
 		if response is not None:
 			if response.messages.resultCode == "Ok":
@@ -241,7 +240,7 @@ class AuthorizeNet():
 						if pmt_delete_response is None or (hasattr(pmt_delete_response, 'messages') and pmt_delete_response.messages.resultCode != 'Ok'):
 							frappe.log_error(message=frappe.get_traceback(), title=f'Error deleting customer payment profile used for {doc.name}')
 
-					create_payment_entry(doc, data, response.transactionResponse.transId)
+					create_payment_entry(doc, data, str(response.transactionResponse.transId))
 					return {"message": "Success", "transaction_id": str(response.transactionResponse.transId)}
 				else:
 					if hasattr(response.transactionResponse, 'errors'):
@@ -291,7 +290,7 @@ class AuthorizeNet():
 		
 		# Request transaction details for payment information
 		txn_details_response = self.get_transaction_details(doc.company, orig_transaction_id)
-		error_message = None
+		error_message = ''
 
 		if txn_details_response.get('message') == 'Success':
 			payment_details = txn_details_response.get('payment_details')
@@ -370,7 +369,7 @@ class AuthorizeNet():
 		createtransactioncontroller.execute()
 
 		response = createtransactioncontroller.getresponse()
-		error_message = None
+		error_message = ''
 		
 		if response is not None:
 			if response.messages.resultCode == "Ok":
@@ -397,6 +396,7 @@ class AuthorizeNet():
 
 	def get_transaction_details(self, company, transaction_id):
 		"""
+		# Structure of payment information from request
 		"payment": {
 			"creditCard": {
 				"cardNumber": "XXXX1111",
@@ -424,7 +424,7 @@ class AuthorizeNet():
 		transactionDetailsController.execute()
 
 		response = transactionDetailsController.getresponse()
-		error_message = None
+		error_message = ''
 
 		if response is not None:
 			if response.messages.resultCode == 'Ok':
@@ -456,4 +456,3 @@ class AuthorizeNet():
 	
 		frappe.log_error(message=frappe.get_traceback(), title=error_message)
 		return {'error': error_message}
-
