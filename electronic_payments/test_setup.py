@@ -1061,9 +1061,14 @@ def create_electronic_payment_settings(settings):
 		eps.provider = "Stripe"
 		eps.api_key = os.environ.get("STRIPE_API_KEY")
 		eps.save()
-	if os.environ.get("AUTHORIZE_API_KEY"):
+	if (
+		os.environ.get("AUTHORIZE_API_KEY")
+		and os.environ.get("AUTHORIZE_TRANSACTION_KEY")
+		and not os.environ.get("STRIPE_API_KEY")
+	):
 		eps = frappe.new_doc("Electronic Payment Settings")
 		eps.company = settings.company
 		eps.provider = "Authorize.net"
 		eps.api_key = os.environ.get("AUTHORIZE_API_KEY")
+		eps.api_key = os.environ.get("AUTHORIZE_TRANSACTION_KEY")
 		eps.save()
