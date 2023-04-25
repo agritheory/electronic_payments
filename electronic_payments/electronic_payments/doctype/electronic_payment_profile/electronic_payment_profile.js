@@ -3,6 +3,5 @@
 
 frappe.ui.form.on('Electronic Payment Profile', {
 	// refresh: function(frm) {
-
 	// }
-});
+})
