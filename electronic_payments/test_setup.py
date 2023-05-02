@@ -488,15 +488,24 @@ def setup_accounts():
 		force=True,
 	)
 	frappe.rename_doc(
-		"Account", "1310 - Debtors - CFC", "1310 - Accounts Payable - CFC", force=True
+		"Account", "1310 - Debtors - CFC", "1310 - Accounts Receivable - CFC", force=True
 	)
 	frappe.rename_doc(
-		"Account", "2110 - Creditors - CFC", "2110 - Accounts Receivable - CFC", force=True
+		"Account", "2110 - Creditors - CFC", "2110 - Accounts Payable - CFC", force=True
 	)
 	update_account_number("1110 - Cash - CFC", "Petty Cash", account_number="1110")
 	update_account_number(
 		"Primary Checking - CFC", "Primary Checking", account_number="1201"
 	)
+
+	ca = frappe.new_doc("Account")  # clearing account
+	ca.account_name = "Electronic Payments Receivable"
+	ca.account_number = "1320"
+	ca.account_type = "Receivable"
+	ca.parent_account = "1300 - Accounts Receivable - CFC"
+	ca.currency = "USD"
+	ca.company = frappe.defaults.get_defaults().get("company")
+	ca.save()
 
 
 def create_payment_terms_templates(settings):
@@ -1071,4 +1080,5 @@ def create_electronic_payment_settings(settings):
 		eps.provider = "Authorize.net"
 		eps.api_key = os.environ.get("AUTHORIZE_API_KEY")
 		eps.api_key = os.environ.get("AUTHORIZE_TRANSACTION_KEY")
+		eps.clearing_account = "1320 - Electronic Payments Receivable - CFC"
 		eps.save()
