@@ -498,14 +498,32 @@ def setup_accounts():
 		"Primary Checking - CFC", "Primary Checking", account_number="1201"
 	)
 
-	ca = frappe.new_doc("Account")  # clearing account
-	ca.account_name = "Electronic Payments Receivable"
-	ca.account_number = "1320"
-	ca.account_type = "Receivable"
-	ca.parent_account = "1300 - Accounts Receivable - CFC"
-	ca.currency = "USD"
-	ca.company = frappe.defaults.get_defaults().get("company")
-	ca.save()
+	rca = frappe.new_doc("Account")  # receivable clearing account
+	rca.account_name = "Electronic Payments Receivable"
+	rca.account_number = "1320"
+	rca.account_type = "Receivable"
+	rca.parent_account = "1300 - Accounts Receivable - CFC"
+	rca.currency = "USD"
+	rca.company = frappe.defaults.get_defaults().get("company")
+	rca.save()
+
+	pca = frappe.new_doc("Account")  # payable clearing account
+	pca.account_name = "Electronic Payments Payable"
+	pca.account_number = "2130"
+	pca.account_type = "Payable"
+	pca.parent_account = "2100 - Accounts Payable - CFC"
+	pca.currency = "USD"
+	pca.company = frappe.defaults.get_defaults().get("company")
+	pca.save()
+
+	fee = frappe.new_doc("Account")  # provider fee expense account
+	fee.account_name = "Electronic Payments Provider Fees"
+	fee.account_number = "5223"
+	# fee.account_type = ""
+	fee.parent_account = "5200 - Indirect Expenses - CFC"
+	fee.currency = "USD"
+	fee.company = frappe.defaults.get_defaults().get("company")
+	fee.save()
 
 
 def create_payment_terms_templates(settings):
