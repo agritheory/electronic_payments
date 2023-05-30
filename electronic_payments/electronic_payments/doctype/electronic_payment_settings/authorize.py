@@ -1,9 +1,11 @@
 import uuid
 from decimal import Decimal
+import json
 
 import frappe
 from frappe import _
 from frappe.utils.password import get_decrypted_password
+from frappe.utils.data import today
 
 from authorizenet import apicontractsv1
 from authorizenet.apicontrollers import (
@@ -12,9 +14,10 @@ from authorizenet.apicontrollers import (
 	deleteCustomerPaymentProfileController,
 	getTransactionDetailsController,
 	createCustomerPaymentProfileController,
+	getTransactionListController,
 )
 from electronic_payments.electronic_payments.doctype.electronic_payment_settings.common import (
-	create_payment_entry,
+	process_electronic_payment,
 )
 
 
@@ -82,7 +85,13 @@ class AuthorizeNet:
 
 		if response is not None:
 			if response.messages.resultCode == "Ok":
-				create_payment_entry(doc, data, str(response.transactionResponse.transId))
+				frappe.db.set_value(
+					doc.doctype,
+					doc.name,
+					"electronic_payment_reference",
+					str(response.transactionResponse.transId),
+				)
+				process_electronic_payment(doc, data, str(response.transactionResponse.transId))
 				return {
 					"message": "Success",
 					"transaction_id": str(response.transactionResponse.transId),
@@ -273,7 +282,13 @@ class AuthorizeNet:
 								title=f"Error deleting customer payment profile used for {doc.name}",
 							)
 
-					create_payment_entry(doc, data, str(response.transactionResponse.transId))
+					frappe.db.set_value(
+						doc.doctype,
+						doc.name,
+						"electronic_payment_reference",
+						str(response.transactionResponse.transId),
+					)
+					process_electronic_payment(doc, data, str(response.transactionResponse.transId))
 					return {
 						"message": "Success",
 						"transaction_id": str(response.transactionResponse.transId),
@@ -308,7 +323,7 @@ class AuthorizeNet:
 		Handles both credit card refunds and bank account credits
 		TODO: clarify where this function is called and if orig doc / what data can be passed
 		Function needs:
-		- transaction ID (saved in doc.remarks or payment entry)
+		- transaction ID (saved in custom field doc.electronic_payment_reference or payment entry/journal entry)
 		- amount of refund (assumes contained in data)
 		- currency
 		- payment info (can request with transaction ID)
@@ -316,7 +331,7 @@ class AuthorizeNet:
 		  - Bank account refunds need routing number, account number, and account holder's name
 		"""
 		merchantAuth = self.merchant_auth(doc.company)
-		orig_transaction_id = doc.remarks
+		orig_transaction_id = doc.electronic_payment_reference
 		amount = data.get("amount")
 
 		# Validate amount is <= doc grand total less any other refunds
@@ -401,7 +416,7 @@ class AuthorizeNet:
 
 	def void_transaction(self, doc, data):
 		merchantAuth = self.merchant_auth(doc.company)
-		orig_transaction_id = doc.remarks
+		orig_transaction_id = doc.electronic_payment_reference
 
 		transactionrequest = apicontractsv1.transactionRequestType()
 		transactionrequest.transactionType = "voidTransaction"
@@ -512,3 +527,41 @@ class AuthorizeNet:
 
 		frappe.log_error(message=frappe.get_traceback(), title=error_message)
 		return {"error": error_message}
+
+
+def fetch_authorize_transactions(settings):
+	settings = (
+		frappe._dict(json.loads(settings)) if isinstance(settings, str) else settings
+	)
+	sorting = apicontractsv1.TransactionListSorting()
+	sorting.orderBy = apicontractsv1.TransactionListOrderFieldEnum.id
+	sorting.orderDescending = True
+	paging = apicontractsv1.Paging()
+	paging.limit = 1000
+	paging.offset = 1
+
+	transactionListRequest = apicontractsv1.getTransactionListRequest()
+	transactionListRequest.merchantAuthentication = settings.merchant_auth()
+	abbr = frappe.get_value("Company", settings.company, "abbr")
+	transactionListRequest.refId = f"{today()} {abbr}"
+	transactionListRequest.sorting = sorting
+	transactionListRequest.paging = paging
+
+	transactionListController = getTransactionListController(transactionListRequest)
+	transactionListController.execute()
+
+	response = transactionListController.getresponse()
+	error_message = ""
+
+	if response is not None:
+		if response.messages.resultCode == apicontractsv1.messageTypeEnum.Ok:
+			if hasattr(response, "transactions"):
+				return {
+					"message": "Success",
+					"transactions": response.transactions,
+				}  # TODO: handle response to create a list of frappe._dict objects for each transaction
+	else:
+		error_message = "No response"
+
+	frappe.log_error(message=frappe.get_traceback(), title=error_message)
+	return {"error": error_message}

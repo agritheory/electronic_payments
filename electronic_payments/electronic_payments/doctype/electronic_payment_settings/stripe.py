@@ -1,10 +1,14 @@
+import json
+import datetime
+from dateutil.relativedelta import relativedelta
+
 import frappe
 from frappe import _
 from frappe.utils.password import get_decrypted_password
 
 import stripe
 from electronic_payments.electronic_payments.doctype.electronic_payment_settings.common import (
-	create_payment_entry,
+	process_electronic_payment,
 )
 
 """
@@ -153,6 +157,7 @@ class Stripe:
 					amount=int(doc.grand_total * self.currency_multiplier(currency)),
 					currency=currency,
 					customer=customer_id,
+					invoice=doc.name,
 					description=doc.name,
 					setup_future_usage="off_session",  # Indicates this payment method will be used in future PaymentIntents and saves to Customer. off_session = can charge customer at later time, on_session = can only charge in live session
 					payment_method_types=["us_bank_account"],
@@ -194,6 +199,7 @@ class Stripe:
 					currency=currency,
 					confirm=True,
 					description=doc.name,
+					invoice=doc.name,
 					payment_method=pm_response.get("transaction_id"),
 					# automatic_payment_methods={"enabled": True},  # Company would need to set up payment methods in their Stripe dashboard
 					# off_session=False if data.get('save_date') != 'Charge now' else True,  # Use with confirm=True and collecting payment data to charge later
@@ -202,7 +208,10 @@ class Stripe:
 				)
 
 				if response.status == "succeeded":
-					create_payment_entry(doc, data, response.id)
+					frappe.db.set_value(
+						doc.doctype, doc.name, "electronic_payment_reference", str(response.id)
+					)
+					process_electronic_payment(doc, data, response.id)
 					return {"message": "Success", "transaction_id": response.id}
 				elif response.status == "processing":
 					# TODO: handle follow up in UI
@@ -331,7 +340,8 @@ class Stripe:
 				customer=customer_profile_id,
 				payment_method_types=["card", "us_bank_account"],
 				payment_method=payment_profile_id,
-				description=doc.name,  # optional
+				description=doc.name,
+				invoice=doc.name,
 			)
 			if response.status == "succeeded":
 				if not frappe.get_value(
@@ -344,7 +354,10 @@ class Stripe:
 						{"party": doc.customer, "payment_profile_id": payment_profile_id},
 					).delete()
 					stripe.PaymentMethod.detach(payment_profile_id)
-				create_payment_entry(doc, data, response.id)
+				frappe.db.set_value(
+					doc.doctype, doc.name, "electronic_payment_reference", str(response.id)
+				)
+				process_electronic_payment(doc, data, response.id)
 				return {"message": "Success", "transaction_id": response.id}
 			elif response.status == "processing":
 				# TODO: handle follow up in UI
@@ -375,7 +388,7 @@ class Stripe:
 		    (amount technically only needed if it's a partial refund, will default to entire charge)
 		"""
 		self.get_password(doc.company)
-		orig_transaction_id = doc.remarks
+		orig_transaction_id = doc.electronic_payment_reference
 
 		try:
 			currency = frappe.defaults.get_global_default("currency").lower()
@@ -384,7 +397,7 @@ class Stripe:
 				amount=int(data.get("amount") * self.currency_multiplier(currency)),
 			)
 			if response.status == "succeeded":
-				# TODO: reverse/cancel payment entry
+				# TODO: reverse/cancel payment/journal entry
 				return {"message": "Success", "transaction_id": response.id}
 			elif response.status == "pending":
 				# TODO: handle follow up in UI
@@ -404,3 +417,58 @@ class Stripe:
 	def void_transaction(self, doc, data):
 		# No separate workflow for this in Stripe
 		self.refund_transaction(doc, data)
+
+
+def fetch_stripe_transactions(settings):
+	"""
+	API call to collect all charge or payment transactions since midnight the day prior
+	to when called. Returns the API response of transaction data.
+
+	Assumptions:
+	- Scheduler called at midnight local time and retrieves transactions as of midnight
+	  one day prior
+
+	:param settings: Electronic Payment Settings document
+	:return: list of frappe._dict objects including transactional data for each
+	        transaction
+	"""
+	settings = (
+		frappe._dict(json.loads(settings)) if isinstance(settings, str) else settings
+	)
+	# utc_one_day_ago = datetime.datetime.now(datetime.timezone.utc) + relativedelta(days=-1)
+	from_datetime = (
+		datetime.datetime.combine(datetime.date.today(), datetime.time(0))
+	) + relativedelta(
+		days=-1
+	)  # Midnight one day ago
+	from_timestamp = int(
+		from_datetime.timestamp()
+	)  # TODO: more precision using timezones? A timestamp from naive datetime assumes local time based on the machine calling this function
+	transactions = []
+
+	try:
+		response = stripe.BalanceTransaction.list(
+			limit=100, created={"gte": from_timestamp}  # requires Unix timestamp as integer
+		)
+		if hasattr(response, "data"):
+			batch_txns = [frappe._dict(txn) for txn in response["data"]]
+			transactions.extend(batch_txns)
+		# Collect remaining transactions if more than 100
+		while response["has_more"]:
+			last_id = response["data"][-1]["id"]
+			response = stripe.BalanceTransaction.list(
+				limit=100, created={"gte": from_timestamp}, starting_after=last_id
+			)
+			if hasattr(response, "data"):
+				batch_txns = [frappe._dict(txn) for txn in response["data"]]
+				transactions.extend(batch_txns)
+		return {"message": "Success", "transactions": transactions}
+	except Exception as e:
+		try:
+			frappe.log_error(
+				message=frappe.get_traceback(), title=f"{e.code}: {e.type}. {e.message}"
+			)
+			return {"error": f"{e.code}: {e.type}. {e.message}"}
+		except Exception as _e:  # non-Stripe error, something else went wrong
+			frappe.log_error(message=frappe.get_traceback(), title=f"{e}")
+			return {"error": f"{_e}"}
