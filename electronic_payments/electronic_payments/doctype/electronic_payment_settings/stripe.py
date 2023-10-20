@@ -144,7 +144,7 @@ class Stripe:
 				}  # e.code has status code, e.type is one of 4 error types, e.message is a human-readable message providing more details about the error
 			except Exception as _e:  # non-Stripe error, something else went wrong
 				frappe.log_error(message=frappe.get_traceback(), title=f"{e}")
-				return {"error": f"{_e}"}
+				return {"error": f"{e}"}
 
 	def create_payment_intent(self, doc, data):
 		# For New ACH transactions, creates an un-confirmed PaymentIntent and returns the client secret
@@ -184,7 +184,7 @@ class Stripe:
 				}  # e.code has status code, e.type is one of 4 error types, e.message is a human-readable message providing more details about the error
 			except Exception as _e:  # non-Stripe error, something else went wrong
 				frappe.log_error(message=frappe.get_traceback(), title=f"{e}")
-				return {"error": f"{_e}"}
+				return {"error": f"{e}"}
 
 	def process_credit_card(self, doc, data):
 		self.get_password(doc.company)
@@ -237,7 +237,7 @@ class Stripe:
 				}  # e.code has status code, e.type is one of 4 error types, e.message is a human-readable message providing more details about the error
 			except Exception as _e:  # non-Stripe error, something else went wrong
 				frappe.log_error(message=frappe.get_traceback(), title=f"{e}")
-				return {"error": f"{_e}"}
+				return {"error": f"{e}"}
 
 	def create_customer_profile(self, doc, data):
 		self.get_password(doc.company)
@@ -261,7 +261,7 @@ class Stripe:
 				return {"error": f"{e.code}: {e.type}. {e.message}"}
 			except Exception as _e:  # non-Stripe error, something else went wrong
 				frappe.log_error(message=frappe.get_traceback(), title=f"{e}")
-				return {"error": f"{_e}"}
+				return {"error": f"{e}"}
 
 	def create_customer_payment_profile(self, doc, data):
 		self.get_password(doc.company)
@@ -313,7 +313,7 @@ class Stripe:
 				return {"error": f"{e.code}: {e.type}. {e.message}"}
 			except Exception as _e:  # non-Stripe error, something else went wrong
 				frappe.log_error(message=frappe.get_traceback(), title=f"{e}")
-				return {"error": f"{_e}"}
+				return {"error": f"{e}"}
 
 	def charge_customer_profile(self, doc, data):
 		self.get_password(doc.company)
@@ -379,7 +379,7 @@ class Stripe:
 				return {"error": f"{e.code}: {e.type}. {e.message}"}
 			except Exception as _e:  # non-Stripe error, something else went wrong
 				frappe.log_error(message=frappe.get_traceback(), title=f"{e}")
-				return {"error": f"{_e}"}
+				return {"error": f"{e}"}
 
 	def refund_transaction(self, doc, data):
 		"""
@@ -412,7 +412,7 @@ class Stripe:
 				return {"error": f"{e.code}: {e.type}. {e.message}"}
 			except Exception as _e:  # non-Stripe error, something else went wrong
 				frappe.log_error(message=frappe.get_traceback(), title=f"{e}")
-				return {"error": f"{_e}"}
+				return {"error": f"{e}"}
 
 	def void_transaction(self, doc, data):
 		# No separate workflow for this in Stripe
@@ -471,4 +471,4 @@ def fetch_stripe_transactions(settings):
 			return {"error": f"{e.code}: {e.type}. {e.message}"}
 		except Exception as _e:  # non-Stripe error, something else went wrong
 			frappe.log_error(message=frappe.get_traceback(), title=f"{e}")
-			return {"error": f"{_e}"}
+			return {"error": f"{e}"}
