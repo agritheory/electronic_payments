@@ -9,6 +9,8 @@ readme = "README.md"
 dynamic = ["version"]
 dependencies = [
     "pytest~=7.4.0",
+    "authorizenet~=1.1.4",
+    "stripe~=2.56.0"
 ]
 
 [build-system]
