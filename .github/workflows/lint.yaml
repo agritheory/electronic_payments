@@ -10,7 +10,6 @@ env:
 
 jobs:
   lint:
-    needs: [ py_json_merge ]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
