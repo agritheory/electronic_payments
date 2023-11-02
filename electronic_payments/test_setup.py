@@ -10,7 +10,6 @@ from erpnext.accounts.doctype.account.account import update_account_number
 
 def before_test():
 	frappe.clear_cache()
-	today = frappe.utils.getdate()
 	setup_complete({
 		"currency": "USD",
 		"full_name": "Administrator",
@@ -19,8 +18,8 @@ def before_test():
 		"company_abbr": "CFC",
 		"domains": ["Distribution"],
 		"country": "United States",
-		"fy_start_date": today.replace(month=1, day=1).isoformat(),
-		"fy_end_date": today.replace(month=12, day=31).isoformat(),
+		"fy_start_date": frappe.utils.getdate().replace(month=1, day=1).isoformat(),
+		"fy_end_date": frappe.utils.getdate().replace(month=12, day=31).isoformat(),
 		"language": "english",
 		"company_tagline": "Chelsea Fruit Co",
 		"email": "support@agritheory.dev",
@@ -254,12 +253,12 @@ customers = [
 def create_test_data():
 	setup_accounts()
 	settings = frappe._dict({
-		'day': datetime.date(int(frappe.defaults.get_defaults().get('fiscal_year')), 1 ,1),
-		'company': frappe.defaults.get_defaults().get('company'),
+		'day': frappe.utils.getdate().replace(month=1, day=1).isoformat(),
+		'company': "Chelsea Fruit Co",
 		'company_account': frappe.get_value("Account",
-			{"account_type": "Bank", "company": frappe.defaults.get_defaults().get('company'), "is_group": 0}),
+			{"account_type": "Bank", "company": "Chelsea Fruit Co", "is_group": 0}),
 		"warehouse": frappe.get_value("Warehouse",
-			{"warehouse_name": "Finished Goods", "company": frappe.defaults.get_defaults().get('company')})
+			{"warehouse_name": "Finished Goods", "company": "Chelsea Fruit Co",})
 		})
 	create_bank_and_bank_account(settings)
 	create_payment_terms_templates(settings)

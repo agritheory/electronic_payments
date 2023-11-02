@@ -9,7 +9,7 @@ readme = "README.md"
 dynamic = ["version"]
 dependencies = [
     "pytest~=7.4.0",
-    "authorizenet~=1.1.4",
+    "authorizenet @ git+https://github.com/agritheory/authorizenet.git@main",
     "stripe~=2.56.0"
 ]
 
