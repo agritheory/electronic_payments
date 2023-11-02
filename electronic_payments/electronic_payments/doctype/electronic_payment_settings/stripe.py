@@ -1,5 +1,2 @@
-
-
-
-class Stripe():
+class Stripe:
 	pass

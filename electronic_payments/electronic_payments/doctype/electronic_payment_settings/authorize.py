@@ -9,25 +9,25 @@ from authorizenet import apicontractsv1
 from authorizenet.apicontrollers import *
 
 
-class AuthorizeNet():
+class AuthorizeNet:
 	def merchant_auth(self):
 		merchantAuth = apicontractsv1.merchantAuthenticationType()
-		merchantAuth.name = self.get_password('api_key') # get_password
-		merchantAuth.transactionKey = self.get_password('transaction_key') # get_password
+		merchantAuth.name = self.get_password("api_key")  # get_password
+		merchantAuth.transactionKey = self.get_password("transaction_key")  # get_password
 		return merchantAuth
 
 	def process_credit_card(self, doc, data):
-		card_number = data.get('card_number')
+		card_number = data.get("card_number")
 		creditCard = apicontractsv1.creditCardType()
-		creditCard.cardNumber = card_number.replace(' ', '')
-		creditCard.expirationDate = data.get('card_expiration_date') 
+		creditCard.cardNumber = card_number.replace(" ", "")
+		creditCard.expirationDate = data.get("card_expiration_date")
 		payment = apicontractsv1.paymentType()
-		
+
 		payment.creditCard = apicontractsv1.transactionRequestType()
-		transactionrequest.transactionType ="authCaptureTransaction"
-		transactionrequest.amount = data.get('amount')
+		transactionrequest.transactionType = "authCaptureTransaction"
+		transactionrequest.amount = data.get("amount")
 		transactionrequest.payment = payment
-		
+
 		createtransactionrequest = apicontractsv1.createTransactionRequest()
 		createtransactionrequest.merchantAuthentication = self.merchant_auth()
 		createtransactionrequest.refId = self.ref_id
@@ -38,65 +38,63 @@ class AuthorizeNet():
 
 		response = createtransactioncontroller.getresponse()
 		if response.messages.resultCode == "Ok":
-			return {'transaction_id': response.transactionResponse.transId}
+			return {"transaction_id": response.transactionResponse.transId}
 		else:
 			# frappe.log_error
-			return {'error': response.messages.resultCode}
+			return {"error": response.messages.resultCode}
 
 	def create_customer_profile(self, doc, data):
 		createCustomerProfile = apicontractsv1.createCustomerProfileRequest()
 		createCustomerProfile.merchantAuthentication = self.merchant_auth()
 		createCustomerProfile.profile = apicontractsv1.customerProfileType(
-			merchantCustomerId=f'{uuid.uuid4().int>>64}',
-			description=doc.customer_name,
-			email=''
+			merchantCustomerId=f"{uuid.uuid4().int>>64}", description=doc.customer_name, email=""
 		)
 		controller = createCustomerProfileController(createCustomerProfile)
 		controller.execute()
 		response = controller.getresponse()
 
 		if response.messages.resultCode == "Ok":
-				return response.customerProfileId
+			return response.customerProfileId
 		else:
 			# frappe.log_error(message='', title='')
-			return {'error': str(response.messages.message[0]['text'].text)}
+			return {"error": str(response.messages.message[0]["text"].text)}
 
 	def create_customer_payment_profile(self, doc, data):
-		if not data.get('customer_profile'):
-			customer_profile_id = frappe.get_value('Customer', doc.customer, 'authorize_customer_profile')
+		if not data.get("customer_profile"):
+			customer_profile_id = frappe.get_value("Customer", doc.customer, "authorize_customer_profile")
 		else:
-			customer_profile_id = data.get('customer_profile')
+			customer_profile_id = data.get("customer_profile")
 		payment_profile_id = frappe.get_value(
-			'Electronic Payment Profile',
-			{'payment_type': data.mode_of_payment.replace('New ', ''), 'customer': doc.customer},
-			'payment_profile_id'
+			"Electronic Payment Profile",
+			{"payment_type": data.mode_of_payment.replace("New ", ""), "customer": doc.customer},
+			"payment_profile_id",
 		)
 		# if data.get('save_data') # TODO: check if customer wants payment method saved
-		frappe.db.set_value('Customer', doc.customer, 'authorize_customer_profile', payment_profile_id)
+		frappe.db.set_value("Customer", doc.customer, "authorize_customer_profile", payment_profile_id)
 		merchantAuth = self.merchant_auth()
 		payment = apicontractsv1.paymentType()
 		profile = apicontractsv1.customerPaymentProfileType()
-		card_number = data.get('card_number')
-		card_number = card_number.replace(' ', '')
-		if data.mode_of_payment.replace('New ', '') == 'Card':
+		card_number = data.get("card_number")
+		card_number = card_number.replace(" ", "")
+		if data.mode_of_payment.replace("New ", "") == "Card":
 			creditCard = apicontractsv1.creditCardType()
 			creditCard.cardNumber = card_number
-			creditCard.expirationDate = data.get('card_expiration_date')
+			creditCard.expirationDate = data.get("card_expiration_date")
 			payment.creditCard = creditCard
 			billTo = apicontractsv1.customerAddressType()
-			billTo.firstName = ' '.join(data.get('cardholder_name').split(' ')[0:-1])
-			billTo.lastName = data.get('cardholder_name').split(' ')[-1][0]
-		elif data.mode_of_payment.replace('New ', '') == 'ACH':
+			billTo.firstName = " ".join(data.get("cardholder_name").split(" ")[0:-1])
+			billTo.lastName = data.get("cardholder_name").split(" ")[-1][0]
+		elif data.mode_of_payment.replace("New ", "") == "ACH":
 			bankAccount = apicontractsv1.bankAccountType()
 			accountType = apicontractsv1.bankAccountTypeEnum
 			bankAccount.accountType = accountType.checking
-			bankAccount.routingNumber = str(data.get('routing_number'))
-			bankAccount.accountNumber = str(data.get('account_number'))
-			bankAccount.nameOnAccount = data.get('account_holders_name')
+			bankAccount.routingNumber = str(data.get("routing_number"))
+			bankAccount.accountNumber = str(data.get("account_number"))
+			bankAccount.nameOnAccount = data.get("account_holders_name")
 			payment.bankAccount = bankAccount
 			billTo = apicontractsv1.customerAddressType()
-			billTo.firstName = ' '.join(data.get('account_holders_name').split(' ')[0:-1])
-			billTo.lastName = data.get('account_holders_name').split(' ')[-1][0]
+			billTo.firstName = " ".join(data.get("account_holders_name").split(" ")[0:-1])
+			billTo.lastName = data.get("account_holders_name").split(" ")[-1][0]
 
 		profile.payment = payment
 		profile.billTo = billTo
@@ -112,33 +110,31 @@ class AuthorizeNet():
 		response = controller.getresponse()
 
 		if response.messages.resultCode == "Ok":
-			payment_profile = frappe.new_doc('Electronic Payment Profile')
-			payment_profile.payment_type = data.mode_of_payment.replace('New ', '')
+			payment_profile = frappe.new_doc("Electronic Payment Profile")
+			payment_profile.payment_type = data.mode_of_payment.replace("New ", "")
 			payment_profile.customer = doc.customer
-			payment_profile.reference = f"**** **** **** {card_number[-4:]}" if card_number else f"*{data.get('account_number')[-4:]}"
+			payment_profile.reference = (
+				f"**** **** **** {card_number[-4:]}" if card_number else f"*{data.get('account_number')[-4:]}"
+			)
 			payment_profile.payment_profile_id = str(response.customerPaymentProfileId)
 			payment_profile.customer_profile = str(customer_profile_id)
-			payment_profile.retain = 1 if data.save_data == 'Save payment data for this customer' else 0
+			payment_profile.retain = 1 if data.save_data == "Save payment data for this customer" else 0
 			payment_profile.save()
 			return payment_profile
 		else:
-			return {'error': str(response.messages.message[0]['text'].text)}
+			return {"error": str(response.messages.message[0]["text"].text)}
 
 	def charge_customer_profile(self, doc, data):
-		if not data.get('customer_profile'):
-			customer_profile_id = frappe.get_value('Customer', doc.customer, 'authorize_customer_profile')
-		else: 
-			customer_profile_id = data.get('customer_profile')
+		if not data.get("customer_profile"):
+			customer_profile_id = frappe.get_value("Customer", doc.customer, "authorize_customer_profile")
+		else:
+			customer_profile_id = data.get("customer_profile")
 		if not customer_profile_id:
 			customer_profile_id = frappe.get_value(
-				'Electronic Payment Profile',
-				{'customer': doc.customer},
-				'customer_profile'
-			)	
+				"Electronic Payment Profile", {"customer": doc.customer}, "customer_profile"
+			)
 		payment_profile_id = frappe.get_value(
-			'Electronic Payment Profile',
-			{'customer': doc.customer},
-			'payment_profile_id'
+			"Electronic Payment Profile", {"customer": doc.customer}, "payment_profile_id"
 		)
 		merchantAuth = self.merchant_auth()
 
@@ -164,23 +160,25 @@ class AuthorizeNet():
 
 		if response is not None:
 			if response.messages.resultCode == "Ok":
-				if hasattr(response.transactionResponse, 'messages') == True:
-					if not frappe.get_value('Electronic Payment Profile', {'customer': doc.customer}, 'retain'):
-						frappe.get_doc('Electronic Payment Profile', {'customer': doc.customer}).delete()
+				if hasattr(response.transactionResponse, "messages") == True:
+					if not frappe.get_value("Electronic Payment Profile", {"customer": doc.customer}, "retain"):
+						frappe.get_doc("Electronic Payment Profile", {"customer": doc.customer}).delete()
 					create_payment_entry(doc, data, response.transactionResponse.transId)
 					return {"message": "Success", "transaction_id": str(response.transactionResponse.transId)}
 				else:
-					if hasattr(response.transactionResponse, 'errors') == True:
-						return {'error': str(response.transactionResponse.errors.error[0].errorText)}
+					if hasattr(response.transactionResponse, "errors") == True:
+						return {"error": str(response.transactionResponse.errors.error[0].errorText)}
 			else:
-				if hasattr(response, 'transactionResponse') == True and hasattr(response.transactionResponse, 'errors') == True:
-					return {'error': str(response.transactionResponse.errors.error[0].errorText)}
+				if (
+					hasattr(response, "transactionResponse") == True
+					and hasattr(response.transactionResponse, "errors") == True
+				):
+					return {"error": str(response.transactionResponse.errors.error[0].errorText)}
 				else:
-					return {'error': str(response.messages.message[0]['text'].text)}
+					return {"error": str(response.messages.message[0]["text"].text)}
 		else:
-			return {'error': 'No Repsonse'}
-		
-	
+			return {"error": "No Repsonse"}
+
 	# def credit_bank_account(self, data):
 	# 	# https://github.com/AuthorizeNet/sample-code-python/blob/master/PaymentTransactions/credit-bank-account.py
 	# 	pass
