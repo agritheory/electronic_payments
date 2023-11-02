@@ -98,8 +98,6 @@ def create_journal_entry(doc, data, transaction_id):
 			"party": party,
 			contra_account_key: doc.grand_total,
 			contra_account_currency_key: doc.grand_total,
-			"reference_type": doc.doctype,
-			"reference_name": doc.name,
 			"user_remarks": str(transaction_id),
 			# need a general purpose function to move all accounting dimensions
 			"cost_center": doc.cost_center,
