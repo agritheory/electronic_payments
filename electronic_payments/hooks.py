@@ -1,4 +1,4 @@
-from . import __version__ as app_version
+from . import __version__ as app_version  # noqa: F401
 
 app_name = "electronic_payments"
 app_title = "Electronic Payments"
@@ -8,6 +8,7 @@ app_icon = "octicon octicon-file-directory"
 app_color = "grey"
 app_email = "support@agritheory.dev"
 app_license = "MIT"
+required_apps = ["frappe/erpnext"]
 
 # Includes in <head>
 # ------------------
@@ -47,7 +48,7 @@ doctype_js = {
 
 # website user home page (by Role)
 # role_home_page = {
-#	"Role": "home_page"
+# 	"Role": "home_page"
 # }
 
 # Generators
@@ -68,12 +69,11 @@ doctype_js = {
 # before_uninstall = "electronic_payments.uninstall.before_uninstall"
 # after_uninstall = "electronic_payments.uninstall.after_uninstall"
 
-# Migration 
+# Migration
 # ------------
 
 # before_migrate = "electronic_payments.uninstall.before_uninstall"
-after_migrate = 'electronic_payments.customize.load_customizations'
-
+# after_migrate = 'electronic_payments.customize.load_customizations'
 
 
 # Desk Notifications
@@ -87,11 +87,11 @@ after_migrate = 'electronic_payments.customize.load_customizations'
 # Permissions evaluated in scripted ways
 
 # permission_query_conditions = {
-#	"Event": "frappe.desk.doctype.event.event.get_permission_query_conditions",
+# 	"Event": "frappe.desk.doctype.event.event.get_permission_query_conditions",
 # }
 #
 # has_permission = {
-#	"Event": "frappe.desk.doctype.event.event.has_permission",
+# 	"Event": "frappe.desk.doctype.event.event.has_permission",
 # }
 
 # DocType Class
@@ -99,7 +99,7 @@ after_migrate = 'electronic_payments.customize.load_customizations'
 # Override standard doctype classes
 
 # override_doctype_class = {
-#	"ToDo": "custom_app.overrides.CustomToDo"
+# 	"ToDo": "custom_app.overrides.CustomToDo"
 # }
 
 # Document Events
@@ -107,32 +107,32 @@ after_migrate = 'electronic_payments.customize.load_customizations'
 # Hook on document methods and events
 
 # doc_events = {
-#	"*": {
-#		"on_update": "method",
-#		"on_cancel": "method",
-#		"on_trash": "method"
-#	}
+# 	"*": {
+# 		"on_update": "method",
+# 		"on_cancel": "method",
+# 		"on_trash": "method"
+# 	}
 # }
 
 # Scheduled Tasks
 # ---------------
 
 # scheduler_events = {
-#	"all": [
-#		"electronic_payments.tasks.all"
-#	],
-#	"daily": [
-#		"electronic_payments.tasks.daily"
-#	],
-#	"hourly": [
-#		"electronic_payments.tasks.hourly"
-#	],
-#	"weekly": [
-#		"electronic_payments.tasks.weekly"
-#	]
-#	"monthly": [
-#		"electronic_payments.tasks.monthly"
-#	]
+# 	"all": [
+# 		"electronic_payments.tasks.all"
+# 	],
+# 	"daily": [
+# 		"electronic_payments.tasks.daily"
+# 	],
+# 	"hourly": [
+# 		"electronic_payments.tasks.hourly"
+# 	],
+# 	"weekly": [
+# 		"electronic_payments.tasks.weekly"
+# 	]
+# 	"monthly": [
+# 		"electronic_payments.tasks.monthly"
+# 	]
 # }
 
 # Testing
@@ -144,14 +144,14 @@ after_migrate = 'electronic_payments.customize.load_customizations'
 # ------------------------------
 #
 # override_whitelisted_methods = {
-#	"frappe.desk.doctype.event.event.get_events": "electronic_payments.event.get_events"
+# 	"frappe.desk.doctype.event.event.get_events": "electronic_payments.event.get_events"
 # }
 #
 # each overriding function accepts a `data` argument;
 # generated from the base implementation of the doctype dashboard,
 # along with any modifications made in other Frappe apps
 # override_doctype_dashboards = {
-#	"Task": "electronic_payments.task.get_dashboard_data"
+# 	"Task": "electronic_payments.task.get_dashboard_data"
 # }
 
 # exempt linked doctypes from being automatically cancelled
@@ -178,15 +178,12 @@ user_data_fields = [
 		"doctype": "{doctype_3}",
 		"strict": False,
 	},
-	{
-		"doctype": "{doctype_4}"
-	}
+	{"doctype": "{doctype_4}"},
 ]
 
 # Authentication and authorization
 # --------------------------------
 
 # auth_hooks = [
-#	"electronic_payments.auth.validate"
+# 	"electronic_payments.auth.validate"
 # ]
-
