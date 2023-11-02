@@ -253,7 +253,7 @@ customers = [
 def create_test_data():
 	setup_accounts()
 	settings = frappe._dict({
-		'day': frappe.utils.getdate().replace(month=1, day=1).isoformat(),
+		'day': frappe.utils.getdate().replace(month=1, day=1),
 		'company': "Chelsea Fruit Co",
 		'company_account': frappe.get_value("Account",
 			{"account_type": "Bank", "company": "Chelsea Fruit Co", "is_group": 0}),
