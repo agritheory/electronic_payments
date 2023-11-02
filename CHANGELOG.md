@@ -2,6 +2,13 @@
 
 
 
+## v0.1.1 (2023-11-02)
+
+### Fix
+
+* fix: add requirements to pyproject.toml ([`65e8224`](https://github.com/agritheory/electronic_payments/commit/65e82243c7520e90a5cb04ad672681625bb60b48))
+
+
 ## v0.1.0 (2023-11-02)
 
 ### Ci
