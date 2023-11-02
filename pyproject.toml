@@ -36,7 +36,7 @@ logging_use_named_masks = false
 major_on_zero = true
 tag_format = "v{version}"
 version_variables = [
-    "check_run/__init__.py:__version__",
+    "electronic_payments/__init__.py:__version__",
     "pyproject.toml:version"
 ]
 
