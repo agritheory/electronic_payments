@@ -87,7 +87,8 @@ The endpoint should be configured in the Electronic Payments Settings with the f
 
 ```
 
-
-### License
-
-MIT
+To run `mypy` locally:
+```shell
+source env/bin/activate
+mypy ./apps/check_run/check_run --ignore-missing-imports
+```
