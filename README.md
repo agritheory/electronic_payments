@@ -90,5 +90,5 @@ The endpoint should be configured in the Electronic Payments Settings with the f
 To run `mypy` locally:
 ```shell
 source env/bin/activate
-mypy ./apps/check_run/check_run --ignore-missing-imports
+mypy ./apps/electronic_payments --ignore-missing-imports
 ```
