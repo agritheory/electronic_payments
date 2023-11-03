@@ -163,15 +163,12 @@ function render_frm_data(frm) {
 
 async function process(frm, dialog) {
 	let values = dialog.get_values()
-	console.log('In JS process')
-	console.log(values)
 	await frappe
 		.xcall(
 			'electronic_payments.electronic_payments.doctype.electronic_payment_settings.electronic_payment_settings.process',
 			{ doc: frm.doc, data: values }
 		)
 		.then(r => {
-			console.log(r)
 			if (r.message == 'Success') {
 				dialog.fields_dict.ht.$wrapper.html('Success!')
 			} else {
@@ -192,7 +189,6 @@ async function payment_options(frm) {
 		.then(r => {
 			payment_profile = r.message
 		})
-	console.log(frm.doc.pre_authorization_token, payment_profile)
 	if (frm.doc.pre_authorization_token || payment_profile.hasOwnProperty('payment_profile_id')) {
 		return ['Saved Payment Method\nNew Card\nNew ACH', payment_profile]
 	} else {

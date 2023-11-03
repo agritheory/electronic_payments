@@ -49,7 +49,6 @@ def process(doc, data):
 		frappe.msgprint(frappe._(f"No Electronic Payment Settings found for {doc.company}"))
 	client = settings.client()
 	response = client.process_transaction(doc, data)
-	print(response)
 	return response
 
 

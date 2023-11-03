@@ -107,6 +107,7 @@ class Stripe:
 			if data.mode_of_payment.replace("New ", "") == "Card":
 				card_number = data.get("card_number")
 				card_number = card_number.replace(" ", "")
+				# TODO: replace with UI data collection
 				response = stripe.PaymentMethod.create(
 					type="card",
 					card={
