@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-class Stripe:
-	pass
-=======
 import json
 import datetime
 from dateutil.relativedelta import relativedelta
@@ -141,9 +137,7 @@ class Stripe:
 			return {"message": "Success", "transaction_id": response.id}
 		except Exception as e:
 			try:
-				frappe.log_error(
-					message=frappe.get_traceback(), title=f"{e.code}: {e.type}. {e.message}"
-				)
+				frappe.log_error(message=frappe.get_traceback(), title=f"{e.code}: {e.type}. {e.message}")
 				return {
 					"error": f"{e.code}: {e.type}. {e.message}"
 				}  # e.code has status code, e.type is one of 4 error types, e.message is a human-readable message providing more details about the error
@@ -181,9 +175,7 @@ class Stripe:
 				return customer_id
 		except Exception as e:
 			try:
-				frappe.log_error(
-					message=frappe.get_traceback(), title=f"{e.code}: {e.type}. {e.message}"
-				)
+				frappe.log_error(message=frappe.get_traceback(), title=f"{e.code}: {e.type}. {e.message}")
 				return {
 					"error": f"{e.code}: {e.type}. {e.message}"
 				}  # e.code has status code, e.type is one of 4 error types, e.message is a human-readable message providing more details about the error
@@ -213,9 +205,7 @@ class Stripe:
 				)
 
 				if response.status == "succeeded":
-					frappe.db.set_value(
-						doc.doctype, doc.name, "electronic_payment_reference", str(response.id)
-					)
+					frappe.db.set_value(doc.doctype, doc.name, "electronic_payment_reference", str(response.id))
 					process_electronic_payment(doc, data, response.id)
 					return {"message": "Success", "transaction_id": response.id}
 				elif response.status == "processing":
@@ -234,9 +224,7 @@ class Stripe:
 				return pm_response
 		except Exception as e:
 			try:
-				frappe.log_error(
-					message=frappe.get_traceback(), title=f"{e.code}: {e.type}. {e.message}"
-				)
+				frappe.log_error(message=frappe.get_traceback(), title=f"{e.code}: {e.type}. {e.message}")
 				return {
 					"error": f"{e.code}: {e.type}. {e.message}"
 				}  # e.code has status code, e.type is one of 4 error types, e.message is a human-readable message providing more details about the error
@@ -247,22 +235,16 @@ class Stripe:
 	def create_customer_profile(self, doc, data):
 		self.get_password(doc.company)
 		try:
-			existing_customer_id = frappe.get_value(
-				"Customer", doc.customer, "electronic_payment_profile"
-			)
+			existing_customer_id = frappe.get_value("Customer", doc.customer, "electronic_payment_profile")
 			if existing_customer_id:
 				return {"message": "Success", "transaction_id": existing_customer_id}
 			else:
 				response = stripe.Customer.create(name=doc.customer)
-				frappe.db.set_value(
-					"Customer", doc.customer, "electronic_payment_profile", response.id
-				)
+				frappe.db.set_value("Customer", doc.customer, "electronic_payment_profile", response.id)
 				return {"message": "Success", "transaction_id": response.id}
 		except Exception as e:
 			try:
-				frappe.log_error(
-					message=frappe.get_traceback(), title=f"{e.code}: {e.type}. {e.message}"
-				)
+				frappe.log_error(message=frappe.get_traceback(), title=f"{e.code}: {e.type}. {e.message}")
 				return {"error": f"{e.code}: {e.type}. {e.message}"}
 			except Exception as _e:  # non-Stripe error, something else went wrong
 				frappe.log_error(message=frappe.get_traceback(), title=f"{e}")
@@ -271,9 +253,7 @@ class Stripe:
 	def create_customer_payment_profile(self, doc, data):
 		self.get_password(doc.company)
 		if not data.get("customer_profile"):
-			customer_profile_id = frappe.get_value(
-				"Customer", doc.customer, "electronic_payment_profile"
-			)
+			customer_profile_id = frappe.get_value("Customer", doc.customer, "electronic_payment_profile")
 		else:
 			customer_profile_id = data.get("customer_profile")
 
@@ -298,23 +278,17 @@ class Stripe:
 				payment_profile.party_type = "Customer"
 				payment_profile.party = doc.customer
 				payment_profile.payment_type = mop
-				payment_profile.reference = (
-					f"**** **** **** {last4}" if mop == "Card" else f"*{last4}"
-				)
+				payment_profile.reference = f"**** **** **** {last4}" if mop == "Card" else f"*{last4}"
 				payment_profile.payment_profile_id = str(response.id)
 				payment_profile.party_profile = str(customer_profile_id)
-				payment_profile.retain = (
-					1 if data.save_data == "Retain payment data for this party" else 0
-				)
+				payment_profile.retain = 1 if data.save_data == "Retain payment data for this party" else 0
 				payment_profile.save()
 				return {"message": "Success", "payment_profile_doc": payment_profile}
 			else:  # error creating the payment method
 				return pm_response
 		except Exception as e:
 			try:
-				frappe.log_error(
-					message=frappe.get_traceback(), title=f"{e.code}: {e.type}. {e.message}"
-				)
+				frappe.log_error(message=frappe.get_traceback(), title=f"{e.code}: {e.type}. {e.message}")
 				return {"error": f"{e.code}: {e.type}. {e.message}"}
 			except Exception as _e:  # non-Stripe error, something else went wrong
 				frappe.log_error(message=frappe.get_traceback(), title=f"{e}")
@@ -323,17 +297,17 @@ class Stripe:
 	def charge_customer_profile(self, doc, data):
 		self.get_password(doc.company)
 		if not data.get("customer_profile"):
-			customer_profile_id = frappe.get_value(
-				"Customer", doc.customer, "electronic_payment_profile"
-			)
+			customer_profile_id = frappe.get_value("Customer", doc.customer, "electronic_payment_profile")
 		else:
 			customer_profile_id = data.get("customer_profile")
 		if not customer_profile_id:
 			customer_profile_id = frappe.get_value(
 				"Electronic Payment Profile", {"party": doc.customer}, "party_profile"
 			)
-		payment_profile_id = frappe.get_value(  # TODO: can there be more than one payment method attached to a customer?
-			"Electronic Payment Profile", {"party": doc.customer}, "payment_profile_id"
+		payment_profile_id = (
+			frappe.get_value(  # TODO: can there be more than one payment method attached to a customer?
+				"Electronic Payment Profile", {"party": doc.customer}, "payment_profile_id"
+			)
 		)
 
 		try:
@@ -359,9 +333,7 @@ class Stripe:
 						{"party": doc.customer, "payment_profile_id": payment_profile_id},
 					).delete()
 					stripe.PaymentMethod.detach(payment_profile_id)
-				frappe.db.set_value(
-					doc.doctype, doc.name, "electronic_payment_reference", str(response.id)
-				)
+				frappe.db.set_value(doc.doctype, doc.name, "electronic_payment_reference", str(response.id))
 				process_electronic_payment(doc, data, response.id)
 				return {"message": "Success", "transaction_id": response.id}
 			elif response.status == "processing":
@@ -378,9 +350,7 @@ class Stripe:
 				return {"error": "Payment failed"}
 		except Exception as e:
 			try:
-				frappe.log_error(
-					message=frappe.get_traceback(), title=f"{e.code}: {e.type}. {e.message}"
-				)
+				frappe.log_error(message=frappe.get_traceback(), title=f"{e.code}: {e.type}. {e.message}")
 				return {"error": f"{e.code}: {e.type}. {e.message}"}
 			except Exception as _e:  # non-Stripe error, something else went wrong
 				frappe.log_error(message=frappe.get_traceback(), title=f"{e}")
@@ -411,9 +381,7 @@ class Stripe:
 				return {"error": f"Refund {response.status}"}
 		except Exception as e:
 			try:
-				frappe.log_error(
-					message=frappe.get_traceback(), title=f"{e.code}: {e.type}. {e.message}"
-				)
+				frappe.log_error(message=frappe.get_traceback(), title=f"{e.code}: {e.type}. {e.message}")
 				return {"error": f"{e.code}: {e.type}. {e.message}"}
 			except Exception as _e:  # non-Stripe error, something else went wrong
 				frappe.log_error(message=frappe.get_traceback(), title=f"{e}")
@@ -437,9 +405,7 @@ def fetch_stripe_transactions(settings):
 	:return: list of frappe._dict objects including transactional data for each
 	        transaction
 	"""
-	settings = (
-		frappe._dict(json.loads(settings)) if isinstance(settings, str) else settings
-	)
+	settings = frappe._dict(json.loads(settings)) if isinstance(settings, str) else settings
 	# utc_one_day_ago = datetime.datetime.now(datetime.timezone.utc) + relativedelta(days=-1)
 	from_datetime = (
 		datetime.datetime.combine(datetime.date.today(), datetime.time(0))
@@ -470,11 +436,8 @@ def fetch_stripe_transactions(settings):
 		return {"message": "Success", "transactions": transactions}
 	except Exception as e:
 		try:
-			frappe.log_error(
-				message=frappe.get_traceback(), title=f"{e.code}: {e.type}. {e.message}"
-			)
+			frappe.log_error(message=frappe.get_traceback(), title=f"{e.code}: {e.type}. {e.message}")
 			return {"error": f"{e.code}: {e.type}. {e.message}"}
 		except Exception as _e:  # non-Stripe error, something else went wrong
 			frappe.log_error(message=frappe.get_traceback(), title=f"{e}")
 			return {"error": f"{e}"}
->>>>>>> stripe
