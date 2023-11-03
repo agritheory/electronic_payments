@@ -163,7 +163,7 @@ class AuthorizeNet:
 			payment.creditCard = creditCard
 			billTo = apicontractsv1.customerAddressType()
 			billTo.firstName = " ".join(data.get("cardholder_name").split(" ")[0:-1])
-			billTo.lastName = data.get("cardholder_name").split(" ")[-1][0]
+			billTo.lastName = data.get("cardholder_name").split(" ")[-1]
 		elif mop == "ACH":
 			account_number = str(data.get("account_number"))
 			last4 = account_number[-4:]
@@ -177,7 +177,7 @@ class AuthorizeNet:
 			payment.bankAccount = bankAccount
 			billTo = apicontractsv1.customerAddressType()
 			billTo.firstName = " ".join(data.get("account_holders_name").split(" ")[0:-1])
-			billTo.lastName = data.get("account_holders_name").split(" ")[-1][0]
+			billTo.lastName = data.get("account_holders_name").split(" ")[-1]
 
 		profile.payment = payment
 		profile.billTo = billTo
