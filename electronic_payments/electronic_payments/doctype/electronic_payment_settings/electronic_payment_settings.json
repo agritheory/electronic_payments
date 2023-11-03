@@ -14,16 +14,27 @@
   "api_key",
   "transaction_key",
   "section_break_5",
-  "clearing_account",
+  "deposit_account",
+  "accepting_fee_account",
   "column_break_7",
+  "use_clearing_account",
+  "accepting_clearing_account",
+  "sending_payments_accounts_section",
+  "withdrawal_account",
+  "enable_sending",
+  "column_break_ra5el",
+  "sending_fee_account",
+  "sending_clearing_account",
   "mode_of_payment"
  ],
  "fields": [
   {
    "fieldname": "company",
    "fieldtype": "Link",
+   "in_list_view": 1,
    "label": "Company",
    "options": "Company",
+   "reqd": 1,
    "unique": 1
   },
   {
@@ -43,13 +54,8 @@
   },
   {
    "fieldname": "section_break_5",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "clearing_account",
-   "fieldtype": "Link",
-   "label": "Clearing Account",
-   "options": "Account"
+   "fieldtype": "Section Break",
+   "label": "Accounts: Accepting Payments"
   },
   {
    "fieldname": "column_break_7",
@@ -58,8 +64,10 @@
   {
    "fieldname": "mode_of_payment",
    "fieldtype": "Link",
+   "hidden": 1,
    "label": "Mode of Payment",
-   "options": "Mode of Payment"
+   "options": "Mode of Payment",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_3",
@@ -75,10 +83,76 @@
    "fieldname": "endpoint",
    "fieldtype": "Data",
    "label": "Endpoint"
+  },
+  {
+   "fieldname": "deposit_account",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Deposit Account",
+   "options": "Account",
+   "reqd": 1
+  },
+  {
+   "fieldname": "use_clearing_account",
+   "fieldtype": "Select",
+   "label": "Use Clearing Account",
+   "options": "Use Journal Entry and Clearing Account\nUse Payment Entry"
+  },
+  {
+   "fieldname": "accepting_fee_account",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Provider Fee Account",
+   "options": "Account",
+   "reqd": 1
+  },
+  {
+   "fieldname": "accepting_clearing_account",
+   "fieldtype": "Link",
+   "label": "Clearing Account",
+   "options": "Account"
+  },
+  {
+   "fieldname": "sending_payments_accounts_section",
+   "fieldtype": "Section Break",
+   "label": "Accounts: Sending Payments"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_sending",
+   "fieldtype": "Check",
+   "label": "Enable Sending Electronic Payments"
+  },
+  {
+   "depends_on": "enable_sending",
+   "fieldname": "withdrawal_account",
+   "fieldtype": "Link",
+   "label": "Withdrawal Account",
+   "mandatory_depends_on": "enable_sending",
+   "options": "Account"
+  },
+  {
+   "depends_on": "enable_sending",
+   "fieldname": "sending_fee_account",
+   "fieldtype": "Link",
+   "label": "Provider Fee Account",
+   "mandatory_depends_on": "enable_sending",
+   "options": "Account"
+  },
+  {
+   "fieldname": "column_break_ra5el",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "enable_sending",
+   "fieldname": "sending_clearing_account",
+   "fieldtype": "Link",
+   "label": "Clearing Account",
+   "options": "Account"
   }
  ],
  "links": [],
- "modified": "2023-03-08 15:45:14.853154",
+ "modified": "2023-05-26 16:56:12.567710",
  "modified_by": "Administrator",
  "module": "Electronic Payments",
  "name": "Electronic Payment Settings",

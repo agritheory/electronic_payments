@@ -60,6 +60,12 @@ Set developer mode in `site_config.json`
 nano sites/{{ site name }}/site_config.json
 # Add this line:
   "developer_mode": 1,
+
+```
+Install pre-commit:
+```
+# ~/frappe-bench/apps/electronic_payments/
+pre-commit install
 ```
 
 Add the site to your computer's hosts file to be able to access it via: `http://{{ site name }}:[8000]`. You'll need to enter your root password to allow your command line application to make edits to this file.

@@ -6,5 +6,5 @@ frappe.ui.form.on('Electronic Payment Settings', {
 		if (!frm.doc.mode_of_payment) {
 			frm.set_df_property('mode_of_payment', 'read_only', 1)
 		}
-	}
+	},
 })
