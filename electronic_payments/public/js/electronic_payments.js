@@ -55,7 +55,7 @@ electronic_payments.electronic_payments = frm => {
 				{ fieldname: 'routing_number', fieldtype: 'Data', label: 'Routing Number', hidden: 1 },
 				{ fieldname: 'account_number', fieldtype: 'Data', label: 'Checking Account Number', hidden: 1 },
 				{ fieldname: 'check_number', fieldtype: 'Int', label: 'Check Number', description: 'Optional', hidden: 1 },
-				{ fieldname: 'payment_profile_id', fieldtype: 'Data', hidden: 1, default: payment_profile_id },
+				{ fieldname: 'payment_profile_id', fieldtype: 'Data', hidden: 1, default: payment_profile_id, hidden: 1 },
 			],
 			set_required_fields: mop_options => {
 				if (d.fields_dict.mode_of_payment.value == 'New Card') {
@@ -163,16 +163,19 @@ function render_frm_data(frm) {
 
 async function process(frm, dialog) {
 	let values = dialog.get_values()
-	console.log(values)
-	await frappe.xcall('electronic_payments.electronic_payments.process', { doc: frm.doc, data: values }).then(r => {
-		console.log(r)
-		if (r.message == 'Success') {
-			dialog.fields_dict.ht.$wrapper.html('Success!')
-		} else {
-			dialog.fields_dict.ht.$wrapper.html(`<p style="color: red; font-weight: bold;">${r.error}</p>`)
-		}
-		frm.reload_doc()
-	})
+	await frappe
+		.xcall(
+			'electronic_payments.electronic_payments.doctype.electronic_payment_settings.electronic_payment_settings.process',
+			{ doc: frm.doc, data: values }
+		)
+		.then(r => {
+			if (r.message == 'Success') {
+				dialog.fields_dict.ht.$wrapper.html('Success!')
+			} else {
+				dialog.fields_dict.ht.$wrapper.html(`<p style="color: red; font-weight: bold;">${r.error}</p>`)
+			}
+			frm.reload_doc()
+		})
 }
 
 async function payment_options(frm) {
@@ -186,7 +189,6 @@ async function payment_options(frm) {
 		.then(r => {
 			payment_profile = r.message
 		})
-	console.log(frm.doc.pre_authorization_token, payment_profile)
 	if (frm.doc.pre_authorization_token || payment_profile.hasOwnProperty('payment_profile_id')) {
 		return ['Saved Payment Method\nNew Card\nNew ACH', payment_profile]
 	} else {

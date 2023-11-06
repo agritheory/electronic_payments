@@ -1,32 +1,32 @@
 {
   "custom_fields": [],
   "custom_perms": [],
-  "doctype": "Mode of Payment",
+  "doctype": "Packed Item",
   "property_setters": [
     {
       "_assign": null,
       "_comments": null,
       "_liked_by": null,
       "_user_tags": null,
-      "creation": "2022-08-05 13:10:55.278054",
+      "creation": "2023-05-22 09:53:28.865581",
       "default_value": null,
-      "doc_type": "Mode of Payment",
+      "doc_type": "Packed Item",
       "docstatus": 0,
       "doctype_or_field": "DocField",
-      "field_name": "type",
+      "field_name": "rate",
       "idx": 0,
-      "modified": "2022-08-05 13:10:55.278054",
+      "modified": "2023-05-22 09:53:28.865581",
       "modified_by": "Administrator",
       "module": "Electronic Payments",
-      "name": "Mode of Payment-type-options",
+      "name": "Packed Item-rate-read_only",
       "owner": "Administrator",
       "parent": null,
       "parentfield": null,
       "parenttype": null,
-      "property": "options",
-      "property_type": "Text",
+      "property": "read_only",
+      "property_type": "Check",
       "row_name": null,
-      "value": "Cash\nBank\nGeneral\nPhone\nElectronic"
+      "value": "1"
     }
   ],
   "sync_on_migrate": 1

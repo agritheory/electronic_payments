@@ -1,6 +1,7 @@
 import datetime
 import random
 import types
+import os
 
 import frappe
 from frappe.desk.page.setup_wizard.setup_wizard import setup_complete
@@ -10,6 +11,7 @@ from erpnext.accounts.doctype.account.account import update_account_number
 
 def before_test():
 	frappe.clear_cache()
+	today = frappe.utils.getdate()
 	setup_complete(
 		{
 			"currency": "USD",
@@ -19,8 +21,8 @@ def before_test():
 			"company_abbr": "CFC",
 			"domains": ["Distribution"],
 			"country": "United States",
-			"fy_start_date": frappe.utils.getdate().replace(month=1, day=1).isoformat(),
-			"fy_end_date": frappe.utils.getdate().replace(month=12, day=31).isoformat(),
+			"fy_start_date": today.replace(month=1, day=1).isoformat(),
+			"fy_end_date": today.replace(month=12, day=31).isoformat(),
 			"language": "english",
 			"company_tagline": "Chelsea Fruit Co",
 			"email": "support@agritheory.dev",
@@ -29,7 +31,7 @@ def before_test():
 			"bank_account": "Primary Checking",
 		}
 	)
-	enable_all_roles_and_domains()
+	# enable_all_roles_and_domains()
 	set_defaults_for_tests()
 	frappe.db.commit()
 	create_test_data()
@@ -158,7 +160,16 @@ tax_authority = [
 ]
 
 employees = [
-	("Wilmer Larson", "Male", "1977-03-06", "2019-04-12", "20 Gaven Path", "Spokane", "NV", "66308"),
+	(
+		"Wilmer Larson",
+		"Male",
+		"1977-03-06",
+		"2019-04-12",
+		"20 Gaven Path",
+		"Spokane",
+		"NV",
+		"66308",
+	),
 	(
 		"Shanel Finley",
 		"Female",
@@ -349,27 +360,34 @@ def create_test_data():
 	setup_accounts()
 	settings = frappe._dict(
 		{
-			"day": frappe.utils.getdate().replace(month=1, day=1),
-			"company": "Chelsea Fruit Co",
+			"day": datetime.date(int(frappe.defaults.get_defaults().get("fiscal_year")), 1, 1),
+			"company": frappe.defaults.get_defaults().get("company"),
 			"company_account": frappe.get_value(
-				"Account", {"account_type": "Bank", "company": "Chelsea Fruit Co", "is_group": 0}
+				"Account",
+				{
+					"account_type": "Bank",
+					"company": frappe.defaults.get_defaults().get("company"),
+					"is_group": 0,
+				},
 			),
 			"warehouse": frappe.get_value(
 				"Warehouse",
 				{
 					"warehouse_name": "Finished Goods",
-					"company": "Chelsea Fruit Co",
+					"company": frappe.defaults.get_defaults().get("company"),
 				},
 			),
 		}
 	)
 	create_bank_and_bank_account(settings)
+	create_electronic_payment_settings(settings)
 	create_payment_terms_templates(settings)
 	create_suppliers(settings)
 	create_customers(customers)
 	create_items(settings)
 	create_invoices(settings)
 	config_expense_claim(settings)
+	create_sales_invoices(settings)
 	create_employees(settings)
 	for month in range(1, 13):
 		create_payroll_journal_entry(settings)
@@ -383,7 +401,8 @@ def create_bank_and_bank_account(settings):
 		mop.enabled = 1
 		mop.type = "Electronic"
 		mop.append(
-			"accounts", {"company": settings.company, "default_account": settings.company_account}
+			"accounts",
+			{"company": settings.company, "default_account": settings.company_account},
 		)
 		mop.save()
 
@@ -441,13 +460,15 @@ def create_bank_and_bank_account(settings):
 	doc.company = settings.company
 	opening_balance = 50000.00
 	doc.append(
-		"accounts", {"account": settings.company_account, "debit_in_account_currency": opening_balance}
+		"accounts",
+		{"account": settings.company_account, "debit_in_account_currency": opening_balance},
 	)
 	retained_earnings = frappe.get_value(
 		"Account", {"account_name": "Retained Earnings", "company": settings.company}
 	)
 	doc.append(
-		"accounts", {"account": retained_earnings, "credit_in_account_currency": opening_balance}
+		"accounts",
+		{"account": retained_earnings, "credit_in_account_currency": opening_balance},
 	)
 	doc.save()
 	doc.submit()
@@ -455,10 +476,16 @@ def create_bank_and_bank_account(settings):
 
 def setup_accounts():
 	frappe.rename_doc(
-		"Account", "1000 - Application of Funds (Assets) - CFC", "1000 - Assets - CFC", force=True
+		"Account",
+		"1000 - Application of Funds (Assets) - CFC",
+		"1000 - Assets - CFC",
+		force=True,
 	)
 	frappe.rename_doc(
-		"Account", "2000 - Source of Funds (Liabilities) - CFC", "2000 - Liabilities - CFC", force=True
+		"Account",
+		"2000 - Source of Funds (Liabilities) - CFC",
+		"2000 - Liabilities - CFC",
+		force=True,
 	)
 	frappe.rename_doc(
 		"Account", "1310 - Debtors - CFC", "1310 - Accounts Receivable - CFC", force=True
@@ -467,7 +494,36 @@ def setup_accounts():
 		"Account", "2110 - Creditors - CFC", "2110 - Accounts Payable - CFC", force=True
 	)
 	update_account_number("1110 - Cash - CFC", "Petty Cash", account_number="1110")
-	update_account_number("Primary Checking - CFC", "Primary Checking", account_number="1201")
+	update_account_number(
+		"Primary Checking - CFC", "Primary Checking", account_number="1201"
+	)
+
+	rca = frappe.new_doc("Account")  # receivable clearing account
+	rca.account_name = "Electronic Payments Receivable"
+	rca.account_number = "1320"
+	rca.account_type = "Receivable"
+	rca.parent_account = "1300 - Accounts Receivable - CFC"
+	rca.currency = "USD"
+	rca.company = frappe.defaults.get_defaults().get("company")
+	rca.save()
+
+	pca = frappe.new_doc("Account")  # payable clearing account
+	pca.account_name = "Electronic Payments Payable"
+	pca.account_number = "2130"
+	pca.account_type = "Payable"
+	pca.parent_account = "2100 - Accounts Payable - CFC"
+	pca.currency = "USD"
+	pca.company = frappe.defaults.get_defaults().get("company")
+	pca.save()
+
+	fee = frappe.new_doc("Account")  # provider fee expense account
+	fee.account_name = "Electronic Payments Provider Fees"
+	fee.account_number = "5223"
+	# fee.account_type = ""
+	fee.parent_account = "5200 - Indirect Expenses - CFC"
+	fee.currency = "USD"
+	fee.company = frappe.defaults.get_defaults().get("company")
+	fee.save()
 
 
 def create_payment_terms_templates(settings):
@@ -558,7 +614,7 @@ def create_customers(customers):
 		cust.customer_type = "Company"
 		cust.customer_group = "Commercial"
 		cust.territory = "All Territories"
-		cust.tax_id = "04-" + "{:05d}".format(random.randint(100, 99999))  # Tax ID number
+		cust.tax_id = "04-" + f"{random.randint(100,99999):05d}"  # Tax ID number
 		cust.save()
 
 		addr = frappe.new_doc("Address")
@@ -580,13 +636,21 @@ def create_items(settings):
 		item.item_group = "Services"
 		item.stock_uom = "Nos"
 		item.maintain_stock = 0
-		item.is_sales_item, item.is_sub_contracted_item, item.include_item_in_manufacturing = 0, 0, 0
+		(
+			item.is_sales_item,
+			item.is_sub_contracted_item,
+			item.include_item_in_manufacturing,
+		) = (0, 0, 0)
 		item.grant_commission = 0
 		item.is_purchase_item = 1
 		item.append("supplier_items", {"supplier": supplier[0]})
 		item.append(
 			"item_defaults",
-			{"company": settings.company, "default_warehouse": "", "default_supplier": supplier[0]},
+			{
+				"company": settings.company,
+				"default_warehouse": "",
+				"default_supplier": supplier[0],
+			},
 		)
 		item.save()
 
@@ -787,16 +851,16 @@ def config_expense_claim(settings):
 	if payroll_payable:
 		frappe.db.set_value("Account", payroll_payable, "account_type", "Payable")
 
-	if frappe.db.exists("Account", {"account_name": "Payroll Taxes", "company": settings.company}):
+	if frappe.db.exists(
+		"Account", {"account_name": "Payroll Taxes", "company": settings.company}
+	):
 		return
 	pta = frappe.new_doc("Account")
 	pta.account_name = "Payroll Taxes"
 	pta.account_number = (
 		max(
-			[
-				int(a.account_number or 1)
-				for a in frappe.get_all("Account", {"is_group": 0}, ["account_number"])
-			]
+			int(a.account_number or 1)
+			for a in frappe.get_all("Account", {"is_group": 0}, ["account_number"])
 		)
 		+ 1
 	)
@@ -899,15 +963,19 @@ def create_payroll_journal_entry(settings):
 	emps = frappe.get_list("Employee", {"company": settings.company})
 	cost_center = frappe.get_value("Company", settings.company, "cost_center")
 	payroll_account = frappe.get_value(
-		"Account", {"company": settings.company, "account_name": "Payroll Payable", "is_group": 0}
+		"Account",
+		{"company": settings.company, "account_name": "Payroll Payable", "is_group": 0},
 	)
 	salary_account = frappe.get_value(
 		"Account", {"company": settings.company, "account_name": "Salary", "is_group": 0}
 	)
 	payroll_expense = frappe.get_value(
-		"Account", {"company": settings.company, "account_name": "Payroll Taxes", "is_group": 0}
+		"Account",
+		{"company": settings.company, "account_name": "Payroll Taxes", "is_group": 0},
 	)
-	payable_account = frappe.get_value("Company", settings.company, "default_payable_account")
+	payable_account = frappe.get_value(
+		"Company", settings.company, "default_payable_account"
+	)
 	je = frappe.new_doc("Journal Entry")
 	je.entry_type = "Journal Entry"
 	je.company = settings.company
@@ -922,7 +990,9 @@ def create_payroll_journal_entry(settings):
 			"accounts",
 			{
 				"account": payroll_account,
-				"bank_account": frappe.get_value("Bank Account", {"account": settings.company_account}),
+				"bank_account": frappe.get_value(
+					"Bank Account", {"account": settings.company_account}
+				),
 				"party_type": "Employee",
 				"party": emp.name,
 				"cost_center": cost_center,
@@ -977,3 +1047,56 @@ def create_payroll_journal_entry(settings):
 	)
 	je.save()
 	je.submit()
+
+
+def create_sales_invoices(settings):
+	for customer in customers[:2]:
+		so = frappe.new_doc("Sales Order")
+		so.company = settings.company
+		so.transaction_date = so.delivery_date = settings.day
+		so.customer = customer[0]
+		so.append(
+			"items",
+			{
+				"item_code": "Cloudberry",
+				"qty": 3,
+			},
+		)
+		so.save()
+		so.submit()
+	for customer in customers[2:]:
+		si = frappe.new_doc("Sales Invoice")
+		si.company = settings.company
+		si.set_posting_time = 1
+		si.posting_date = settings.day
+		si.customer = customer[0]
+		si.append(
+			"items",
+			{
+				"item_code": "Cloudberry",
+				"qty": 3,
+			},
+		)
+		si.save()
+		si.submit()
+
+
+def create_electronic_payment_settings(settings):
+	if os.environ.get("STRIPE_API_KEY"):
+		eps = frappe.new_doc("Electronic Payment Settings")
+		eps.company = settings.company
+		eps.provider = "Stripe"
+		eps.api_key = os.environ.get("STRIPE_API_KEY")
+		eps.save()
+	if (
+		os.environ.get("AUTHORIZE_API_KEY")
+		and os.environ.get("AUTHORIZE_TRANSACTION_KEY")
+		and not os.environ.get("STRIPE_API_KEY")
+	):
+		eps = frappe.new_doc("Electronic Payment Settings")
+		eps.company = settings.company
+		eps.provider = "Authorize.net"
+		eps.api_key = os.environ.get("AUTHORIZE_API_KEY")
+		eps.api_key = os.environ.get("AUTHORIZE_TRANSACTION_KEY")
+		eps.clearing_account = "1320 - Electronic Payments Receivable - CFC"
+		eps.save()
