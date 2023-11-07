@@ -15,7 +15,9 @@ def get_context(context):
 		payment_method = frappe.get_doc("Portal Payment Method", pm.name).as_dict()
 		if payment_method.service_charge and payment_method.percentage_or_rate == "Percentage":
 			amount = context.doc.grand_total * (payment_method.percentage / 100)
-			payment_method.total = flt(context.doc.grand_total + amount, frappe.get_precision(context.doc.doctype, "grand_total"))
+			payment_method.total = flt(
+				context.doc.grand_total + amount, frappe.get_precision(context.doc.doctype, "grand_total")
+			)
 			payment_method.service_charge = f""" - { fmt_money(
 				amount,
 				frappe.get_precision(context.doc.doctype, "grand_total"),
@@ -26,7 +28,10 @@ def get_context(context):
 				context.doc.currency,
 			) })"""
 		elif payment_method.service_charge and payment_method.percentage_or_rate == "Rate":
-			payment_method.total = flt(context.doc.grand_total + payment_method.rate, frappe.get_precision(context.doc.doctype, "grand_total"))
+			payment_method.total = flt(
+				context.doc.grand_total + payment_method.rate,
+				frappe.get_precision(context.doc.doctype, "grand_total"),
+			)
 			payment_method.service_charge = f""" - { fmt_money(
 				payment_method.rate,
 				frappe.get_precision(context.doc.doctype, "grand_total"),
@@ -37,10 +42,14 @@ def get_context(context):
 				context.doc.currency,
 			) })"""
 		else:
-			payment_method.total = flt(context.doc.grand_total, frappe.get_precision(context.doc.doctype, "grand_total"))
+			payment_method.total = flt(
+				context.doc.grand_total, frappe.get_precision(context.doc.doctype, "grand_total")
+			)
 			payment_method.service_charge = ""
 		if payment_method.default:
-			context.doc.grand_total_with_service_charge = fmt_money(payment_method.total, frappe.get_precision(context.doc.doctype, "grand_total"))
+			context.doc.grand_total_with_service_charge = fmt_money(
+				payment_method.total, frappe.get_precision(context.doc.doctype, "grand_total")
+			)
 		payment_methods.append(payment_method)
 	context.payment_methods = payment_methods
 
@@ -56,4 +65,4 @@ def get_context(context):
 @frappe.whitelist()
 def pay(dt, dn, payment_method):
 	print(dt, dn, payment_method)
-	return {'success_message': "Your Payment has been processed successfully"}
+	return {"success_message": "Your Payment has been processed successfully"}

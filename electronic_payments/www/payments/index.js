@@ -14,9 +14,8 @@ frappe.ready(() => {
 		let dt = order_url.searchParams.get('dt')
 		let dn = order_url.searchParams.get('dn')
 		let payment_method = $('#payment-method')[0].value
-		frappe.call('pay', {dt: dt, dn: dn, payment_method: payment_method})
-		.then(r => {
-			if ('success_message' in r.message){
+		frappe.call('pay', { dt: dt, dn: dn, payment_method: payment_method }).then(r => {
+			if ('success_message' in r.message) {
 				$('#payments-messages')[0].innerHTML = r.message.success_message
 				setTimeout(() => {
 					window.location = '/invoices'
@@ -27,6 +26,4 @@ frappe.ready(() => {
 			}
 		})
 	})
-
 })
-

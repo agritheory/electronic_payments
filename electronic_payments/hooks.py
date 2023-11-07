@@ -145,7 +145,7 @@ after_migrate = "electronic_payments.customize.load_customizations"
 #
 override_whitelisted_methods = {
 	"pay": "electronic_payments.www.payments.index.pay",
-	"erpnext.accounts.doctype.payment_request.payment_request.make_payment_request": "electronic_payments.www.payments.payment_options"
+	"erpnext.accounts.doctype.payment_request.payment_request.make_payment_request": "electronic_payments.www.payments.payment_options",
 }
 #
 # each overriding function accepts a `data` argument;
