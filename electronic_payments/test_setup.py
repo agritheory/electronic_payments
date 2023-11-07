@@ -861,27 +861,6 @@ def create_invoices(settings):
 	pi.submit()
 
 
-def create_sales_invoices(settings):
-	for customer in customers:
-		si = frappe.new_doc("Sales Invoice")
-		si.company = settings.company
-		si.set_posting_time = 1
-		si.posting_date = settings.day
-		si.customer = customer[0]
-		si.append(
-			"items",
-			{
-				"item_code": "Cloudberry",
-				"rate": frappe.get_value(
-					"Item Price", {"price_list": "Standard Selling", "item_code": "Cloudberry"}
-				),
-				"qty": 5,
-			},
-		)
-		si.save()
-		si.submit()
-
-
 def validate_release_date(self):
 	pass
 
@@ -1098,7 +1077,7 @@ def create_payroll_journal_entry(settings):
 
 
 def create_sales_invoices(settings):
-	for customer in customers[:2]:
+	for customer in customers:
 		so = frappe.new_doc("Sales Order")
 		so.company = settings.company
 		so.transaction_date = so.delivery_date = settings.day
@@ -1112,21 +1091,6 @@ def create_sales_invoices(settings):
 		)
 		so.save()
 		so.submit()
-	for customer in customers[2:]:
-		si = frappe.new_doc("Sales Invoice")
-		si.company = settings.company
-		si.set_posting_time = 1
-		si.posting_date = settings.day
-		si.customer = customer[0]
-		si.append(
-			"items",
-			{
-				"item_code": "Cloudberry",
-				"qty": 3,
-			},
-		)
-		si.save()
-		si.submit()
 
 
 def create_electronic_payment_settings(settings):
