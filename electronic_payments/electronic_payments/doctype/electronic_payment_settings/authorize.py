@@ -25,9 +25,7 @@ class AuthorizeNet:
 	def merchant_auth(self, company):
 		settings = frappe.get_doc("Electronic Payment Settings", {"company": company})
 		if not settings:
-			frappe.msgprint(
-				_(f"No Electronic Payment Settings found for {company}-Authorize.net")
-			)
+			frappe.msgprint(_(f"No Electronic Payment Settings found for {company}-Authorize.net"))
 		else:
 			merchantAuth = apicontractsv1.merchantAuthenticationType()
 			merchantAuth.name = get_decrypted_password(
@@ -110,9 +108,7 @@ class AuthorizeNet:
 		return {"error": error_message}
 
 	def create_customer_profile(self, doc, data):
-		existing_customer_id = frappe.get_value(
-			"Customer", doc.customer, "electronic_payment_profile"
-		)
+		existing_customer_id = frappe.get_value("Customer", doc.customer, "electronic_payment_profile")
 		if existing_customer_id:
 			return {"message": "Success", "transaction_id": existing_customer_id}
 		else:
@@ -140,9 +136,7 @@ class AuthorizeNet:
 
 	def create_customer_payment_profile(self, doc, data):
 		if not data.get("customer_profile"):
-			customer_profile_id = frappe.get_value(
-				"Customer", doc.customer, "electronic_payment_profile"
-			)
+			customer_profile_id = frappe.get_value("Customer", doc.customer, "electronic_payment_profile")
 		else:
 			customer_profile_id = data.get("customer_profile")
 
@@ -197,14 +191,10 @@ class AuthorizeNet:
 			payment_profile.party_type = "Customer"
 			payment_profile.party = doc.customer
 			payment_profile.payment_type = mop
-			payment_profile.reference = (
-				f"**** **** **** {last4}" if mop == "Card" else f"*{last4}"
-			)
+			payment_profile.reference = f"**** **** **** {last4}" if mop == "Card" else f"*{last4}"
 			payment_profile.payment_profile_id = str(response.customerPaymentProfileId)
 			payment_profile.party_profile = str(customer_profile_id)
-			payment_profile.retain = (
-				1 if data.save_data == "Retain payment data for this party" else 0
-			)
+			payment_profile.retain = 1 if data.save_data == "Retain payment data for this party" else 0
 			payment_profile.save()
 			return {"message": "Success", "payment_profile_doc": payment_profile}
 		else:
@@ -214,9 +204,7 @@ class AuthorizeNet:
 
 	def charge_customer_profile(self, doc, data):
 		if not data.get("customer_profile"):
-			customer_profile_id = frappe.get_value(
-				"Customer", doc.customer, "electronic_payment_profile"
-			)
+			customer_profile_id = frappe.get_value("Customer", doc.customer, "electronic_payment_profile")
 		else:
 			customer_profile_id = data.get("customer_profile")
 		if not customer_profile_id:
@@ -262,9 +250,7 @@ class AuthorizeNet:
 							"Electronic Payment Profile",
 							{"party": doc.customer, "payment_profile_id": payment_profile_id},
 						).delete()
-						deleteCustomerPaymentProfile = (
-							apicontractsv1.deleteCustomerPaymentProfileRequest()
-						)
+						deleteCustomerPaymentProfile = apicontractsv1.deleteCustomerPaymentProfileRequest()
 						deleteCustomerPaymentProfile.merchantAuthentication = merchantAuth
 						deleteCustomerPaymentProfile.customerProfileId = str(customer_profile_id)
 						deleteCustomerPaymentProfile.customerPaymentProfileId = payment_profile_id
@@ -274,8 +260,7 @@ class AuthorizeNet:
 						pmt_delete_response = controller.getresponse()
 
 						if pmt_delete_response is None or (
-							hasattr(pmt_delete_response, "messages")
-							and pmt_delete_response.messages.resultCode != "Ok"
+							hasattr(pmt_delete_response, "messages") and pmt_delete_response.messages.resultCode != "Ok"
 						):
 							frappe.log_error(
 								message=frappe.get_traceback(),
@@ -484,9 +469,7 @@ class AuthorizeNet:
 		transactionDetailsRequest.merchantAuthentication = merchantAuth
 		transactionDetailsRequest.transId = transaction_id
 
-		transactionDetailsController = getTransactionDetailsController(
-			transactionDetailsRequest
-		)
+		transactionDetailsController = getTransactionDetailsController(transactionDetailsRequest)
 
 		transactionDetailsController.execute()
 
@@ -530,9 +513,7 @@ class AuthorizeNet:
 
 
 def fetch_authorize_transactions(settings):
-	settings = (
-		frappe._dict(json.loads(settings)) if isinstance(settings, str) else settings
-	)
+	settings = frappe._dict(json.loads(settings)) if isinstance(settings, str) else settings
 	sorting = apicontractsv1.TransactionListSorting()
 	sorting.orderBy = apicontractsv1.TransactionListOrderFieldEnum.id
 	sorting.orderDescending = True

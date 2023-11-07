@@ -52,7 +52,6 @@ def process(doc, data):
 	return response
 
 
-
 @frappe.whitelist()
 def fetch_transactions():
 	for settings in frappe.get_all("Electronic Payments Settings"):

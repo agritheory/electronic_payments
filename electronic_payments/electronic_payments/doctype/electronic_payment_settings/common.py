@@ -18,9 +18,7 @@ def create_payment_entry(doc, data, transaction_id):
 	party = doc.supplier if doc.doctype == "Purchase Invoice" else doc.customer
 	account = doc.credit_to if doc.doctype == "Purchase Invoice" else doc.debit_to
 	bank_account = (
-		settings.withdrawal_account
-		if doc.doctype == "Purchase Invoice"
-		else settings.deposit_account
+		settings.withdrawal_account if doc.doctype == "Purchase Invoice" else settings.deposit_account
 	)
 
 	pe = frappe.new_doc("Payment Entry")

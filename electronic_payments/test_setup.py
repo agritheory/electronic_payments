@@ -292,6 +292,8 @@ customers = [
 			"country": "United States",
 			"pincode": "03301",
 		},
+		"Antonina Hunter",
+		"ahunter@andromedafruit.co",
 	),
 	(
 		"Betelgeuse Bakery Suppliers",
@@ -302,6 +304,8 @@ customers = [
 			"country": "United States",
 			"pincode": "03304",
 		},
+		"Jong Foley",
+		"jfoley@bakerysuppliers.us",
 	),
 	(
 		"Cassiopeia Restaurant Group",
@@ -312,6 +316,8 @@ customers = [
 			"country": "United States",
 			"pincode": "01970",
 		},
+		"Illa Townsend",
+		"illa@cassiopeiagroup.com",
 	),
 	(
 		"Delphinus Food Distributors",
@@ -322,6 +328,8 @@ customers = [
 			"country": "United States",
 			"pincode": "01966",
 		},
+		"Byron Greene",
+		"byron@delphinus.food",
 	),
 	(
 		"Grus Goodies",
@@ -332,6 +340,8 @@ customers = [
 			"country": "United States",
 			"pincode": "02169",
 		},
+		"Leif Grusson",
+		"leif@grusgoodies.com",
 	),
 	(
 		"Phoenix Fruit, Ltd",
@@ -342,6 +352,8 @@ customers = [
 			"country": "United States",
 			"pincode": "02184",
 		},
+		"Brenton Kennedy",
+		"brenton@pheonix.fruit",
 	),
 	(
 		"Hydra Produce Co",
@@ -352,6 +364,8 @@ customers = [
 			"country": "Canada",
 			"pincode": "H1Y3A4",
 		},
+		"Marcell Crane",
+		"marcell@hydraproduce.ca",
 	),
 ]
 
@@ -389,6 +403,7 @@ def create_test_data():
 	config_expense_claim(settings)
 	create_sales_invoices(settings)
 	create_employees(settings)
+	curate_portal_and_ecommerce_settings(settings)
 	for month in range(1, 13):
 		create_payroll_journal_entry(settings)
 		settings.day = settings.day.replace(month=month)
@@ -494,9 +509,7 @@ def setup_accounts():
 		"Account", "2110 - Creditors - CFC", "2110 - Accounts Payable - CFC", force=True
 	)
 	update_account_number("1110 - Cash - CFC", "Petty Cash", account_number="1110")
-	update_account_number(
-		"Primary Checking - CFC", "Primary Checking", account_number="1201"
-	)
+	update_account_number("Primary Checking - CFC", "Primary Checking", account_number="1201")
 
 	rca = frappe.new_doc("Account")  # receivable clearing account
 	rca.account_name = "Electronic Payments Receivable"
@@ -625,8 +638,28 @@ def create_customers(customers):
 		addr.state = customer[1]["state"]
 		addr.country = customer[1]["country"]
 		addr.pincode = customer[1]["pincode"]
-		addr.append("links", {"link_doctype": "Customer", "link_name": customer[0]})
+		addr.append("links", {"link_doctype": "Customer", "link_name": cust.name})
 		addr.save()
+
+		user = frappe.new_doc("User")
+		user.first_name = customer[2].split(" ")[0]
+		user.last_name = customer[2].split(" ")[1]
+		user.username = customer[3]
+		user.time_zone = "America/New_York"
+		user.email = customer[3]
+		user.user_type = "System User"
+		user.send_welcome_email = 0
+		user.append("roles", {"role": "Customer"})
+		user.save()
+
+		contact = frappe.new_doc("Contact")
+		contact.first_name = user.first_name
+		contact.last_name = user.last_name
+		contact.user = user.name
+		contact.address = addr.name
+		contact.append("email_ids", {"email_id": user.name, "is_primary": 1})
+		contact.append("links", {"link_doctype": "Customer", "link_name": cust.name})
+		contact.save()
 
 
 def create_items(settings):
@@ -828,6 +861,27 @@ def create_invoices(settings):
 	pi.submit()
 
 
+def create_sales_invoices(settings):
+	for customer in customers:
+		si = frappe.new_doc("Sales Invoice")
+		si.company = settings.company
+		si.set_posting_time = 1
+		si.posting_date = settings.day
+		si.customer = customer[0]
+		si.append(
+			"items",
+			{
+				"item_code": "Cloudberry",
+				"rate": frappe.get_value(
+					"Item Price", {"price_list": "Standard Selling", "item_code": "Cloudberry"}
+				),
+				"qty": 5,
+			},
+		)
+		si.save()
+		si.submit()
+
+
 def validate_release_date(self):
 	pass
 
@@ -851,9 +905,7 @@ def config_expense_claim(settings):
 	if payroll_payable:
 		frappe.db.set_value("Account", payroll_payable, "account_type", "Payable")
 
-	if frappe.db.exists(
-		"Account", {"account_name": "Payroll Taxes", "company": settings.company}
-	):
+	if frappe.db.exists("Account", {"account_name": "Payroll Taxes", "company": settings.company}):
 		return
 	pta = frappe.new_doc("Account")
 	pta.account_name = "Payroll Taxes"
@@ -973,9 +1025,7 @@ def create_payroll_journal_entry(settings):
 		"Account",
 		{"company": settings.company, "account_name": "Payroll Taxes", "is_group": 0},
 	)
-	payable_account = frappe.get_value(
-		"Company", settings.company, "default_payable_account"
-	)
+	payable_account = frappe.get_value("Company", settings.company, "default_payable_account")
 	je = frappe.new_doc("Journal Entry")
 	je.entry_type = "Journal Entry"
 	je.company = settings.company
@@ -990,9 +1040,7 @@ def create_payroll_journal_entry(settings):
 			"accounts",
 			{
 				"account": payroll_account,
-				"bank_account": frappe.get_value(
-					"Bank Account", {"account": settings.company_account}
-				),
+				"bank_account": frappe.get_value("Bank Account", {"account": settings.company_account}),
 				"party_type": "Employee",
 				"party": emp.name,
 				"cost_center": cost_center,
@@ -1082,6 +1130,16 @@ def create_sales_invoices(settings):
 
 
 def create_electronic_payment_settings(settings):
+	if not frappe.db.exists("Account", "1320 - Electronic Payments Receivable - CFC"):
+		epr = frappe.new_doc("Account")
+		epr.account_number = "1320"
+		epr.account_name = "Electronic Payments Receivable"
+		epr.company = settings.company
+		epr.root_type = "Asset"
+		epr.report_type = "Balance Sheet"
+		epr.parent_account = "1300 - Accounts Receivable - CFC"
+		epr.save()
+
 	if os.environ.get("STRIPE_API_KEY"):
 		eps = frappe.new_doc("Electronic Payment Settings")
 		eps.company = settings.company
@@ -1100,3 +1158,38 @@ def create_electronic_payment_settings(settings):
 		eps.api_key = os.environ.get("AUTHORIZE_TRANSACTION_KEY")
 		eps.clearing_account = "1320 - Electronic Payments Receivable - CFC"
 		eps.save()
+
+
+def curate_portal_and_ecommerce_settings(settings=None):
+	ecom = frappe.get_doc("E Commerce Settings", "E Commerce Settings")
+	ecom.enabled = 1
+	ecom.save()
+
+	portal = frappe.get_doc("Portal Settings", "Portal Settings")
+	portal.hide_standard_menu = 1
+	portal.append(
+		"custom_menu",
+		{
+			"title": "Orders",
+			"enabled": 1,
+			"route": "/orders",
+			"reference_doctype": "Sales Invoice",
+			"role": "Customer",
+		},
+	)
+	portal.append(
+		"custom_menu",
+		{
+			"title": "Orders",
+			"enabled": 1,
+			"route": "/orders",
+			"reference_doctype": "Purchase Invoice",
+			"role": "Supplier",
+		},
+	)
+	portal.save()
+
+
+# config portal
+# add read permissions for each doctype with hook on Portal Settings
+#
