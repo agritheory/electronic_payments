@@ -15,11 +15,11 @@ required_apps = ["frappe/erpnext"]
 
 # include js, css files in header of desk.html
 # app_include_css = "/assets/electronic_payments/css/electronic_payments.css"
-app_include_js = "/assets/js/electronic_payments.min.js"
+app_include_js = ["electronic_payments.bundle.js", "faceted_search.bundle.js"]
 
 # include js, css files in header of web template
 # web_include_css = "/assets/electronic_payments/css/electronic_payments.css"
-# web_include_js = "/assets/electronic_payments/js/electronic_payments.js"
+web_include_js = ["faceted_search.bundle.js"]
 
 # include custom scss in every website theme (without file extension ".scss")
 # website_theme_scss = "electronic_payments/public/scss/website"

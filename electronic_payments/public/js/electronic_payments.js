@@ -55,7 +55,7 @@ electronic_payments.electronic_payments = frm => {
 				{ fieldname: 'routing_number', fieldtype: 'Data', label: 'Routing Number', hidden: 1 },
 				{ fieldname: 'account_number', fieldtype: 'Data', label: 'Checking Account Number', hidden: 1 },
 				{ fieldname: 'check_number', fieldtype: 'Int', label: 'Check Number', description: 'Optional', hidden: 1 },
-				{ fieldname: 'payment_profile_id', fieldtype: 'Data', hidden: 1, default: payment_profile_id, hidden: 1 },
+				{ fieldname: 'payment_profile_id', fieldtype: 'Data', hidden: 1, default: payment_profile_id },
 			],
 			set_required_fields: mop_options => {
 				if (d.fields_dict.mode_of_payment.value == 'New Card') {
