@@ -6,15 +6,13 @@ faceted_search.mount = () => {
 	if (cur_list && ['Item', 'Website Item', 'BOM'].includes(cur_list.doctype)) {
 		if (faceted_search.$search == undefined && !$('#faceted-search').length) {
 			$('.filter-section').prepend('<li id="faceted-search"></li>')
-			setTimeout(() => {
+			waitForElement('#faceted-search').then(() => {
 				faceted_search.$search = new window.Vue({
-					el: $('#faceted-search').get(0),
+					el: '#faceted-search',
 					render: h => h(FacetedSearch, { props: {} }),
 				})
-			}, 100)
+			})
 		}
-	} else {
-		console.log('not Item list')
 	}
 }
 
