@@ -13,7 +13,7 @@
 {% block page_content %}
 {% set currency_symbol = frappe.db.get_value('Currency', doc.currency, 'symbol') %}
 <h2>Select Payment Method</h2>
-<h4>{{ doc.title or doc.name }} - {{ currency_symbol }} {{ doc.grand_total_with_service_charge }} </h4>
+<h4>{{ doc.name }} - {{ currency_symbol }} {{ doc.grand_total_with_service_charge }} </h4>
 <span
 	data-currency="{{doc.currency}}"
 	data-symbol="{{ currency_symbol }}"
