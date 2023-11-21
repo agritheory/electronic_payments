@@ -3,9 +3,9 @@ frappe.provide('electronic_payments')
 electronic_payments.electronic_payments = frm => {
 	payment_options(frm).then(mop_options => {
 		let payment_profile_id = undefined
-		if (mop_options[1] && mop_options[1].payment_profile_id) {
-			payment_profile_id = mop_options[1].payment_profile_id
-		}
+		let customer_profile_id = undefined
+		let ppm_name = undefined
+		let subject_to_credit_limit = 0
 		let d = new frappe.ui.Dialog({
 			title: __('Electronic Payments'),
 			size: 'extra-large',
@@ -55,7 +55,10 @@ electronic_payments.electronic_payments = frm => {
 				{ fieldname: 'routing_number', fieldtype: 'Data', label: 'Routing Number', hidden: 1 },
 				{ fieldname: 'account_number', fieldtype: 'Data', label: 'Checking Account Number', hidden: 1 },
 				{ fieldname: 'check_number', fieldtype: 'Int', label: 'Check Number', description: 'Optional', hidden: 1 },
-				{ fieldname: 'payment_profile_id', fieldtype: 'Data', hidden: 1, default: payment_profile_id, hidden: 1 },
+				{ fieldname: 'customer_profile_id', fieldtype: 'Data', default: customer_profile_id, hidden: 1 },
+				{ fieldname: 'payment_profile_id', fieldtype: 'Data', default: payment_profile_id, hidden: 1 },
+				{ fieldname: 'ppm_name', fieldtype: 'Data', default: ppm_name, hidden: 1 },
+				{ fieldname: 'subject_to_credit_limit', fieldtype: 'Int', default: subject_to_credit_limit, hidden: 1 },
 			],
 			set_required_fields: mop_options => {
 				if (d.fields_dict.mode_of_payment.value == 'New Card') {
@@ -88,13 +91,19 @@ electronic_payments.electronic_payments = frm => {
 					d.fields_dict.check_number.df.hidden = 0
 					d.fields_dict.account_number.df.read_only = 0
 					d.fields_dict.account_number.set_value('')
-				} else if (d.fields_dict.mode_of_payment.value == 'Saved Payment Method') {
+				} else if (d.fields_dict.mode_of_payment.value.slice(0, 5) == 'Saved') {
+					let ref_last4 = d.fields_dict.mode_of_payment.value.slice(d.fields_dict.mode_of_payment.value.length - 4)
+					let selected = mop_options[1].filter(item => item.reference.slice(item.reference.length - 4) == ref_last4)
 					d.fields_dict.save_data.df.hidden = 1
-					if (mop_options[1].payment_type == 'ACH') {
+					d.fields_dict.customer_profile_id.set_value(selected[0].party_profile)
+					d.fields_dict.payment_profile_id.set_value(selected[0].payment_profile_id)
+					d.fields_dict.ppm_name.set_value(selected[0].ppm_name)
+					d.fields_dict.subject_to_credit_limit.set_value(selected[0].subject_to_credit_limit)
+					if (selected[0].payment_type == 'ACH') {
 						d.fields_dict.account_number.df.hidden = 0
 						d.fields_dict.card_number.df.hidden = 1
 						d.fields_dict.account_number.df.read_only = 1
-						d.fields_dict.account_number.set_value(mop_options[1].reference)
+						d.fields_dict.account_number.set_value(selected[0].reference)
 
 						d.fields_dict.account_holders_name.df.hidden = 1
 						d.fields_dict.dl_state.df.hidden = 1
@@ -109,14 +118,13 @@ electronic_payments.electronic_payments = frm => {
 						d.fields_dict.card_number.df.hidden = 0
 						d.fields_dict.account_number.df.hidden = 1
 						d.fields_dict.card_number.df.read_only = 1
-						d.fields_dict.card_number.set_value(mop_options[1].reference)
+						d.fields_dict.card_number.set_value(selected[0].reference)
 
 						d.fields_dict.account_holders_name.df.hidden = 1
 						d.fields_dict.dl_state.df.hidden = 1
 						d.fields_dict.dl_number.df.hidden = 1
 						d.fields_dict.routing_number.df.hidden = 1
 						d.fields_dict.check_number.df.hidden = 1
-						d.fields_dict.card_number.df.hidden = 1
 						d.fields_dict.card_cvc.df.hidden = 1
 						d.fields_dict.cardholder_name.df.hidden = 1
 						d.fields_dict.card_expiration_date.df.hidden = 1
@@ -179,18 +187,24 @@ async function process(frm, dialog) {
 }
 
 async function payment_options(frm) {
-	let payment_profile = ''
-	await frappe.db
-		.get_value('Electronic Payment Profile', { party: frm.doc.customer }, [
-			'payment_profile_id',
-			'reference',
-			'payment_type',
-		])
+	let payment_profiles = []
+	let saved_methods = []
+	await frappe
+		.xcall(
+			'electronic_payments.electronic_payments.doctype.electronic_payment_settings.electronic_payment_settings.get_payment_profiles',
+			{ doc: frm.doc }
+		)
 		.then(r => {
-			payment_profile = r.message
+			payment_profiles = r
+			for (let i = 0; i < r.length; ++i) {
+				saved_methods.push(
+					'Saved Payment Method: ' + r[i].payment_type + ' ' + r[i].reference.slice(r[i].reference.length - 4)
+				)
+			}
 		})
-	if (frm.doc.pre_authorization_token || payment_profile.hasOwnProperty('payment_profile_id')) {
-		return ['Saved Payment Method\nNew Card\nNew ACH', payment_profile]
+	if (frm.doc.pre_authorization_token || payment_profiles.length > 0) {
+		const options = saved_methods.concat(['New Card', 'New ACH']).join('\n')
+		return [options, payment_profiles]
 	} else {
 		return ['New Card\nNew ACH']
 	}

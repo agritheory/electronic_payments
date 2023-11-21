@@ -1,4 +1,5 @@
 import frappe
+from frappe.query_builder import Order
 import json
 
 from electronic_payments.electronic_payments.doctype.electronic_payment_settings.authorize import (
@@ -50,6 +51,32 @@ def process(doc, data):
 	client = settings.client()
 	response = client.process_transaction(doc, data)
 	return response
+
+
+@frappe.whitelist()
+def get_payment_profiles(doc):
+	doc = frappe._dict(json.loads(doc)) if isinstance(doc, str) else doc
+	party = doc.supplier if "Purchase" in doc.doctype else doc.customer
+	epp = frappe.qb.DocType("Electronic Payment Profile")
+	ppm = frappe.qb.DocType("Portal Payment Method")
+
+	query = (
+		frappe.qb.from_(epp)
+		.inner_join(ppm)
+		.on(ppm.electronic_payment_profile == epp.name)
+		.select(
+			epp.payment_profile_id,
+			epp.reference,
+			epp.payment_type,
+			epp.party_profile,
+			(ppm.name).as_("ppm_name"),
+			ppm.default,
+			ppm.subject_to_credit_limit,
+		)
+		.where(epp.party == party)
+		.orderby(ppm.default, order=Order.desc)
+	)
+	return frappe.db.sql(query, as_dict=True)
 
 
 @frappe.whitelist()
