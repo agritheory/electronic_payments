@@ -5,9 +5,12 @@ from dateutil.relativedelta import relativedelta
 import frappe
 from frappe import _
 from frappe.utils.password import get_decrypted_password
+from frappe.utils.data import flt
 
 import stripe
 from electronic_payments.electronic_payments.doctype.electronic_payment_settings.common import (
+	exceeds_credit_limit,
+	calculate_payment_method_fees,
 	process_electronic_payment,
 )
 
@@ -59,7 +62,11 @@ class Stripe:
 
 	def process_transaction(self, doc, data):
 		mop = data.mode_of_payment.replace("New ", "")
-		if mop == "Saved Payment Method":
+		if mop.startswith("Saved"):
+			if data.get("subject_to_credit_limit") and exceeds_credit_limit(doc, data):
+				return {"error": "Credit Limit exceeded for selected Mode of Payment"}
+			if data.get("ppm_name"):
+				data.update({"additional_charges": calculate_payment_method_fees(doc, data)})
 			response = self.charge_customer_profile(doc, data)
 		elif mop == "ACH":
 			# TODO: update UI to handle response, handle save_data option
@@ -70,9 +77,11 @@ class Stripe:
 			else:  # saves payment data (will delete payment profile doc after charging if for txn only)
 				customer_response = self.create_customer_profile(doc, data)
 				if customer_response.get("message") == "Success":
-					data.update({"customer_profile": customer_response.get("transaction_id")})
+					data.update({"customer_profile_id": customer_response.get("transaction_id")})
 					pmt_profile_response = self.create_customer_payment_profile(doc, data)
 					if pmt_profile_response.get("message") == "Success":
+						pp_doc = pmt_profile_response.get("payment_profile_doc")
+						data.update({"payment_profile_id": pp_doc.payment_profile_id})
 						response = self.charge_customer_profile(doc, data)
 					else:  # error creating the customer payment profile
 						return pmt_profile_response
@@ -149,14 +158,17 @@ class Stripe:
 		# For New ACH transactions, creates an un-confirmed PaymentIntent and returns the client secret
 		self.get_password(doc.company)
 		try:
+			total_to_charge = flt(
+				doc.grand_total + (data.get("additional_charges") or 0),
+				frappe.get_precision(doc.doctype, "grand_total"),
+			)
 			customer_id = self.create_customer_profile(doc, data)
 			if customer_id.get("message") == "Success":
 				currency = frappe.defaults.get_global_default("currency").lower()
 				response = stripe.PaymentIntent.create(
-					amount=int(doc.grand_total * self.currency_multiplier(currency)),
+					amount=int(total_to_charge * self.currency_multiplier(currency)),
 					currency=currency,
 					customer=customer_id,
-					invoice=doc.name,
 					description=doc.name,
 					setup_future_usage="off_session",  # Indicates this payment method will be used in future PaymentIntents and saves to Customer. off_session = can charge customer at later time, on_session = can only charge in live session
 					payment_method_types=["us_bank_account"],
@@ -191,12 +203,15 @@ class Stripe:
 				currency = frappe.defaults.get_global_default("currency").lower()
 				card_number = data.get("card_number")
 				card_number = card_number.replace(" ", "")
+				total_to_charge = flt(
+					doc.grand_total + (data.get("additional_charges") or 0),
+					frappe.get_precision(doc.doctype, "grand_total"),
+				)
 				response = stripe.PaymentIntent.create(
-					amount=int(doc.grand_total * self.currency_multiplier(currency)),
+					amount=int(total_to_charge * self.currency_multiplier(currency)),
 					currency=currency,
 					confirm=True,
 					description=doc.name,
-					invoice=doc.name,
 					payment_method=pm_response.get("transaction_id"),
 					# automatic_payment_methods={"enabled": True},  # Company would need to set up payment methods in their Stripe dashboard
 					# off_session=False if data.get('save_date') != 'Charge now' else True,  # Use with confirm=True and collecting payment data to charge later
@@ -252,10 +267,10 @@ class Stripe:
 
 	def create_customer_payment_profile(self, doc, data):
 		self.get_password(doc.company)
-		if not data.get("customer_profile"):
+		if not data.get("customer_profile_id"):
 			customer_profile_id = frappe.get_value("Customer", doc.customer, "electronic_payment_profile")
 		else:
-			customer_profile_id = data.get("customer_profile")
+			customer_profile_id = data.get("customer_profile_id")
 
 		try:
 			pm_response = self.create_payment_method(doc, data)
@@ -283,6 +298,23 @@ class Stripe:
 				payment_profile.party_profile = str(customer_profile_id)
 				payment_profile.retain = 1 if data.save_data == "Retain payment data for this party" else 0
 				payment_profile.save()
+
+				if payment_profile.retain:
+					ppm = frappe.new_doc("Portal Payment Method")
+					ppm.mode_of_payment = frappe.get_value(
+						"Electronic Payment Settings", {"company": doc.company}, "mode_of_payment"
+					)
+					ppm.label = f"{mop}-{last4}"
+					ppm.default = 0
+					ppm.electronic_payment_profile = payment_profile.name
+					ppm.service_charge = 0
+					ppm.parent = payment_profile.party
+					ppm.parenttype = payment_profile.party_type
+					ppm.save()
+					cust = frappe.get_doc("Customer", doc.customer)
+					cust.append("portal_payment_method", ppm)
+					cust.save()
+
 				return {"message": "Success", "payment_profile_doc": payment_profile}
 			else:  # error creating the payment method
 				return pm_response
@@ -296,31 +328,27 @@ class Stripe:
 
 	def charge_customer_profile(self, doc, data):
 		self.get_password(doc.company)
-		if not data.get("customer_profile"):
+		if not data.get("customer_profile_id"):
 			customer_profile_id = frappe.get_value("Customer", doc.customer, "electronic_payment_profile")
 		else:
-			customer_profile_id = data.get("customer_profile")
-		if not customer_profile_id:
-			customer_profile_id = frappe.get_value(
-				"Electronic Payment Profile", {"party": doc.customer}, "party_profile"
-			)
-		payment_profile_id = (
-			frappe.get_value(  # TODO: can there be more than one payment method attached to a customer?
-				"Electronic Payment Profile", {"party": doc.customer}, "payment_profile_id"
-			)
-		)
+			customer_profile_id = data.get("customer_profile_id")
+
+		payment_profile_id = data.get("payment_profile_id")
 
 		try:
 			currency = frappe.defaults.get_global_default("currency").lower()
+			total_to_charge = flt(
+				doc.grand_total + (data.get("additional_charges") or 0),
+				frappe.get_precision(doc.doctype, "grand_total"),
+			)
 			response = stripe.PaymentIntent.create(
-				amount=int(doc.grand_total * self.currency_multiplier(currency)),
+				amount=int(total_to_charge * self.currency_multiplier(currency)),
 				currency=currency,
 				confirm=True,
 				customer=customer_profile_id,
 				payment_method_types=["card", "us_bank_account"],
 				payment_method=payment_profile_id,
 				description=doc.name,
-				invoice=doc.name,
 			)
 			if response.status == "succeeded":
 				if not frappe.get_value(
@@ -360,7 +388,7 @@ class Stripe:
 		"""
 		TODO: clarify where this function is called and what data can be passed
 		Function needs: transaction ID of original charge and amount to refund
-		    (amount technically only needed if it's a partial refund, will default to entire charge)
+		        (amount technically only needed if partial refund, will default to entire charge)
 		"""
 		self.get_password(doc.company)
 		orig_transaction_id = doc.electronic_payment_reference
@@ -391,6 +419,57 @@ class Stripe:
 		# No separate workflow for this in Stripe
 		self.refund_transaction(doc, data)
 
+	def delete_payment_profile(self, company, payment_profile_id):
+		# Delete from ERPNext
+		epp_name = frappe.get_value(
+			"Electronic Payment Profile",
+			{"payment_profile_id": payment_profile_id},
+		)
+		pmm_name = frappe.get_value("Payment Portal Method", {"electronic_payment_profile": epp_name})
+		frappe.delete_doc("Electronic Payment Profile", epp_name)
+		frappe.delete_doc("Payment Portal Method", pmm_name)
+
+		# Delete from API
+		self.get_password(company)
+		try:
+			response = stripe.PaymentMethod.detach(payment_profile_id)
+			return {"message": "Success"}
+		except Exception as e:
+			try:
+				frappe.log_error(message=frappe.get_traceback(), title=f"{e.code}: {e.type}. {e.message}")
+				return {"error": f"{e.code}: {e.type}. {e.message}"}
+			except Exception as _e:  # non-Stripe error, something else went wrong
+				frappe.log_error(message=frappe.get_traceback(), title=f"{e}")
+				return {"error": f"{e}"}
+
+	def delete_customer_profile(self, company, customer):
+		# Delete from ERPNext
+		customer_profile_id = frappe.get_value(
+			"Customer",
+			customer,
+			"electronic_payment_profile",
+		)
+		frappe.set_value("Customer", customer, "electronic_payment_profile", "")
+
+		# Delete from API
+		self.get_password(company)
+		try:
+			response = stripe.Customer.delete(customer_profile_id)
+			if response.deleted:
+				return {"message": "Success"}
+			else:
+				frappe.log_error(
+					message=frappe.get_traceback(),
+					title=f"Error deleting profile for {customer}",
+				)
+		except Exception as e:
+			try:
+				frappe.log_error(message=frappe.get_traceback(), title=f"{e.code}: {e.type}. {e.message}")
+				return {"error": f"{e.code}: {e.type}. {e.message}"}
+			except Exception as _e:  # non-Stripe error, something else went wrong
+				frappe.log_error(message=frappe.get_traceback(), title=f"{e}")
+				return {"error": f"{e}"}
+
 
 def fetch_stripe_transactions(settings):
 	"""
@@ -402,8 +481,7 @@ def fetch_stripe_transactions(settings):
 	  one day prior
 
 	:param settings: Electronic Payment Settings document
-	:return: list of frappe._dict objects including transactional data for each
-	        transaction
+	:return: list of frappe._dict objects including transactional data for each transaction
 	"""
 	settings = frappe._dict(json.loads(settings)) if isinstance(settings, str) else settings
 	# utc_one_day_ago = datetime.datetime.now(datetime.timezone.utc) + relativedelta(days=-1)
