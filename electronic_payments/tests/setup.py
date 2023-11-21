@@ -789,7 +789,6 @@ def create_electronic_payment_settings(settings):
 		eps.company = settings.company
 		eps.provider = "Stripe"
 		eps.api_key = os.environ.get("STRIPE_API_KEY")
-		eps = frappe.new_doc("Electronic Payment Settings")
 		eps.deposit_account = "1201 - Primary Checking - CFC"
 		eps.accepting_fee_account = "5223 - Electronic Payments Provider Fees - CFC"
 		eps.accepting_clearing_account = "1320 - Electronic Payments Receivable - CFC"
