@@ -98,9 +98,9 @@ after_migrate = "electronic_payments.customize.load_customizations"
 # ---------------
 # Override standard doctype classes
 
-# override_doctype_class = {
-# 	"ToDo": "custom_app.overrides.CustomToDo"
-# }
+override_doctype_class = {
+	"Journal Entry": "electronic_payments.overrides.journal_entry.CustomElectronicPaymentsJournalEntry"
+}
 
 # Document Events
 # ---------------
