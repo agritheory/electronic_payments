@@ -299,7 +299,9 @@ class Stripe:
 				payment_profile.retain = 1 if data.save_data == "Retain payment data for this party" else 0
 				payment_profile.save()
 
-				if payment_profile.retain:
+				if payment_profile.retain and frappe.get_value(
+					"Electronic Payment Settings", {"company": doc.company}, "create_ppm"
+				):
 					ppm = frappe.new_doc("Portal Payment Method")
 					ppm.mode_of_payment = frappe.get_value(
 						"Electronic Payment Settings", {"company": doc.company}, "mode_of_payment"

@@ -789,6 +789,7 @@ def create_electronic_payment_settings(settings):
 		eps.company = settings.company
 		eps.provider = "Stripe"
 		eps.api_key = os.environ.get("STRIPE_API_KEY")
+		eps.create_ppm = 1
 		eps.deposit_account = "1201 - Primary Checking - CFC"
 		eps.accepting_fee_account = "5223 - Electronic Payments Provider Fees - CFC"
 		eps.accepting_clearing_account = "1320 - Electronic Payments Receivable - CFC"
@@ -803,6 +804,7 @@ def create_electronic_payment_settings(settings):
 		eps.provider = "Authorize.net"
 		eps.api_key = os.environ.get("AUTHORIZE_API_KEY")
 		eps.transaction_key = os.environ.get("AUTHORIZE_TRANSACTION_KEY")
+		eps.create_ppm = 1
 		eps.deposit_account = "1201 - Primary Checking - CFC"
 		eps.accepting_fee_account = "5223 - Electronic Payments Provider Fees - CFC"
 		eps.accepting_clearing_account = "1320 - Electronic Payments Receivable - CFC"
