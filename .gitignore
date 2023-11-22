@@ -194,3 +194,6 @@ cypress/videos
 
 # JetBrains IDEs
 .idea/
+
+# payment method test code
+test_env_setup.py
