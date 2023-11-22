@@ -103,7 +103,16 @@ class AuthorizeNet:
 					"electronic_payment_reference",
 					str(response.transactionResponse.transId),
 				)
-				process_electronic_payment(doc, data, str(response.transactionResponse.transId))
+				frappe.enqueue(
+					process_electronic_payment,
+					queue="short",
+					timeout=3600,
+					is_async=True,
+					now=False,
+					doc=doc,
+					data=data,
+					transaction_id=str(response.transactionResponse.transId),
+				)
 				return {
 					"message": "Success",
 					"transaction_id": str(response.transactionResponse.transId),
@@ -306,7 +315,16 @@ class AuthorizeNet:
 						"electronic_payment_reference",
 						str(response.transactionResponse.transId),
 					)
-					process_electronic_payment(doc, data, str(response.transactionResponse.transId))
+					frappe.enqueue(
+						process_electronic_payment,
+						queue="short",
+						timeout=3600,
+						is_async=True,
+						now=False,
+						doc=doc,
+						data=data,
+						transaction_id=str(response.transactionResponse.transId),
+					)
 					return {
 						"message": "Success",
 						"transaction_id": str(response.transactionResponse.transId),

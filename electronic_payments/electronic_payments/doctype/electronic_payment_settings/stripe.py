@@ -221,7 +221,16 @@ class Stripe:
 
 				if response.status == "succeeded":
 					frappe.db.set_value(doc.doctype, doc.name, "electronic_payment_reference", str(response.id))
-					process_electronic_payment(doc, data, response.id)
+					frappe.enqueue(
+						process_electronic_payment,
+						queue="short",
+						timeout=3600,
+						is_async=True,
+						now=False,
+						doc=doc,
+						data=data,
+						transaction_id=str(response.id),
+					)
 					return {"message": "Success", "transaction_id": response.id}
 				elif response.status == "processing":
 					# TODO: handle follow up in UI
@@ -364,7 +373,16 @@ class Stripe:
 					).delete()
 					stripe.PaymentMethod.detach(payment_profile_id)
 				frappe.db.set_value(doc.doctype, doc.name, "electronic_payment_reference", str(response.id))
-				process_electronic_payment(doc, data, response.id)
+				frappe.enqueue(
+					process_electronic_payment,
+					queue="short",
+					timeout=3600,
+					is_async=True,
+					now=False,
+					doc=doc,
+					data=data,
+					transaction_id=str(response.id),
+				)
 				return {"message": "Success", "transaction_id": response.id}
 			elif response.status == "processing":
 				# TODO: handle follow up in UI
