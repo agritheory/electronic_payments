@@ -425,9 +425,10 @@ class Stripe:
 			"Electronic Payment Profile",
 			{"payment_profile_id": payment_profile_id},
 		)
-		pmm_name = frappe.get_value("Payment Portal Method", {"electronic_payment_profile": epp_name})
+		pmm_name = frappe.get_value("Portal Payment Method", {"electronic_payment_profile": epp_name})
+
+		frappe.delete_doc("Portal Payment Method", pmm_name)
 		frappe.delete_doc("Electronic Payment Profile", epp_name)
-		frappe.delete_doc("Payment Portal Method", pmm_name)
 
 		# Delete from API
 		self.get_password(company)
