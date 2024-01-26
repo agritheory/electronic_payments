@@ -21,6 +21,7 @@ from electronic_payments.electronic_payments.doctype.electronic_payment_settings
 	exceeds_credit_limit,
 	calculate_payment_method_fees,
 	process_electronic_payment,
+	queue_method_as_admin,
 )
 
 
@@ -103,12 +104,8 @@ class AuthorizeNet:
 					"electronic_payment_reference",
 					str(response.transactionResponse.transId),
 				)
-				frappe.enqueue(
+				queue_method_as_admin(
 					process_electronic_payment,
-					queue="short",
-					timeout=3600,
-					is_async=True,
-					now=False,
 					doc=doc,
 					data=data,
 					transaction_id=str(response.transactionResponse.transId),
@@ -315,12 +312,8 @@ class AuthorizeNet:
 						"electronic_payment_reference",
 						str(response.transactionResponse.transId),
 					)
-					frappe.enqueue(
+					queue_method_as_admin(
 						process_electronic_payment,
-						queue="short",
-						timeout=3600,
-						is_async=True,
-						now=False,
 						doc=doc,
 						data=data,
 						transaction_id=str(response.transactionResponse.transId),

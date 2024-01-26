@@ -1,7 +1,15 @@
 import frappe
-from frappe.utils.data import today, flt
+from frappe.utils.data import cstr, flt, today
+from frappe.utils.background_jobs import (
+	get_queue,
+	execute_job,
+	truncate_failed_registry,
+	RQ_JOB_FAILURE_TTL,
+	RQ_RESULTS_TTL,
+)
 from erpnext.accounts.party import get_party_account
 from erpnext.selling.doctype.customer.customer import get_credit_limit
+import datetime
 
 
 def exceeds_credit_limit(doc, data):
@@ -97,7 +105,7 @@ def create_payment_entry(doc, data, transaction_id):
 	pe.cost_center = doc.cost_center
 	pe.project = doc.project
 
-	pe.save()
+	pe.save(ignore_permissions=True)
 	pe.submit()
 
 
@@ -178,5 +186,51 @@ def create_journal_entry(doc, data, transaction_id):
 				"project": doc.project,
 			},
 		)
-	je.save()
+	je.save(ignore_permissions=True)
 	je.submit()
+
+
+def queue_method_as_admin(method, **kwargs):
+	"""
+	Applies background job enqueue logic but sets the user as Administrator to execute method.
+
+	:param method: function to call
+	:param kwargs: arguments to pass to method
+	:return: job
+	"""
+	# enqueue arguments passed to execute_job
+	queue = "short"
+	timeout = 3600
+	event = None
+	is_async = True
+	at_front = False
+	job_id = None
+	try:
+		q = get_queue(queue, is_async=is_async)
+	except ConnectionError:
+		if frappe.local.flags.in_migrate:
+			# If redis is not available during migration, execute the job directly
+			print(f"Redis queue is unreachable: Executing {method} synchronously")
+			return frappe.call(method, **kwargs)
+		raise
+
+	queue_args = {
+		"site": frappe.local.site,
+		"user": "Administrator",  # frappe.session.user,
+		"method": method,
+		"event": event,
+		"job_name": cstr(method) + str(datetime.datetime.now()),
+		"is_async": is_async,
+		"kwargs": kwargs,
+	}
+
+	return q.enqueue_call(
+		execute_job,
+		timeout=timeout,
+		kwargs=queue_args,
+		at_front=at_front,
+		failure_ttl=frappe.conf.get("rq_job_failure_ttl") or RQ_JOB_FAILURE_TTL,
+		result_ttl=frappe.conf.get("rq_results_ttl") or RQ_RESULTS_TTL,
+		job_id=job_id,
+		on_failure=truncate_failed_registry,
+	)

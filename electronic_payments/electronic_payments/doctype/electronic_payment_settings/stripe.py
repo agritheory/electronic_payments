@@ -12,6 +12,7 @@ from electronic_payments.electronic_payments.doctype.electronic_payment_settings
 	exceeds_credit_limit,
 	calculate_payment_method_fees,
 	process_electronic_payment,
+	queue_method_as_admin,
 )
 
 """
@@ -221,15 +222,8 @@ class Stripe:
 
 				if response.status == "succeeded":
 					frappe.db.set_value(doc.doctype, doc.name, "electronic_payment_reference", str(response.id))
-					frappe.enqueue(
-						process_electronic_payment,
-						queue="short",
-						timeout=3600,
-						is_async=True,
-						now=False,
-						doc=doc,
-						data=data,
-						transaction_id=str(response.id),
+					queue_method_as_admin(
+						process_electronic_payment, doc=doc, data=data, transaction_id=str(response.id)
 					)
 					return {"message": "Success", "transaction_id": response.id}
 				elif response.status == "processing":
@@ -373,15 +367,8 @@ class Stripe:
 					).delete()
 					stripe.PaymentMethod.detach(payment_profile_id)
 				frappe.db.set_value(doc.doctype, doc.name, "electronic_payment_reference", str(response.id))
-				frappe.enqueue(
-					process_electronic_payment,
-					queue="short",
-					timeout=3600,
-					is_async=True,
-					now=False,
-					doc=doc,
-					data=data,
-					transaction_id=str(response.id),
+				queue_method_as_admin(
+					process_electronic_payment, doc=doc, data=data, transaction_id=str(response.id)
 				)
 				return {"message": "Success", "transaction_id": response.id}
 			elif response.status == "processing":

@@ -178,7 +178,8 @@ async function process(frm, dialog) {
 		)
 		.then(r => {
 			if (r.message == 'Success') {
-				dialog.fields_dict.ht.$wrapper.html('Success!')
+				dialog.fields_dict.ht.$wrapper.html(`<p style="color: green; font-weight: bold;">Success!</p>`)
+				// TODO: hide/remove Process Payment button
 			} else {
 				dialog.fields_dict.ht.$wrapper.html(`<p style="color: red; font-weight: bold;">${r.error}</p>`)
 			}
