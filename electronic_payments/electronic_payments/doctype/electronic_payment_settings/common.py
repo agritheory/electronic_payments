@@ -1,8 +1,9 @@
 import frappe
-from frappe.utils.data import cstr, flt, today
+from frappe.utils.data import cstr, today
 from frappe.utils.background_jobs import (
 	get_queue,
 	execute_job,
+	create_job_id,
 	truncate_failed_registry,
 	RQ_JOB_FAILURE_TTL,
 	RQ_RESULTS_TTL,
@@ -20,19 +21,12 @@ def exceeds_credit_limit(doc, data):
 def calculate_payment_method_fees(doc, data):
 	"""
 	Given a document (with a grand_total) and a data dict with payment method information,
-	        returns any fees associated with that payment method
+	returns any fees associated with that payment method
 	"""
-	fees = 0.0
 	if not data.get("ppm_name"):
-		return fees
+		return 0.0
 	ppm = frappe.get_doc("Portal Payment Method", data.get("ppm_name"))
-	if ppm.service_charge and ppm.percentage_or_rate == "Percentage":
-		fees = flt(
-			doc.grand_total * (ppm.percentage / 100), frappe.get_precision(doc.doctype, "grand_total")
-		)
-	elif ppm.service_charge and ppm.percentage_or_rate == "Rate":
-		fees = flt(ppm.rate, frappe.get_precision(doc.doctype, "grand_total"))
-	return fees
+	return ppm.calculate_payment_method_fees(doc)
 
 
 def process_electronic_payment(doc, data, transaction_id):
@@ -199,12 +193,13 @@ def queue_method_as_admin(method, **kwargs):
 	:return: job
 	"""
 	# enqueue arguments passed to execute_job
+	job_name_and_id_str = cstr(method) + str(datetime.datetime.now())
 	queue = "short"
 	timeout = 3600
 	event = None
 	is_async = True
 	at_front = False
-	job_id = None
+	job_id = create_job_id(job_name_and_id_str)
 	try:
 		q = get_queue(queue, is_async=is_async)
 	except ConnectionError:
@@ -219,7 +214,7 @@ def queue_method_as_admin(method, **kwargs):
 		"user": "Administrator",  # frappe.session.user,
 		"method": method,
 		"event": event,
-		"job_name": cstr(method) + str(datetime.datetime.now()),
+		"job_name": job_name_and_id_str,
 		"is_async": is_async,
 		"kwargs": kwargs,
 	}

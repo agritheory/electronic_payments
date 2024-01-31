@@ -56,17 +56,20 @@
 			"label": "Service Charge"
 		},
 		{
+			"depends_on": "eval:doc.service_charge === 1",
 			"fieldname": "percentage_or_rate",
 			"fieldtype": "Select",
 			"label": "Percentage or Rate",
 			"options": "Percentage\nRate"
 		},
 		{
+			"depends_on": "eval:doc.service_charge === 1 && doc.percentage_or_rate == 'Percentage'",
 			"fieldname": "percentage",
 			"fieldtype": "Percent",
 			"label": "Percentage"
 		},
 		{
+			"depends_on": "eval:doc.service_charge === 1 && doc.percentage_or_rate == 'Rate'",
 			"fieldname": "rate",
 			"fieldtype": "Currency",
 			"label": "Rate"
@@ -92,7 +95,7 @@
 	"index_web_pages_for_search": 1,
 	"istable": 1,
 	"links": [],
-	"modified": "2023-11-07 13:54:22.546977",
+	"modified": "2024-01-30 10:57:22.898204",
 	"modified_by": "Administrator",
 	"module": "Electronic Payments",
 	"name": "Portal Payment Method",

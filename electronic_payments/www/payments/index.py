@@ -20,41 +20,26 @@ def get_context(context):
 	party = context.doc.customer if context.doc.customer else context.doc.supplier
 	payment_methods = []
 	for pm in frappe.get_all("Portal Payment Method", {"parent": party}, order_by="`default` DESC"):
-		payment_method = frappe.get_doc("Portal Payment Method", pm.name).as_dict()
-		if payment_method.service_charge and payment_method.percentage_or_rate == "Percentage":
-			amount = context.doc.grand_total * (payment_method.percentage / 100)
-			payment_method.total = flt(
-				context.doc.grand_total + amount,
-				frappe.get_precision(context.doc.doctype, "grand_total"),
-			)
-			payment_method.service_charge = f""" - { fmt_money(
-				amount,
-				frappe.get_precision(context.doc.doctype, "grand_total"),
-				context.doc.currency,
-			) } ({fmt_money(
-				context.doc.grand_total + amount,
-				frappe.get_precision(context.doc.doctype, "grand_total"),
-				context.doc.currency,
-			) })"""
-		elif payment_method.service_charge and payment_method.percentage_or_rate == "Rate":
-			payment_method.total = flt(
-				context.doc.grand_total + payment_method.rate,
-				frappe.get_precision(context.doc.doctype, "grand_total"),
-			)
-			payment_method.service_charge = f""" - { fmt_money(
-				payment_method.rate,
-				frappe.get_precision(context.doc.doctype, "grand_total"),
-				context.doc.currency,
-			) } ({fmt_money(
-				context.doc.grand_total + payment_method.rate,
-				frappe.get_precision(context.doc.doctype, "grand_total"),
-				context.doc.currency,
-			) })"""
-		else:
-			payment_method.total = flt(
-				context.doc.grand_total, frappe.get_precision(context.doc.doctype, "grand_total")
-			)
-			payment_method.service_charge = ""
+		payment_method = frappe.get_doc("Portal Payment Method", pm.name)
+		fees = payment_method.calculate_payment_method_fees(context.doc)
+		payment_method = payment_method.as_dict()
+		payment_method.total = flt(
+			context.doc.grand_total + fees,
+			frappe.get_precision(context.doc.doctype, "grand_total"),
+		)
+		payment_method.service_charge = (
+			f""" - { fmt_money(
+			fees,
+			frappe.get_precision(context.doc.doctype, "grand_total"),
+			context.doc.currency,
+		) } ({fmt_money(
+			context.doc.grand_total + fees,
+			frappe.get_precision(context.doc.doctype, "grand_total"),
+			context.doc.currency,
+		) })"""
+			if fees
+			else ""
+		)
 		if payment_method.default:
 			context.doc.grand_total_with_service_charge = fmt_money(
 				payment_method.total, frappe.get_precision(context.doc.doctype, "grand_total")
@@ -102,7 +87,6 @@ def pay(dt, dn, payment_method):
 			["payment_profile_id", "party_profile"],
 		)
 		response = process(doc, data)
-		print(response)
 		if response.get("message") == "Success":
 			return {"success_message": "Your Payment has been processed successfully"}
 		else:
