@@ -784,26 +784,26 @@ def create_electronic_payment_settings(settings):
 		epr.parent_account = "1300 - Accounts Receivable - CFC"
 		epr.save()
 
-	if os.environ.get("STRIPE_API_KEY"):
+	if os.environ.get("AUTHORIZE_API_KEY") and os.environ.get("AUTHORIZE_TRANSACTION_KEY"):
 		eps = frappe.new_doc("Electronic Payment Settings")
 		eps.company = settings.company
-		eps.provider = "Stripe"
-		eps.api_key = os.environ.get("STRIPE_API_KEY")
+		eps.provider = "Authorize.net"
+		eps.api_key = os.environ.get("AUTHORIZE_API_KEY")
+		eps.transaction_key = os.environ.get("AUTHORIZE_TRANSACTION_KEY")
 		eps.create_ppm = 1
 		eps.deposit_account = "1201 - Primary Checking - CFC"
 		eps.accepting_fee_account = "5223 - Electronic Payments Provider Fees - CFC"
 		eps.accepting_clearing_account = "1320 - Electronic Payments Receivable - CFC"
 		eps.save()
 	if (
-		os.environ.get("AUTHORIZE_API_KEY")
-		and os.environ.get("AUTHORIZE_TRANSACTION_KEY")
-		and not os.environ.get("STRIPE_API_KEY")
+		os.environ.get("STRIPE_API_KEY")
+		and not os.environ.get("AUTHORIZE_API_KEY")
+		and not os.environ.get("AUTHORIZE_TRANSACTION_KEY")
 	):
 		eps = frappe.new_doc("Electronic Payment Settings")
 		eps.company = settings.company
-		eps.provider = "Authorize.net"
-		eps.api_key = os.environ.get("AUTHORIZE_API_KEY")
-		eps.transaction_key = os.environ.get("AUTHORIZE_TRANSACTION_KEY")
+		eps.provider = "Stripe"
+		eps.api_key = os.environ.get("STRIPE_API_KEY")
 		eps.create_ppm = 1
 		eps.deposit_account = "1201 - Primary Checking - CFC"
 		eps.accepting_fee_account = "5223 - Electronic Payments Provider Fees - CFC"
