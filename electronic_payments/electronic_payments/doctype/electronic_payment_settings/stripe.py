@@ -163,16 +163,16 @@ class Stripe:
 				doc.grand_total + (data.get("additional_charges") or 0),
 				frappe.get_precision(doc.doctype, "grand_total"),
 			)
-			customer_id = self.create_customer_profile(doc, data)
-			if customer_id.get("message") == "Success":
+			customer_response = self.create_customer_profile(doc, data)
+			if customer_response.get("message") == "Success":
 				currency = frappe.defaults.get_global_default("currency").lower()
 				response = stripe.PaymentIntent.create(
 					amount=int(total_to_charge * self.currency_multiplier(currency)),
 					currency=currency,
-					customer=customer_id,
+					customer=customer_response.get("transaction_id"),
 					description=doc.name,
 					setup_future_usage="off_session",  # Indicates this payment method will be used in future PaymentIntents and saves to Customer. off_session = can charge customer at later time, on_session = can only charge in live session
-					payment_method_types=["us_bank_account"],
+					payment_method_types=["us_bank_account", "card"],
 					# payment_method_options={
 					# 	"us_bank_account": {
 					# 	"financial_connections": {"permissions": ["payment_method", "balances"]},
@@ -182,10 +182,11 @@ class Stripe:
 				return {
 					"message": "Success",
 					"transaction_id": response.id,
+					"customer_profile_id": response.customer,
 					"client_secret": response.client_secret,
 				}
 			else:  # error creating customer profile
-				return customer_id
+				return customer_response
 		except Exception as e:
 			try:
 				frappe.log_error(message=frappe.get_traceback(), title=f"{e.code}: {e.type}. {e.message}")
