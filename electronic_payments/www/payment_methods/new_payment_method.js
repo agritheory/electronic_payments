@@ -11,7 +11,7 @@ frappe.ready(async () => {
 		}
 		let ppm = get_form_data()
 		let ppm_edited = frappe.call({
-			method: 'electronic_payments.www.payment_methods.payment_method.edit_portal_payment_method',
+			method: 'electronic_payments.www.payment_methods.new_payment_method.new_portal_payment_method',
 			args: {
 				payment_method: ppm,
 			},
@@ -35,8 +35,11 @@ frappe.ready(async () => {
 
 	function get_form_data() {
 		ppm = {}
-		let inputs = ['name', 'label', 'default', 'service_charge', 'percentage_or_rate', 'percentage', 'rate']
+		let inputs = ['label', 'default', 'percentage_or_rate', 'percentage', 'rate', 'party', 'party_type', 'mode_of_payment']
 		inputs.forEach(id => (ppm[id] = document.getElementById(`ppm_${id}`).value))
+
+		let checkboxs = ['service_charge', 'default']
+		checkboxs.forEach(id => (ppm[id] = document.getElementById(`ppm_${id}`).checked))
 		return ppm
 	}
 })

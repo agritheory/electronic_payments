@@ -35,8 +35,11 @@ frappe.ready(async () => {
 
 	function get_form_data() {
 		ppm = {}
-		let inputs = ['name', 'label', 'default', 'service_charge', 'percentage_or_rate', 'percentage', 'rate']
+		let inputs = ['name', 'label', 'default', 'percentage_or_rate', 'percentage', 'rate']
 		inputs.forEach(id => (ppm[id] = document.getElementById(`ppm_${id}`).value))
+
+		let checkboxs = ['service_charge', 'default']
+		checkboxs.forEach(id => (ppm[id] = document.getElementById(`ppm_${id}`).checked))
 		return ppm
 	}
 })

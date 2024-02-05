@@ -13,52 +13,52 @@
 {% block page_content %}
 <div class="page-content-block">
 	<h3 style="margin-top: 0px;">{{ _("New Payment Method") }}</h3>
-	<form id="ppm-form" action="#">
-		<div class="row">
-			<div class="col-sm-12" style="max-width: 500px;">
-				<div class="form-group">
-					<label for="mode_of_payment" class="control-label text-muted small">{{ _("Mode of Payment") }}</label>
-					<input id="ppm_mode_of_payment" type="text" class="form-control" name="mode_of_payment">
-				</div>
-
-				<div class="form-group">
-					<label for="label" class="control-label text-muted small">{{ _("Label") }}</label>
-					<input id="ppm_label" type="text" class="form-control" name="label">
-				</div>
-
-				<div class="form-group">
-					<label for="default" class="control-label text-muted small">{{ _("Default") }}</label>
-                    <input id="ppm_default" type="checkbox" class="form-control" name="default">
-				</div>
-
-				<div class="form-group">
-					<label for="service_charge" class="control-label text-muted small">{{ _("Service Charge") }}</label>
-					<input id="ppm_service_charge" type="checkbox" class="form-control" name="service_charge">
-				</div>
-
-				<div class="form-group">
-					<label for="percentage_or_rate" class="control-label text-muted small">{{ _("Percentage or Rate") }}</label>
-					<select id="ppm_percentage_or_rate" class="form-control" name="percentage_or_rate" data-label="percentage_or_rate" data-fieldtype="Select">
-						<option value="Percentage" selected>{{ _("Percentage") }}</option>
-						<option value="Rate">{{ _("Rate") }}</option>
-					</select>
-				</div>
-
-				<div class="form-group">
-					<label for="percentage" class="control-label text-muted small">{{ _("Percentage") }}</label>
-					<input id="ppm_percentage" type="number" class="form-control" name="percentage">
-				</div>
-				<div class="form-group">
-					<label for="rate" class="control-label text-muted small">{{ _("Rate") }}</label>
-					<input id="ppm_rate" type="number" class="form-control" name="rate">
-				</div>
-
-				<div class="row mt-3 " id="submit-button-area">
-					<div class="col-md mt-3" style="grid-area: submit;"><button class="btn btn-primary form-control" id="submit-button">{{ _("Save") }}</button></div>
-				</div>
-			</div>
-		</div>
-	</form>
-	<div id="payments-messages"></div>
+	<div class="row">
+        <div class="col-md-10">
+			<div id="payments-messages" class="mt-2 mb-2"></div>
+            <form id="ppm-form" action="#">
+				<input id="ppm_party" type="hidden" class="form-control" name="party" value="{{ party }}">
+				<input id="ppm_party_type" type="hidden" class="form-control" name="party_type" value="{{ party_type }}">
+                <div class="form-group row">
+                    <div class="col-sm-6">
+                        <label for="mode_of_payment" class="control-label text-muted small">{{ _("Mode of Payment") }}</label>
+						<input id="ppm_mode_of_payment" type="text" class="form-control" name="mode_of_payment">
+                    </div>
+                    <div class="col-sm-6">
+                        <label for="label" class="control-label text-muted small">{{ _("Label") }}</label>
+						<input id="ppm_label" type="text" class="form-control" name="label">
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <div class="col-sm-6">
+                        <label for="default" class="control-label text-muted small">{{ _("Default") }}</label>
+                    	<input id="ppm_default" type="checkbox" class="form-control" name="default">
+                    </div>
+                    <div class="col-sm-6">
+						<label for="service_charge" class="control-label text-muted small">{{ _("Service Charge") }}</label>
+						<input id="ppm_service_charge" type="checkbox" class="form-control" name="service_charge">
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <div class="col-sm-6">
+                        <label for="percentage_or_rate" class="control-label text-muted small">{{ _("Percentage or Rate") }}</label>
+						<select id="ppm_percentage_or_rate" class="form-control" name="percentage_or_rate" data-label="percentage_or_rate" data-fieldtype="Select">
+							<option value="Percentage" selected>{{ _("Percentage") }}</option>
+							<option value="Rate">{{ _("Rate") }}</option>
+						</select>
+                    </div>
+                    <div class="col-sm-3">
+                        <label for="percentage" class="control-label text-muted small">{{ _("Percentage") }}</label>
+						<input id="ppm_percentage" type="number" class="form-control" name="percentage">
+                    </div>
+                    <div class="col-sm-3">
+                        <label for="rate" class="control-label text-muted small">{{ _("Rate") }}</label>
+						<input id="ppm_rate" type="number" class="form-control" name="rate">
+                    </div>
+                </div>
+				<button type="button" class="btn btn-primary px-4 float-right" id="submit-button">{{ _("Save") }}</button>
+            </form>
+        </div>
+    </div>
 </div>
 {% endblock %}
