@@ -12,46 +12,45 @@
 
 {% block page_content %}
 <div class="page-content-block">
-	<h3 style="margin-top: 0px;">{{ _("Edit Payment Method") }}</h3>
+	<h3 style="margin-top: 0px;">{{ _("New Payment Method") }}</h3>
 	<form id="ppm-form" action="#">
-		<input id="ppm_name" type="hidden" name="name" value="{{ ppm.name }}">
 		<div class="row">
 			<div class="col-sm-12" style="max-width: 500px;">
 				<div class="form-group">
 					<label for="mode_of_payment" class="control-label text-muted small">{{ _("Mode of Payment") }}</label>
-					<input id="ppm_mode_of_payment" type="text" class="form-control" name="mode_of_payment" readonly value= "{{ ppm.mode_of_payment }}">
+					<input id="ppm_mode_of_payment" type="text" class="form-control" name="mode_of_payment">
 				</div>
 
 				<div class="form-group">
 					<label for="label" class="control-label text-muted small">{{ _("Label") }}</label>
-					<input id="ppm_label" type="text" class="form-control" name="label" value="{{ ppm.label }}">
+					<input id="ppm_label" type="text" class="form-control" name="label">
 				</div>
 
 				<div class="form-group">
 					<label for="default" class="control-label text-muted small">{{ _("Default") }}</label>
-                    <input id="ppm_default" type="checkbox" class="form-control" name="default" {% if ppm.default %} checked {% endif %}>
+                    <input id="ppm_default" type="checkbox" class="form-control" name="default">
 				</div>
 
 				<div class="form-group">
 					<label for="service_charge" class="control-label text-muted small">{{ _("Service Charge") }}</label>
-					<input id="ppm_service_charge" type="checkbox" class="form-control" name="service_charge" {% if ppm.service_charge %} checked {% endif %}>
+					<input id="ppm_service_charge" type="checkbox" class="form-control" name="service_charge">
 				</div>
 
 				<div class="form-group">
 					<label for="percentage_or_rate" class="control-label text-muted small">{{ _("Percentage or Rate") }}</label>
 					<select id="ppm_percentage_or_rate" class="form-control" name="percentage_or_rate" data-label="percentage_or_rate" data-fieldtype="Select">
-						<option value="Percentage" {% if ppm.percentage_or_rate == 'Percentage' %}selected="selected"{% endif %}>{{ _("Percentage") }}</option>
-						<option value="Rate" {% if ppm.percentage_or_rate == 'Rate' %}selected="selected"{% endif %}>{{ _("Rate") }}</option>
+						<option value="Percentage" selected>{{ _("Percentage") }}</option>
+						<option value="Rate">{{ _("Rate") }}</option>
 					</select>
 				</div>
 
 				<div class="form-group">
 					<label for="percentage" class="control-label text-muted small">{{ _("Percentage") }}</label>
-					<input id="ppm_percentage" type="number" class="form-control" name="percentage" value="{{ ppm.percentage }}">
+					<input id="ppm_percentage" type="number" class="form-control" name="percentage">
 				</div>
 				<div class="form-group">
 					<label for="rate" class="control-label text-muted small">{{ _("Rate") }}</label>
-					<input id="ppm_rate" type="number" class="form-control" name="rate" value="{{ ppm.rate }}">
+					<input id="ppm_rate" type="number" class="form-control" name="rate">
 				</div>
 
 				<div class="row mt-3 " id="submit-button-area">

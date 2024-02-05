@@ -11,49 +11,58 @@
 {% endblock %}
 
 {% block page_content %}
-
-<h2>Manage Payment Methods</h2>
-<div id="payments-messages"></div>
-{% if portal_payment_methods %}
+<div class="page-content-block"></div>
+    <h3 style="margin-top: 1rem;">{{ _("Manage Payment Methods") }}</h3>
+    <div id="payments-messages"></div>
+    <div class="new-btn pb-3 float-right">
+        <a href="/payment_methods/new_payment_method" class="btn btn-sm btn-primary small new-note-btn mr-1">
+            <svg class="icon icon-sm">
+                <use href="#icon-add"></use>
+            </svg>
+            {{ _("New Payment Method") }}
+        </a>
+    </div>
+    {% if portal_payment_methods %}
     <div class="table">
         <table class="table table-bordered table-hover">
             <thead>
                 <tr class="active">
-                <th style="width: 150px">{{ _("Mode of Payment") }}</th>
-                <th style="width: 120px">{{ _("Label") }}</th>
-                <th style="width: 120px">{{ _("Default") }}</th>
-                <th style="width: 100px">{{ _("Service Charge") }}</th>
-                <th style="width: 100px"></th>
-                <th style="width: 100px"></th>
-            </tr>
+                    <th style="width: 120px">{{ _("Label") }}</th>
+                    <th style="width: 150px">{{ _("Mode of Payment") }}</th>
+                    <th style="width: 50px">{{ _("Default") }}</th>
+                    <th style="width: 50px">{{ _("Service Charge") }}</th>
+                    <th style="width: 50px"></th>
+                    <th style="width: 50px"></th>
+                </tr>
             </thead>
-        <tbody>
-            {% for ppm in portal_payment_methods %}
-            <tr>
-                <td>{{ ppm.mode_of_payment }}</td>
-                <td>{{ ppm.label }}</td>
-                <td>{% if ppm.default %}{{ _("Yes") }}{% else %}{{ _("No") }}{% endif %}</td>
-                <td>{% if ppm.service_charge %}{{ _("Yes") }}{% else %}{{ _("No") }}{% endif %}</td>
-                <td>
-                    <a href="/payment_methods/payment_method?name={{ ppm.name }}" class="card-link">
-                        <svg class="icon icon-sm">
-                            <use href="#icon-edit"></use>
-                        </svg>
-                        {{ _("Edit") }}
-                    </a>
-                </td>
-                <td>
-                    <a href="javascript:;" class="card-link remove-ppm" data-name="{{ ppm.name }}" data-mop="{{ ppm.mode_of_payment}}" data-label="{{ ppm.label }}">
-                        <svg class="icon icon-sm">
-                            <use href="#icon-delete"></use>
-                        </svg>
-                        {{ _("Remove") }}
-                    </a>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
+            <tbody>
+                {% for ppm in portal_payment_methods %}
+                <tr>
+                    <td>{{ ppm.label }}</td>
+                    <td>{{ ppm.mode_of_payment }}</td>
+                    <td>{% if ppm.default %}{{ _("Yes") }}{% else %}{{ _("No") }}{% endif %}</td>
+                    <td>{% if ppm.service_charge %}{{ _("Yes") }}{% else %}{{ _("No") }}{% endif %}</td>
+                    <td>
+                        <a href="/payment_methods/payment_method?name={{ ppm.name }}" class="card-link">
+                            <svg class="icon icon-sm">
+                                <use href="#icon-edit"></use>
+                            </svg>
+                            {{ _("Edit") }}
+                        </a>
+                    </td>
+                    <td>
+                        <a href="javascript:;" class="card-link remove-ppm" data-name="{{ ppm.name }}" data-mop="{{ ppm.mode_of_payment}}" data-label="{{ ppm.label }}">
+                            <svg class="icon icon-sm">
+                                <use href="#icon-delete"></use>
+                            </svg>
+                            {{ _("Remove") }}
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
         </table>
     </div>
-{% endif %}
+    {% endif %}
+</div>
 {% endblock %}

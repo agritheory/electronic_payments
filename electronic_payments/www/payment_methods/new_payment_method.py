@@ -8,7 +8,6 @@ no_cache = 1
 
 def get_context(context):
 	context.add_breadcrumbs = 1
-	name = frappe.local.request.args.get("name")
 	user = frappe.session.user
 	contact_name = get_contact_name(user)
 	party = None
@@ -18,19 +17,19 @@ def get_context(context):
 		for link in contact.links:
 			if link.link_doctype == "Customer":
 				party = link.link_name
+				party_type = link.link_doctype
 				break
 
 			if link.link_doctype == "Supplier":
 				party = link.link_name
+				party_type = link.link_doctype
 				break
 
 	if not party:
 		frappe.throw(_("Not permitted"), frappe.PermissionError)
 
-	try:
-		context.ppm = frappe.get_doc("Portal Payment Method", {"name": name, "parent": party})
-	except frappe.exceptions.DoesNotExistError:
-		frappe.throw(_("Not permitted"), frappe.PermissionError)
+	context.party = party
+	context.party_type = party_type
 
 
 @frappe.whitelist()
