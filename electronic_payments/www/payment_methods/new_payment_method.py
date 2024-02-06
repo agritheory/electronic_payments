@@ -34,19 +34,24 @@ def get_context(context):
 
 @frappe.whitelist()
 def new_portal_payment_method(payment_method):
-	data = json.loads(payment_method)
-	portal_payment_method = frappe.new_doc("Portal Payment Method")
-	portal_payment_method.parent = data.get("party")
-	portal_payment_method.parenttype = data.get("party_type")
-	portal_payment_method.mode_of_payment = data.get("mode_of_payment")
-	portal_payment_method.service_charge = data.get("service_charge")
-	portal_payment_method.default = data.get("default") # TODO: prevent multiple defaults?
-	portal_payment_method.percentage_or_rate = data.get("percentage_or_rate")
-	portal_payment_method.percentage = data.get("percentage")
-	portal_payment_method.rate = data.get("rate")
-	portal_payment_method.label = data.get("label")
+	from erpnext import get_default_company
+
+	data = frappe._dict(json.loads(payment_method))
+
+	company = get_default_company()
+	settings = frappe.get_doc("Electronic Payment Settings", {"company": company})
+	client = settings.client()
+
+	doc = frappe._dict({"company": company, "customer": data.party})
+
+	data.mode_of_payment = data.payment_type
+	data.save_data = "Retain payment data for this party"
+	print(data)
 	try:
-		portal_payment_method.insert(ignore_permissions=True)
+		response = client.create_customer_payment_profile(doc, data)
+		frappe.db.commit()
+		if response.get("error"):
+			return {"error_message": response["error"]}
 		return {"success_message": "Your Payment Method has been created successfully"}
 	except Exception as e:
 		return {"error_message": str(e)}

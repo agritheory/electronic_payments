@@ -17,42 +17,68 @@
         <div class="col-md-10">
 			<div id="payments-messages" class="mt-2 mb-2"></div>
             <form id="ppm-form" action="#">
-				<input id="ppm_name" type="hidden" name="name" value="{{ ppm.name }}">
+				<input id="ppm_name" type="hidden" name="name" value="{{ portal_payment_method.name }}">
                 <div class="form-group row">
                     <div class="col-sm-6">
-                        <label for="mode_of_payment" class="control-label text-muted small">{{ _("Mode of Payment") }}</label>
-						<input id="ppm_mode_of_payment" type="text" class="form-control" name="mode_of_payment" readonly value= "{{ ppm.mode_of_payment }}">
-                    </div>
-                    <div class="col-sm-6">
-                        <label for="label" class="control-label text-muted small">{{ _("Label") }}</label>
-						<input id="ppm_label" type="text" class="form-control" name="label" value="{{ ppm.label }}">
-                    </div>
-                </div>
-                <div class="form-group row">
-                    <div class="col-sm-6">
-                        <label for="default" class="control-label text-muted small">{{ _("Default") }}</label>
-                    	<input id="ppm_default" type="checkbox" class="form-control" name="default" {% if ppm.default %} checked {% endif %}>
-                    </div>
-                    <div class="col-sm-6">
-						<label for="service_charge" class="control-label text-muted small">{{ _("Service Charge") }}</label>
-						<input id="ppm_service_charge" type="checkbox" class="form-control" name="service_charge" {% if ppm.service_charge %} checked {% endif %}>
-                    </div>
-                </div>
-                <div class="form-group row">
-                    <div class="col-sm-6">
-                        <label for="percentage_or_rate" class="control-label text-muted small">{{ _("Percentage or Rate") }}</label>
-						<select id="ppm_percentage_or_rate" class="form-control" name="percentage_or_rate" data-label="percentage_or_rate" data-fieldtype="Select">
-							<option value="Percentage" {% if ppm.percentage_or_rate == 'Percentage' %}selected="selected"{% endif %}>{{ _("Percentage") }}</option>
-							<option value="Rate" {% if ppm.percentage_or_rate == 'Rate' %}selected="selected"{% endif %}>{{ _("Rate") }}</option>
+                        <label for="payment_type" class="control-label text-muted small">{{ _("Payment Type") }}</label>
+                        <select id="ppm_payment_type" class="form-control" name="payment_type" data-label="payment_type" data-fieldtype="Select">
+							<option value="Card" {% if portal_payment_method.electronic_payment_profile_object.payment_type == "Card" %}selected{% endif %}>{{ _("Card") }}</option>
+							<option value="ACH" {% if portal_payment_method.electronic_payment_profile_object.payment_type == "ACH" %}selected{% endif %}>{{ _("ACH") }}</option>
 						</select>
                     </div>
-                    <div class="col-sm-3">
-                        <label for="percentage" class="control-label text-muted small">{{ _("Percentage") }}</label>
-						<input id="ppm_percentage" type="number" class="form-control" name="percentage" value="{{ ppm.percentage }}">
+                    <div class="col-sm-6">
+                        <label for="default" class="control-label text-muted small">{{ _("Default") }}</label>
+                    	<input id="ppm_default" type="checkbox" class="form-control" name="default" {% if portal_payment_method.default %}checked{% endif %}>
                     </div>
-                    <div class="col-sm-3">
-                        <label for="rate" class="control-label text-muted small">{{ _("Rate") }}</label>
-						<input id="ppm_rate" type="number" class="form-control" name="rate" value="{{ ppm.rate }}">
+                </div>
+                <div id="card">
+                    <div class="form-group row">
+                        <div class="col-sm-6">
+                            <label for="card_number" class="control-label text-muted small">{{ _("Card Number") }}</label>
+                            <input id="ppm_card_number" type="text" class="form-control" name="card_number" value="{{ portal_payment_method.card_number }}">
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="card_cvc" class="control-label text-muted small">{{ _("CVC") }}</label>
+                            <input id="ppm_card_cvc" type="text" class="form-control" name="card_cvc">
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <div class="col-sm-6">
+                            <label for="cardholder_name" class="control-label text-muted small">{{ _("Card Holder's Name") }}</label>
+                            <input id="ppm_cardholder_name" type="text" class="form-control" name="cardholder_name" value="{{ portal_payment_method.first_name }} {{ portal_payment_method.last_name }}">
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="card_expiration_date" class="control-label text-muted small">{{ _("Card Expiration Date") }}</label>
+                            <input id="ppm_card_expiration_date" type="text" placeholder="2022-12" class="form-control" name="card_expiration_date" value="{{ portal_payment_method.expiration_date }}">
+                        </div>
+                    </div>
+                </div>
+                <div id="ach">
+                    <div class="form-group row">
+                        <div class="col-sm-6">
+                            <label for="account_holders_name" class="control-label text-muted small">{{ _("Account Holder's Name") }}</label>
+                            <input id="ppm_account_holders_name" type="text" class="form-control" name="account_holders_name" value="{{ portal_payment_method.first_name }} {{ portal_payment_method.last_name }}">
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="dl_state" class="control-label text-muted small">{{ _("Drivers License State") }}</label>
+                            <input id="ppm_dl_state" type="text" class="form-control" name="dl_state">
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <div class="col-sm-6">
+                            <label for="dl_number" class="control-label text-muted small">{{ _("Drivers License Number") }}</label>
+                            <input id="ppm_dl_number" type="text" class="form-control" name="dl_number">
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="routing_number" class="control-label text-muted small">{{ _("Routing Number") }}</label>
+                            <input id="ppm_routing_number" type="text" class="form-control" name="routing_number" value="{{ portal_payment_method.routing_number }}">
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <div class="col-sm-6">
+                            <label for="account_number" class="control-label text-muted small">{{ _("Checking Account Number") }}</label>
+                            <input id="ppm_account_number" type="text" class="form-control" name="account_number" value="{{ portal_payment_method.account_number }}">
+                        </div>
                     </div>
                 </div>
 				<button type="button" class="btn btn-primary px-4 float-right" id="submit-button">{{ _("Save") }}</button>

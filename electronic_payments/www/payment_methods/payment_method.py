@@ -28,7 +28,28 @@ def get_context(context):
 		frappe.throw(_("Not permitted"), frappe.PermissionError)
 
 	try:
-		context.ppm = frappe.get_doc("Portal Payment Method", {"name": name, "parent": party})
+		portal_payment_method = frappe.get_doc("Portal Payment Method", {"name": name, "parent": party})
+		electronic_payment_profile = frappe.get_doc(
+			"Electronic Payment Profile", portal_payment_method.electronic_payment_profile
+		)
+		portal_payment_method.electronic_payment_profile_object = electronic_payment_profile
+
+		# TODO company?, Stripe
+		if electronic_payment_profile.payment_gateway == "Authorize":
+			from erpnext import get_default_company
+			from electronic_payments.electronic_payments.doctype.electronic_payment_settings.authorize import (
+				AuthorizeNet,
+			)
+
+			client = AuthorizeNet()
+			response = client.get_customer_payment_profile(
+				get_default_company(), electronic_payment_profile.name
+			)
+			if response["message"] == "Success":
+				portal_payment_method.update(response["data"])
+
+		context.portal_payment_method = portal_payment_method
+
 	except frappe.exceptions.DoesNotExistError:
 		frappe.throw(_("Not permitted"), frappe.PermissionError)
 
@@ -37,12 +58,7 @@ def get_context(context):
 def edit_portal_payment_method(payment_method):
 	data = json.loads(payment_method)
 	portal_payment_method = frappe.get_doc("Portal Payment Method", data["name"])
-	portal_payment_method.service_charge = data.get("service_charge")
-	portal_payment_method.default = data.get("default") # TODO: prevent multiple defaults?
-	portal_payment_method.percentage_or_rate = data.get("percentage_or_rate")
-	portal_payment_method.percentage = data.get("percentage")
-	portal_payment_method.rate = data.get("rate")
-	portal_payment_method.label = data.get("label")
+	portal_payment_method.default = data.get("default")  # TODO: prevent multiple defaults?
 	try:
 		portal_payment_method.save(ignore_permissions=True)
 		return {"success_message": "Your Payment Method has been updated successfully"}

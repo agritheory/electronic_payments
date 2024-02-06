@@ -26,8 +26,8 @@
         <table class="table table-bordered table-hover">
             <thead>
                 <tr class="active">
-                    <th style="width: 120px">{{ _("Label") }}</th>
-                    <th style="width: 150px">{{ _("Mode of Payment") }}</th>
+                    <th style="width: 120px">{{ _("Payment Type") }}</th>
+                    <th style="width: 120px">{{ _("Reference") }}</th>
                     <th style="width: 50px">{{ _("Default") }}</th>
                     <th style="width: 50px">{{ _("Service Charge") }}</th>
                     <th style="width: 50px"></th>
@@ -37,8 +37,8 @@
             <tbody>
                 {% for ppm in portal_payment_methods %}
                 <tr>
-                    <td>{{ ppm.label }}</td>
-                    <td>{{ ppm.mode_of_payment }}</td>
+                    <td>{{ ppm.electronic_payment_profile_object.payment_type }}</td>
+                    <td>{{ ppm.electronic_payment_profile_object.reference }}</td>
                     <td>{% if ppm.default %}{{ _("Yes") }}{% else %}{{ _("No") }}{% endif %}</td>
                     <td>{% if ppm.service_charge %}{{ _("Yes") }}{% else %}{{ _("No") }}{% endif %}</td>
                     <td>

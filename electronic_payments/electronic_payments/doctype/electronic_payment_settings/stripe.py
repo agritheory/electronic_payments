@@ -6,6 +6,7 @@ import frappe
 from frappe import _
 from frappe.utils.password import get_decrypted_password
 from frappe.utils.data import flt
+from frappe.utils import cint
 
 import stripe
 from electronic_payments.electronic_payments.doctype.electronic_payment_settings.common import (
@@ -297,11 +298,12 @@ class Stripe:
 				payment_profile.party_type = "Customer"
 				payment_profile.party = doc.customer
 				payment_profile.payment_type = mop
+				payment_profile.payment_gateway = "Stripe"
 				payment_profile.reference = f"**** **** **** {last4}" if mop == "Card" else f"*{last4}"
 				payment_profile.payment_profile_id = str(response.id)
 				payment_profile.party_profile = str(customer_profile_id)
 				payment_profile.retain = 1 if data.save_data == "Retain payment data for this party" else 0
-				payment_profile.save()
+				payment_profile.save(ignore_permissions=True)
 
 				if payment_profile.retain and frappe.get_value(
 					"Electronic Payment Settings", {"company": doc.company}, "create_ppm"
@@ -311,15 +313,15 @@ class Stripe:
 						"Electronic Payment Settings", {"company": doc.company}, "mode_of_payment"
 					)
 					ppm.label = f"{mop}-{last4}"
-					ppm.default = 0
+					ppm.default = cint(data.get("default", 0))
 					ppm.electronic_payment_profile = payment_profile.name
 					ppm.service_charge = 0
 					ppm.parent = payment_profile.party
 					ppm.parenttype = payment_profile.party_type
-					ppm.save()
+					ppm.save(ignore_permissions=True)
 					cust = frappe.get_doc("Customer", doc.customer)
 					cust.append("portal_payment_method", ppm)
-					cust.save()
+					cust.save(ignore_permissions=True)
 
 				return {"message": "Success", "payment_profile_doc": payment_profile}
 			else:  # error creating the payment method

@@ -6,6 +6,7 @@ import frappe
 from frappe import _
 from frappe.utils.password import get_decrypted_password
 from frappe.utils.data import today, flt
+from frappe.utils import cint
 
 from authorizenet import apicontractsv1
 from authorizenet.apicontrollers import (
@@ -16,6 +17,7 @@ from authorizenet.apicontrollers import (
 	getTransactionDetailsController,
 	createCustomerPaymentProfileController,
 	getTransactionListController,
+	getCustomerPaymentProfileController,
 )
 from electronic_payments.electronic_payments.doctype.electronic_payment_settings.common import (
 	exceeds_credit_limit,
@@ -154,6 +156,52 @@ class AuthorizeNet:
 				frappe.log_error(message=frappe.get_traceback(), title=error_message)
 				return {"error": error_message}
 
+	def get_customer_payment_profile(self, company, electronic_payment_profile_name):
+		merchantAuth = self.merchant_auth(company)
+
+		electronic_payment_profile = frappe.get_doc(
+			"Electronic Payment Profile", {"name": electronic_payment_profile_name}
+		)
+		getCustomerPaymentProfile = apicontractsv1.getCustomerPaymentProfileRequest()
+		getCustomerPaymentProfile.merchantAuthentication = merchantAuth
+		getCustomerPaymentProfile.customerProfileId = electronic_payment_profile.party_profile
+		getCustomerPaymentProfile.customerPaymentProfileId = (
+			electronic_payment_profile.payment_profile_id
+		)
+		controller = getCustomerPaymentProfileController(getCustomerPaymentProfile)
+		controller.execute()
+		response = controller.getresponse()
+
+		if response.messages.resultCode != "Ok":
+			error_message = str(response.messages.message[0]["text"].text)
+			frappe.log_error(message=frappe.get_traceback(), title=error_message)
+			return {"error": error_message}
+
+		if electronic_payment_profile.payment_type == "Card":
+			return {
+				"message": "Success",
+				"data": {
+					"first_name": response.paymentProfile.billTo.firstName,
+					"last_name": response.paymentProfile.billTo.lastName,
+					"card_number": response.paymentProfile.payment.creditCard.cardNumber,
+					"expiration_date": response.paymentProfile.payment.creditCard.expirationDate,
+					"card_type": response.paymentProfile.payment.creditCard.cardType,
+				},
+			}
+		elif electronic_payment_profile.payment_type == "ACH":
+			return {
+				"message": "Success",
+				"data": {
+					"first_name": response.paymentProfile.billTo.firstName,
+					"last_name": response.paymentProfile.billTo.lastName,
+					"account_type": response.paymentProfile.payment.bankAccount.accountType,
+					"routing_number": response.paymentProfile.payment.bankAccount.routingNumber,
+					"account_number": response.paymentProfile.payment.bankAccount.accountNumber,
+					"name_on_account": response.paymentProfile.payment.bankAccount.nameOnAccount,
+					"echeck_type": response.paymentProfile.payment.bankAccount.echeckType,
+				},
+			}
+
 	def create_customer_payment_profile(self, doc, data):
 		if not data.get("customer_profile_id"):
 			customer_profile_id = frappe.get_value("Customer", doc.customer, "electronic_payment_profile")
@@ -211,11 +259,12 @@ class AuthorizeNet:
 			payment_profile.party_type = "Customer"
 			payment_profile.party = doc.customer
 			payment_profile.payment_type = mop
+			payment_profile.payment_gateway = "Authorize"
 			payment_profile.reference = f"**** **** **** {last4}" if mop == "Card" else f"*{last4}"
 			payment_profile.payment_profile_id = str(response.customerPaymentProfileId)
 			payment_profile.party_profile = str(customer_profile_id)
 			payment_profile.retain = 1 if data.save_data == "Retain payment data for this party" else 0
-			payment_profile.save()
+			payment_profile.save(ignore_permissions=True)
 
 			if payment_profile.retain and frappe.get_value(
 				"Electronic Payment Settings", {"company": doc.company}, "create_ppm"
@@ -226,15 +275,15 @@ class AuthorizeNet:
 					"Electronic Payment Settings", {"company": doc.company}, "mode_of_payment"
 				)
 				ppm.label = f"{mop}-{last4}"
-				ppm.default = 0
+				ppm.default = cint(data.get("default", 0))
 				ppm.electronic_payment_profile = payment_profile.name
 				ppm.service_charge = 0
 				ppm.parent = payment_profile.party
 				ppm.parenttype = payment_profile.party_type
-				ppm.save()
+				ppm.save(ignore_permissions=True)
 				cust = frappe.get_doc("Customer", doc.customer)
 				cust.append("portal_payment_method", ppm)
-				cust.save()
+				cust.save(ignore_permissions=True)
 
 			return {"message": "Success", "payment_profile_doc": payment_profile}
 		else:

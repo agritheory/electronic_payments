@@ -38,8 +38,12 @@ def get_portal_payment_methods():
 		return portal_payment_methods
 
 	for ppm in portal_payment_method_names:
-		portal_payment_methods.append(frappe.get_doc("Portal Payment Method", ppm))
-
+		portal_payment_method = frappe.get_doc("Portal Payment Method", ppm)
+		electronic_payment_profile = frappe.get_doc(
+			"Electronic Payment Profile", portal_payment_method.electronic_payment_profile
+		)
+		portal_payment_method.electronic_payment_profile_object = electronic_payment_profile
+		portal_payment_methods.append(portal_payment_method)
 	return portal_payment_methods
 
 
