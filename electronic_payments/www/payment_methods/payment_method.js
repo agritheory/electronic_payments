@@ -1,4 +1,48 @@
 frappe.ready(async () => {
+	function fields_display() {
+		const service_charge = document.getElementById('ppm_service_charge')
+		const percentage_or_rate = document.getElementById('ppm_percentage_or_rate')
+		const percentage = document.getElementById('ppm_percentage')
+		const rate = document.getElementById('ppm_rate')
+
+		if (service_charge.checked) {
+			percentage_or_rate.style.display = 'block'
+			percentage_or_rate.parentNode.style.display = 'block'
+		} else {
+			percentage_or_rate.style.display = 'none'
+			percentage_or_rate.parentNode.style.display = 'none'
+		}
+
+		if (percentage_or_rate.style.display != 'none') {
+			if (percentage_or_rate.value == 'Percentage') {
+				percentage.style.display = 'block'
+				percentage.parentNode.style.display = 'block'
+				rate.style.display = 'none'
+				rate.parentNode.style.display = 'none'
+			} else {
+				percentage.style.display = 'none'
+				percentage.parentNode.style.display = 'none'
+				rate.style.display = 'block'
+				rate.parentNode.style.display = 'block'
+			}
+		} else {
+			percentage.style.display = 'none'
+			percentage.parentNode.style.display = 'none'
+			rate.style.display = 'none'
+			rate.parentNode.style.display = 'none'
+		}
+	}
+
+	fields_display()
+
+	$('#ppm_service_charge').change(function () {
+		fields_display()
+	})
+
+	$('#ppm_percentage_or_rate').change(function () {
+		fields_display()
+	})
+
 	$('#submit-button').on('click', event => {
 		event.preventDefault()
 		let button = document.getElementById('submit-button')
