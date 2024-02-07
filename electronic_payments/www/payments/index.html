@@ -1,0 +1,42 @@
+{% extends "templates/web.html" %}
+
+{% block breadcrumbs %}
+{% include "templates/includes/breadcrumbs.html" %}
+{% endblock %}
+
+{% block header %}
+{% endblock %}
+
+{% block header_actions %}
+{% endblock %}
+
+{% block page_content %}
+{% set currency_symbol = frappe.db.get_value('Currency', doc.currency, 'symbol') %}
+<h2>Select Payment Method</h2>
+<h4>{{ doc.name }} - {{ currency_symbol }} {{ doc.grand_total_with_service_charge }} </h4>
+<span
+	data-currency="{{doc.currency}}"
+	data-symbol="{{ currency_symbol }}"
+	id="doc-currency"
+></span>
+<div class="form-column col-sm-6" style="margin-top: 1rem">
+	<div class="frappe-control">
+		<select class="input-with-feedback form-control ellipsis" id="payment-method">
+			{% for option in payment_methods %}
+				<option 
+					value="{{option.name}}"
+					data-total="{{option.total}}"
+				>{{option.label}}{{ option.service_charge }}</option>
+			{% endfor %}
+		</select>
+	</div>
+</div>
+<div class="form-column col-sm-6" style="margin-top: 1rem"></div>
+	<button 
+		class="btn btn-primary btn-sm"
+		id="pay-for-order"
+	> {{ _("Pay") }} {{ currency_symbol }} {{ doc.grand_total_with_service_charge }}</button>
+</div>
+<div id="payments-messages"
+></div>
+{% endblock %}

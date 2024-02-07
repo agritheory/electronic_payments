@@ -8,18 +8,18 @@ app_icon = "octicon octicon-file-directory"
 app_color = "grey"
 app_email = "support@agritheory.dev"
 app_license = "MIT"
-required_apps = ["frappe/erpnext"]
+required_apps = ["frappe/erpnext", "frappe/payments"]
 
 # Includes in <head>
 # ------------------
 
 # include js, css files in header of desk.html
 # app_include_css = "/assets/electronic_payments/css/electronic_payments.css"
-app_include_js = "/assets/js/electronic_payments.min.js"
+app_include_js = ["electronic_payments.bundle.js"]
 
 # include js, css files in header of web template
 # web_include_css = "/assets/electronic_payments/css/electronic_payments.css"
-# web_include_js = "/assets/electronic_payments/js/electronic_payments.js"
+# web_include_js = ["web.bundle.js"]
 
 # include custom scss in every website theme (without file extension ".scss")
 # website_theme_scss = "electronic_payments/public/scss/website"
@@ -98,9 +98,9 @@ after_migrate = "electronic_payments.customize.load_customizations"
 # ---------------
 # Override standard doctype classes
 
-# override_doctype_class = {
-# 	"ToDo": "custom_app.overrides.CustomToDo"
-# }
+override_doctype_class = {
+	"Journal Entry": "electronic_payments.overrides.journal_entry.CustomElectronicPaymentsJournalEntry"
+}
 
 # Document Events
 # ---------------
@@ -143,9 +143,10 @@ after_migrate = "electronic_payments.customize.load_customizations"
 # Overriding Methods
 # ------------------------------
 #
-# override_whitelisted_methods = {
-# 	"frappe.desk.doctype.event.event.get_events": "electronic_payments.event.get_events"
-# }
+override_whitelisted_methods = {
+	"pay": "electronic_payments.www.payments.index.pay",
+	"erpnext.accounts.doctype.payment_request.payment_request.make_payment_request": "electronic_payments.www.payments.payment_options",
+}
 #
 # each overriding function accepts a `data` argument;
 # generated from the base implementation of the doctype dashboard,

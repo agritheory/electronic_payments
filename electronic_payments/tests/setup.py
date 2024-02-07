@@ -5,8 +5,10 @@ import os
 
 import frappe
 from frappe.desk.page.setup_wizard.setup_wizard import setup_complete
-from erpnext.setup.utils import enable_all_roles_and_domains, set_defaults_for_tests
+from erpnext.setup.utils import enable_all_roles_and_domains, set_defaults_for_tests  # noqa: F401
 from erpnext.accounts.doctype.account.account import update_account_number
+
+from electronic_payments.tests.fixtures import suppliers, tax_authority, employees, customers
 
 
 def before_test():
@@ -41,326 +43,12 @@ def before_test():
 	frappe.db.commit()
 
 
-suppliers = [
-	(
-		"Exceptional Grid",
-		"Electricity",
-		"ACH/EFT",
-		150.00,
-		"Net 14",
-		{
-			"address_line1": "2 Cosmo Point",
-			"city": "Summerville",
-			"state": "MA",
-			"country": "United States",
-			"pincode": "34791",
-		},
-	),
-	(
-		"Liu & Loewen Accountants LLP",
-		"Accounting Services",
-		"ACH/EFT",
-		500.00,
-		"Net 30",
-		{
-			"address_line1": "138 Wanda Square",
-			"city": "Chino",
-			"state": "ME",
-			"country": "United States",
-			"pincode": "90953",
-		},
-	),
-	(
-		"Mare Digitalis",
-		"Cloud Services",
-		"Credit Card",
-		200.00,
-		"Due on Receipt",
-		{
-			"address_line1": "1000 Toll Plaza Tunnel Alley",
-			"city": "Joplin",
-			"state": "CT",
-			"country": "United States",
-			"pincode": "51485",
-		},
-	),
-	(
-		"AgriTheory",
-		"ERPNext Consulting",
-		"Check",
-		1000.00,
-		"Net 14",
-		{
-			"address_line1": "1293 Bannan Road",
-			"city": "New Brighton",
-			"state": "NH",
-			"country": "United States",
-			"pincode": "55932",
-		},
-	),
-	(
-		"HIJ Telecom, Inc",
-		"Internet Services",
-		"Check",
-		150.00,
-		"Net 30",
-		{
-			"address_line1": "955 Winding Highway",
-			"city": "Glassboro",
-			"state": "NY",
-			"country": "United States",
-			"pincode": "28026",
-		},
-	),
-	(
-		"Sphere Cellular",
-		"Phone Services",
-		"ACH/EFT",
-		250.00,
-		"Net 30",
-		{
-			"address_line1": "1198 Carpenter Road",
-			"city": "Rolla",
-			"state": "VT",
-			"country": "United States",
-			"pincode": "94286",
-		},
-	),
-	(
-		"Cooperative Ag Finance",
-		"Financial Services",
-		"Bank Draft",
-		5000.00,
-		"Net 30",
-		{
-			"address_line1": "629 Loyola Landing",
-			"city": "Warner Robins",
-			"state": "CT",
-			"country": "United States",
-			"pincode": "28989",
-		},
-	),
-]
-
-tax_authority = [
-	(
-		"Local Tax Authority",
-		"Payroll Taxes",
-		"Check",
-		0.00,
-		"Due on Receipt",
-		{
-			"address_line1": "18 Spooner Stravenue",
-			"city": "Danbury",
-			"state": "RI",
-			"country": "United States",
-			"pincode": "07165",
-		},
-	),
-]
-
-employees = [
-	(
-		"Wilmer Larson",
-		"Male",
-		"1977-03-06",
-		"2019-04-12",
-		"20 Gaven Path",
-		"Spokane",
-		"NV",
-		"66308",
-	),
-	(
-		"Shanel Finley",
-		"Female",
-		"1984-04-23",
-		"2019-07-04",
-		"1070 Ulloa Green",
-		"DeKalb",
-		"PA",
-		"30474",
-	),
-	(
-		"Camellia Phelps",
-		"Female",
-		"1980-07-06",
-		"2019-07-28",
-		"787 Sotelo Arcade",
-		"Stockton",
-		"CO",
-		"14860",
-	),
-	(
-		"Michale Mitchell",
-		"Male",
-		"1984-06-29",
-		"2020-01-12",
-		"773 Icehouse Road",
-		"West Sacramento",
-		"VT",
-		"24355",
-	),
-	(
-		"Sharilyn Romero",
-		"Female",
-		"1998-04-22",
-		"2020-03-20",
-		"432 Dudley Ranch",
-		"Clovis",
-		"WA",
-		"97159",
-	),
-	(
-		"Doug Buckley",
-		"Male",
-		"1979-06-18",
-		"2020-09-08",
-		"771 Battery Caulfield Motorway",
-		"Yonkers",
-		"VT",
-		"38125",
-	),
-	(
-		"Margarito Wallace",
-		"Male",
-		"1991-08-17",
-		"2020-11-01",
-		"639 Brook Park",
-		"Terre Haute",
-		"OR",
-		"41704",
-	),
-	(
-		"Mckenzie Ashley",
-		"Female",
-		"1997-09-13",
-		"2021-02-22",
-		"1119 Hunter Glen",
-		"Ormond Beach",
-		"MD",
-		"30864",
-	),
-	(
-		"Merrie Oliver",
-		"Other",
-		"1979-11-08",
-		"2021-03-11",
-		"267 Vega Freeway",
-		"West Palm Beach",
-		"FL",
-		"24411",
-	),
-	(
-		"Naoma Blake",
-		"Female",
-		"1987-07-10",
-		"2021-06-21",
-		"649 Conrad Road",
-		"Thousand Oaks",
-		"CT",
-		"97929",
-	),
-	(
-		"Donnell Fry",
-		"Male",
-		"1994-07-27",
-		"2021-06-24",
-		"504 Starr King Canyon",
-		"Norwalk",
-		"OR",
-		"46845",
-	),
-	(
-		"Shalanda Peterson",
-		"Female",
-		"1999-10-04",
-		"2021-08-01",
-		"109 Seventh Parkway",
-		"Urbana",
-		"DE",
-		"55975",
-	),
-]
-
-customers = [
-	(
-		"Andromeda Fruit Market",
-		{
-			"address_line1": "3606 Cookie Plaza",
-			"city": "Concord",
-			"state": "NH",
-			"country": "United States",
-			"pincode": "03301",
-		},
-	),
-	(
-		"Betelgeuse Bakery Suppliers",
-		{
-			"address_line1": "920 Meade St",
-			"city": "Bow",
-			"state": "NH",
-			"country": "United States",
-			"pincode": "03304",
-		},
-	),
-	(
-		"Cassiopeia Restaurant Group",
-		{
-			"address_line1": "29 Navi Avenue",
-			"city": "Salem",
-			"state": "MA",
-			"country": "United States",
-			"pincode": "01970",
-		},
-	),
-	(
-		"Delphinus Food Distributors",
-		{
-			"address_line1": "680 Rotanev Rotary",
-			"city": "Rockport",
-			"state": "MA",
-			"country": "United States",
-			"pincode": "01966",
-		},
-	),
-	(
-		"Grus Goodies",
-		{
-			"address_line1": "80 Alnair Circle",
-			"city": "Quincy",
-			"state": "MA",
-			"country": "United States",
-			"pincode": "02169",
-		},
-	),
-	(
-		"Phoenix Fruit, Ltd",
-		{
-			"address_line1": "530 Ankaa Blvd",
-			"city": "Braintree",
-			"state": "MA",
-			"country": "United States",
-			"pincode": "02184",
-		},
-	),
-	(
-		"Hydra Produce Co",
-		{
-			"address_line1": "444 Rue d'Alphard",
-			"city": "Montreal",
-			"state": "Quebec",
-			"country": "Canada",
-			"pincode": "H1Y3A4",
-		},
-	),
-]
-
-
 def create_test_data():
+	today = frappe.utils.getdate()
 	setup_accounts()
 	settings = frappe._dict(
 		{
-			"day": datetime.date(int(frappe.defaults.get_defaults().get("fiscal_year")), 1, 1),
+			"day": today.replace(month=1, day=1),
 			"company": frappe.defaults.get_defaults().get("company"),
 			"company_account": frappe.get_value(
 				"Account",
@@ -383,12 +71,13 @@ def create_test_data():
 	create_electronic_payment_settings(settings)
 	create_payment_terms_templates(settings)
 	create_suppliers(settings)
-	create_customers(customers)
+	create_customers(settings)
 	create_items(settings)
 	create_invoices(settings)
 	config_expense_claim(settings)
 	create_sales_invoices(settings)
 	create_employees(settings)
+	curate_portal_and_ecommerce_settings(settings)
 	for month in range(1, 13):
 		create_payroll_journal_entry(settings)
 		settings.day = settings.day.replace(month=month)
@@ -494,9 +183,7 @@ def setup_accounts():
 		"Account", "2110 - Creditors - CFC", "2110 - Accounts Payable - CFC", force=True
 	)
 	update_account_number("1110 - Cash - CFC", "Petty Cash", account_number="1110")
-	update_account_number(
-		"Primary Checking - CFC", "Primary Checking", account_number="1201"
-	)
+	update_account_number("Primary Checking - CFC", "Primary Checking", account_number="1201")
 
 	rca = frappe.new_doc("Account")  # receivable clearing account
 	rca.account_name = "Electronic Payments Receivable"
@@ -607,7 +294,7 @@ def create_suppliers(settings):
 	addr.save()
 
 
-def create_customers(customers):
+def create_customers(settings):
 	for customer in customers:
 		cust = frappe.new_doc("Customer")
 		cust.customer_name = customer[0]
@@ -615,6 +302,12 @@ def create_customers(customers):
 		cust.customer_group = "Commercial"
 		cust.territory = "All Territories"
 		cust.tax_id = "04-" + f"{random.randint(100,99999):05d}"  # Tax ID number
+		if customer[0] == "Cassiopeia Restaurant Group":
+			# Set a credit limit and add a Portal Payment Method subject to the credit limit
+			cust.append(
+				"credit_limits",
+				{"company": settings.company, "credit_limit": 300, "bypass_credit_limit_check": 1},
+			)
 		cust.save()
 
 		addr = frappe.new_doc("Address")
@@ -625,8 +318,28 @@ def create_customers(customers):
 		addr.state = customer[1]["state"]
 		addr.country = customer[1]["country"]
 		addr.pincode = customer[1]["pincode"]
-		addr.append("links", {"link_doctype": "Customer", "link_name": customer[0]})
+		addr.append("links", {"link_doctype": "Customer", "link_name": cust.name})
 		addr.save()
+
+		user = frappe.new_doc("User")
+		user.first_name = customer[2].split(" ")[0]
+		user.last_name = customer[2].split(" ")[1]
+		user.username = customer[3]
+		user.time_zone = "America/New_York"
+		user.email = customer[3]
+		user.user_type = "System User"
+		user.send_welcome_email = 0
+		user.append("roles", {"role": "Customer"})
+		user.save()
+
+		contact = frappe.new_doc("Contact")
+		contact.first_name = user.first_name
+		contact.last_name = user.last_name
+		contact.user = user.name
+		contact.address = addr.name
+		contact.append("email_ids", {"email_id": user.name, "is_primary": 1})
+		contact.append("links", {"link_doctype": "Customer", "link_name": cust.name})
+		contact.save()
 
 
 def create_items(settings):
@@ -842,7 +555,7 @@ def config_expense_claim(settings):
 			"accounts", {"company": settings.company, "default_account": travel_expense_account}
 		)
 		travel.save()
-	except:
+	except:  # noqa E722
 		pass
 
 	payroll_payable = frappe.db.get_value(
@@ -851,9 +564,7 @@ def config_expense_claim(settings):
 	if payroll_payable:
 		frappe.db.set_value("Account", payroll_payable, "account_type", "Payable")
 
-	if frappe.db.exists(
-		"Account", {"account_name": "Payroll Taxes", "company": settings.company}
-	):
+	if frappe.db.exists("Account", {"account_name": "Payroll Taxes", "company": settings.company}):
 		return
 	pta = frappe.new_doc("Account")
 	pta.account_name = "Payroll Taxes"
@@ -973,9 +684,7 @@ def create_payroll_journal_entry(settings):
 		"Account",
 		{"company": settings.company, "account_name": "Payroll Taxes", "is_group": 0},
 	)
-	payable_account = frappe.get_value(
-		"Company", settings.company, "default_payable_account"
-	)
+	payable_account = frappe.get_value("Company", settings.company, "default_payable_account")
 	je = frappe.new_doc("Journal Entry")
 	je.entry_type = "Journal Entry"
 	je.company = settings.company
@@ -990,9 +699,7 @@ def create_payroll_journal_entry(settings):
 			"accounts",
 			{
 				"account": payroll_account,
-				"bank_account": frappe.get_value(
-					"Bank Account", {"account": settings.company_account}
-				),
+				"bank_account": frappe.get_value("Bank Account", {"account": settings.company_account}),
 				"party_type": "Employee",
 				"party": emp.name,
 				"cost_center": cost_center,
@@ -1050,7 +757,7 @@ def create_payroll_journal_entry(settings):
 
 
 def create_sales_invoices(settings):
-	for customer in customers[:2]:
+	for customer in customers:
 		so = frappe.new_doc("Sales Order")
 		so.company = settings.company
 		so.transaction_date = so.delivery_date = settings.day
@@ -1064,39 +771,76 @@ def create_sales_invoices(settings):
 		)
 		so.save()
 		so.submit()
-	for customer in customers[2:]:
-		si = frappe.new_doc("Sales Invoice")
-		si.company = settings.company
-		si.set_posting_time = 1
-		si.posting_date = settings.day
-		si.customer = customer[0]
-		si.append(
-			"items",
-			{
-				"item_code": "Cloudberry",
-				"qty": 3,
-			},
-		)
-		si.save()
-		si.submit()
 
 
 def create_electronic_payment_settings(settings):
-	if os.environ.get("STRIPE_API_KEY"):
-		eps = frappe.new_doc("Electronic Payment Settings")
-		eps.company = settings.company
-		eps.provider = "Stripe"
-		eps.api_key = os.environ.get("STRIPE_API_KEY")
-		eps.save()
-	if (
-		os.environ.get("AUTHORIZE_API_KEY")
-		and os.environ.get("AUTHORIZE_TRANSACTION_KEY")
-		and not os.environ.get("STRIPE_API_KEY")
-	):
+	if not frappe.db.exists("Account", "1320 - Electronic Payments Receivable - CFC"):
+		epr = frappe.new_doc("Account")
+		epr.account_number = "1320"
+		epr.account_name = "Electronic Payments Receivable"
+		epr.company = settings.company
+		epr.root_type = "Asset"
+		epr.report_type = "Balance Sheet"
+		epr.parent_account = "1300 - Accounts Receivable - CFC"
+		epr.save()
+
+	if os.environ.get("AUTHORIZE_API_KEY") and os.environ.get("AUTHORIZE_TRANSACTION_KEY"):
 		eps = frappe.new_doc("Electronic Payment Settings")
 		eps.company = settings.company
 		eps.provider = "Authorize.net"
 		eps.api_key = os.environ.get("AUTHORIZE_API_KEY")
-		eps.api_key = os.environ.get("AUTHORIZE_TRANSACTION_KEY")
-		eps.clearing_account = "1320 - Electronic Payments Receivable - CFC"
+		eps.transaction_key = os.environ.get("AUTHORIZE_TRANSACTION_KEY")
+		eps.create_ppm = 1
+		eps.deposit_account = "1201 - Primary Checking - CFC"
+		eps.accepting_fee_account = "5223 - Electronic Payments Provider Fees - CFC"
+		eps.accepting_clearing_account = "1320 - Electronic Payments Receivable - CFC"
 		eps.save()
+	if (
+		os.environ.get("STRIPE_API_KEY")
+		and not os.environ.get("AUTHORIZE_API_KEY")
+		and not os.environ.get("AUTHORIZE_TRANSACTION_KEY")
+	):
+		eps = frappe.new_doc("Electronic Payment Settings")
+		eps.company = settings.company
+		eps.provider = "Stripe"
+		eps.api_key = os.environ.get("STRIPE_API_KEY")
+		eps.create_ppm = 1
+		eps.deposit_account = "1201 - Primary Checking - CFC"
+		eps.accepting_fee_account = "5223 - Electronic Payments Provider Fees - CFC"
+		eps.accepting_clearing_account = "1320 - Electronic Payments Receivable - CFC"
+		eps.save()
+
+
+def curate_portal_and_ecommerce_settings(settings=None):
+	ecom = frappe.get_doc("E Commerce Settings", "E Commerce Settings")
+	ecom.enabled = 1
+	ecom.save()
+
+	portal = frappe.get_doc("Portal Settings", "Portal Settings")
+	portal.hide_standard_menu = 1
+	portal.append(
+		"custom_menu",
+		{
+			"title": "Orders",
+			"enabled": 1,
+			"route": "/orders",
+			"reference_doctype": "Sales Invoice",
+			"role": "Customer",
+		},
+	)
+	portal.append(
+		"custom_menu",
+		{
+			"title": "Orders",
+			"enabled": 1,
+			"route": "/orders",
+			"reference_doctype": "Purchase Invoice",
+			"role": "Supplier",
+		},
+	)
+	portal.save()
+
+
+# config portal
+# add read permissions for each doctype with hook on Portal Settings
+#
