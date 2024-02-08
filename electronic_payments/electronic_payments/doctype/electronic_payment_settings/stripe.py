@@ -270,6 +270,37 @@ class Stripe:
 				frappe.log_error(message=frappe.get_traceback(), title=f"{e}")
 				return {"error": f"{e}"}
 
+	def get_customer_payment_profile(self, company, electronic_payment_profile_name):
+		self.get_password(company)
+		electronic_payment_profile = frappe.get_doc(
+			"Electronic Payment Profile", {"name": electronic_payment_profile_name}
+		)
+		response = stripe.PaymentMethod.retrieve(electronic_payment_profile.payment_profile_id)
+		if response.type == "card":
+			return {
+				"message": "Success",
+				"data": {
+					"first_name": " ".join(response.billing_details.name.split(" ")[0:-1]),
+					"last_name": response.billing_details.name.split(" ")[-1],
+					"card_number": f"**** **** **** {response.card.last4}",
+					"expiration_date": f"{response.card.exp_year}-{response.card.exp_month}",
+					"card_type": response.card.brand,
+				},
+			}
+		elif response.type == "us_bank_account":
+			return {
+				"message": "Success",
+				"data": {
+					"first_name": " ".join(response.billing_details.name.split(" ")[0:-1]),
+					"last_name": response.billing_details.name.split(" ")[-1],
+					"account_type": response.us_bank_account.account_type,
+					"routing_number": response.us_bank_account.routing_number,
+					"account_number": f"*{response.us_bank_account.last4}",
+					"name_on_account": response.us_bank_account.bank_name,
+					"echeck_type": "",
+				},
+			}
+
 	def create_customer_payment_profile(self, doc, data):
 		self.get_password(doc.company)
 		if not data.get("customer_profile_id"):

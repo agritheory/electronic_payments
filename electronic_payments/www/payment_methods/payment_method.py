@@ -2,6 +2,8 @@ import json
 import frappe
 from frappe import _
 from frappe.contacts.doctype.contact.contact import get_contact_name
+from erpnext import get_default_company
+from electronic_payments.www.payment_methods.index import get_electronic_payment_settings
 
 no_cache = 1
 
@@ -28,25 +30,23 @@ def get_context(context):
 		frappe.throw(_("Not permitted"), frappe.PermissionError)
 
 	try:
+		settings = get_electronic_payment_settings()
+
+		if not settings:
+			return {"error_message": _("You cannot edit this Payment Method.")}
+
 		portal_payment_method = frappe.get_doc("Portal Payment Method", {"name": name, "parent": party})
 		electronic_payment_profile = frappe.get_doc(
 			"Electronic Payment Profile", portal_payment_method.electronic_payment_profile
 		)
 		portal_payment_method.electronic_payment_profile_object = electronic_payment_profile
 
-		# TODO company?, Stripe
-		if electronic_payment_profile.payment_gateway == "Authorize":
-			from erpnext import get_default_company
-			from electronic_payments.electronic_payments.doctype.electronic_payment_settings.authorize import (
-				AuthorizeNet,
-			)
-
-			client = AuthorizeNet()
-			response = client.get_customer_payment_profile(
-				get_default_company(), electronic_payment_profile.name
-			)
-			if response["message"] == "Success":
-				portal_payment_method.update(response["data"])
+		client = settings.client()
+		response = client.get_customer_payment_profile(
+			get_default_company(), electronic_payment_profile.name
+		)
+		if response["message"] == "Success":
+			portal_payment_method.update(response["data"])
 
 		context.portal_payment_method = portal_payment_method
 
