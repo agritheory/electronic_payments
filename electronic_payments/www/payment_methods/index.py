@@ -1,6 +1,7 @@
 import frappe
 from frappe import _
 from frappe.contacts.doctype.contact.contact import get_contact_name
+from erpnext import get_default_company
 
 no_cache = 1
 
@@ -49,9 +50,31 @@ def get_portal_payment_methods():
 
 @frappe.whitelist()
 def remove_portal_payment_method(payment_method):
+	settings = get_electronic_payment_settings()
+
+	if not settings:
+		return {"error_message": _("Your Payment Method cannot be deleted.")}
+
 	try:
-		ppm = frappe.get_doc("Portal Payment Method", payment_method)
-		ppm.delete(ignore_permissions=True)
-		return {"success_message": "Your Payment Method has been removed successfully"}
+		electronic_payment_profile = frappe.db.get_value(
+			"Portal Payment Method", payment_method, "electronic_payment_profile"
+		)
+		payment_profile_id = frappe.db.get_value(
+			"Electronic Payment Profile", electronic_payment_profile, "payment_profile_id"
+		)
+		client = settings.client()
+		response = client.c(get_default_company(), payment_profile_id)
+
+		if response.get("message") and response.get("message") == "Success":
+			return {"success_message": _("Your Payment Method has been removed successfully.")}
+		return {"error_message": _("Your Payment Method cannot be deleted.")}
 	except Exception as e:
 		return {"error_message": str(e)}
+
+
+def get_electronic_payment_settings():
+	company = get_default_company()
+
+	if frappe.db.exists("Electronic Payment Settings", {"company": company}):
+		return frappe.get_doc("Electronic Payment Settings", {"company": company})
+	return None

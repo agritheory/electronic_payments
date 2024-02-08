@@ -613,8 +613,8 @@ class AuthorizeNet:
 		)
 		pmm_name = frappe.get_value("Portal Payment Method", {"electronic_payment_profile": epp_name})
 
-		frappe.delete_doc("Portal Payment Method", pmm_name)
-		frappe.delete_doc("Electronic Payment Profile", epp_name)
+		frappe.delete_doc("Portal Payment Method", pmm_name, ignore_permissions=True)
+		frappe.delete_doc("Electronic Payment Profile", epp_name, ignore_permissions=True)
 
 		# Delete from API
 		merchantAuth = self.merchant_auth(company)
