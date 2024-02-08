@@ -217,39 +217,93 @@ def create_payment_terms_templates(settings):
 	if not frappe.db.exists("Payment Terms Template", "Net 30"):
 		doc = frappe.new_doc("Payment Terms Template")
 		doc.template_name = "Net 30"
+		pt = frappe.new_doc("Payment Term")
+		pt.payment_term_name = "Net 30"
+		pt.invoice_portion = 100
+		pt.due_date_based_on = "Day(s) after invoice date"
+		pt.credit_days = 30
+		pt.save()
 		doc.append(
 			"terms",
 			{
-				"payment_term": "Net 30",
-				"invoice_portion": 100,
-				"due_date_based_on": "Day(s) after invoice date",
-				"credit_days": 30,
+				"payment_term": pt.name,
+				"invoice_portion": pt.invoice_portion,
+				"due_date_based_on": pt.due_date_based_on,
+				"credit_days": pt.credit_days,
 			},
 		)
 		doc.save()
 	if not frappe.db.exists("Payment Terms Template", "Due on Receipt"):
 		doc = frappe.new_doc("Payment Terms Template")
 		doc.template_name = "Due on Receipt"
+		pt = frappe.new_doc("Payment Term")
+		pt.payment_term_name = "Due on Receipt"
+		pt.invoice_portion = 100
+		pt.due_date_based_on = "Day(s) after invoice date"
+		pt.credit_days = 0
+		pt.save()
 		doc.append(
 			"terms",
 			{
-				"payment_term": "Due on Receipt",
-				"invoice_portion": 100,
-				"due_date_based_on": "Day(s) after invoice date",
-				"credit_days": 0,
+				"payment_term": pt.name,
+				"invoice_portion": pt.invoice_portion,
+				"due_date_based_on": pt.due_date_based_on,
+				"credit_days": pt.credit_days,
 			},
 		)
 		doc.save()
 	if not frappe.db.exists("Payment Terms Template", "Net 14"):
 		doc = frappe.new_doc("Payment Terms Template")
 		doc.template_name = "Net 14"
+		pt = frappe.new_doc("Payment Term")
+		pt.payment_term_name = "Net 14"
+		pt.invoice_portion = 100
+		pt.due_date_based_on = "Day(s) after invoice date"
+		pt.credit_days = 14
+		pt.save()
 		doc.append(
 			"terms",
 			{
-				"payment_term": "Net 14",
-				"invoice_portion": 100,
-				"due_date_based_on": "Day(s) after invoice date",
-				"credit_days": 14,
+				"payment_term": pt.name,
+				"invoice_portion": pt.invoice_portion,
+				"due_date_based_on": pt.due_date_based_on,
+				"credit_days": pt.credit_days,
+			},
+		)
+		doc.save()
+	if not frappe.db.exists("Payment Terms Template", "20 in 14 80 in 30"):
+		doc = frappe.new_doc("Payment Terms Template")
+		doc.template_name = "20 in 14 80 in 30"
+		# first payment term - 20% due in 14 days
+		pt = frappe.new_doc("Payment Term")
+		pt.payment_term_name = "20 Percent in 14 Days"
+		pt.invoice_portion = 20
+		pt.due_date_based_on = "Day(s) after invoice date"
+		pt.credit_days = 14
+		pt.save()
+		doc.append(
+			"terms",
+			{
+				"payment_term": pt.name,
+				"invoice_portion": pt.invoice_portion,
+				"due_date_based_on": pt.due_date_based_on,
+				"credit_days": pt.credit_days,
+			},
+		)
+		# second payment term - 80% due in 30 days
+		pt = frappe.new_doc("Payment Term")
+		pt.payment_term_name = "80 Percent in 30 Days"
+		pt.invoice_portion = 80
+		pt.due_date_based_on = "Day(s) after invoice date"
+		pt.credit_days = 30
+		pt.save()
+		doc.append(
+			"terms",
+			{
+				"payment_term": pt.name,
+				"invoice_portion": pt.invoice_portion,
+				"due_date_based_on": pt.due_date_based_on,
+				"credit_days": pt.credit_days,
 			},
 		)
 		doc.save()
@@ -757,7 +811,8 @@ def create_payroll_journal_entry(settings):
 
 
 def create_sales_invoices(settings):
-	for customer in customers:
+	today = frappe.utils.getdate()
+	for idx, customer in enumerate(customers):
 		so = frappe.new_doc("Sales Order")
 		so.company = settings.company
 		so.transaction_date = so.delivery_date = settings.day
@@ -771,6 +826,22 @@ def create_sales_invoices(settings):
 		)
 		so.save()
 		so.submit()
+
+		si = frappe.new_doc("Sales Invoice")
+		si.posting_date = today
+		si.company = settings.company
+		si.customer = customer
+		si.append(
+			"items",
+			{
+				"item_code": "Hairless rambutan",
+				"qty": 2,
+			},
+		)
+		if idx < 3:
+			si.payment_terms_template = "20 in 14 80 in 30"
+		si.save()
+		si.submit()
 
 
 def create_electronic_payment_settings(settings):
