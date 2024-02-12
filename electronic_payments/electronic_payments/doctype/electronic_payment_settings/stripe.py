@@ -301,6 +301,9 @@ class Stripe:
 				},
 			}
 
+	def edit_customer_payment_profile(self, company, electronic_payment_profile_name, data):
+		self.get_password(company)
+
 	def create_customer_payment_profile(self, doc, data):
 		self.get_password(doc.company)
 		if not data.get("customer_profile_id"):

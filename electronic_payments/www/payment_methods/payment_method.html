@@ -21,7 +21,7 @@
                 <div class="form-group row">
                     <div class="col-sm-6">
                         <label for="payment_type" class="control-label text-muted small">{{ _("Payment Type") }}</label>
-                        <select id="ppm_payment_type" class="form-control" name="payment_type" data-label="payment_type" data-fieldtype="Select">
+                        <select id="ppm_payment_type" class="form-control" name="payment_type" data-label="payment_type" data-fieldtype="Select" disabled>
 							<option value="Card" {% if portal_payment_method.electronic_payment_profile_object.payment_type == "Card" %}selected{% endif %}>{{ _("Card") }}</option>
 							<option value="ACH" {% if portal_payment_method.electronic_payment_profile_object.payment_type == "ACH" %}selected{% endif %}>{{ _("ACH") }}</option>
 						</select>

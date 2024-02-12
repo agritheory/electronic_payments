@@ -1,7 +1,6 @@
 import json
 import frappe
 from frappe import _
-from erpnext import get_default_company
 from electronic_payments.www.payment_methods.index import (
 	get_electronic_payment_settings,
 	get_party,
@@ -29,9 +28,7 @@ def get_context(context):
 		portal_payment_method.electronic_payment_profile_object = electronic_payment_profile
 
 		client = settings.client()
-		response = client.get_customer_payment_profile(
-			get_default_company(), electronic_payment_profile.name
-		)
+		response = client.get_customer_payment_profile(settings.company, electronic_payment_profile.name)
 		if response["message"] == "Success":
 			portal_payment_method.update(response["data"])
 
@@ -44,10 +41,20 @@ def get_context(context):
 @frappe.whitelist()
 def edit_portal_payment_method(payment_method):
 	data = json.loads(payment_method)
+	settings = get_electronic_payment_settings()
+
+	if not settings:
+		return {"error_message": _("You cannot edit this Payment Method.")}
+
 	portal_payment_method = frappe.get_doc("Portal Payment Method", data["name"])
-	portal_payment_method.default = data.get("default")
 	try:
-		portal_payment_method.save(ignore_permissions=True)
-		return {"success_message": "Your Payment Method has been updated successfully"}
+		client = settings.client()
+		response = client.edit_customer_payment_profile(
+			settings.company, portal_payment_method.electronic_payment_profile, data
+		)
+		print(response)
+		if response.get("error"):
+			return {"error_message": response["error"]}
+		return {"success_message": _("Your Payment Method has been updated successfully")}
 	except Exception as e:
 		return {"error_message": str(e)}
