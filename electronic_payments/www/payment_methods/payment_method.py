@@ -1,9 +1,11 @@
 import json
 import frappe
 from frappe import _
-from frappe.contacts.doctype.contact.contact import get_contact_name
 from erpnext import get_default_company
-from electronic_payments.www.payment_methods.index import get_electronic_payment_settings
+from electronic_payments.www.payment_methods.index import (
+	get_electronic_payment_settings,
+	get_party,
+)
 
 no_cache = 1
 
@@ -11,23 +13,8 @@ no_cache = 1
 def get_context(context):
 	context.add_breadcrumbs = 1
 	name = frappe.local.request.args.get("name")
-	user = frappe.session.user
-	contact_name = get_contact_name(user)
-	party = None
-
-	if contact_name:
-		contact = frappe.get_doc("Contact", contact_name)
-		for link in contact.links:
-			if link.link_doctype == "Customer":
-				party = link.link_name
-				break
-
-			if link.link_doctype == "Supplier":
-				party = link.link_name
-				break
-
-	if not party:
-		frappe.throw(_("Not permitted"), frappe.PermissionError)
+	party_data = get_party()
+	party = party_data["party"]
 
 	try:
 		settings = get_electronic_payment_settings()
@@ -58,7 +45,7 @@ def get_context(context):
 def edit_portal_payment_method(payment_method):
 	data = json.loads(payment_method)
 	portal_payment_method = frappe.get_doc("Portal Payment Method", data["name"])
-	portal_payment_method.default = data.get("default")  # TODO: prevent multiple defaults?
+	portal_payment_method.default = data.get("default")
 	try:
 		portal_payment_method.save(ignore_permissions=True)
 		return {"success_message": "Your Payment Method has been updated successfully"}

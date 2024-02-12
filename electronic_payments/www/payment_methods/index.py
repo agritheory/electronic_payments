@@ -12,24 +12,8 @@ def get_context(context):
 
 
 def get_portal_payment_methods():
-	user = frappe.session.user
-	contact_name = get_contact_name(user)
-	party = None
-
-	if contact_name:
-		contact = frappe.get_doc("Contact", contact_name)
-		for link in contact.links:
-			if link.link_doctype == "Customer":
-				party = link.link_name
-				break
-
-			if link.link_doctype == "Supplier":
-				party = link.link_name
-				break
-
-	if not party:
-		frappe.throw(_("Not permitted"), frappe.PermissionError)
-
+	party_data = get_party()
+	party = party_data["party"]
 	portal_payment_methods = []
 	portal_payment_method_names = frappe.get_all(
 		"Portal Payment Method", {"parent": party}, pluck="name"
@@ -78,3 +62,28 @@ def get_electronic_payment_settings():
 	if frappe.db.exists("Electronic Payment Settings", {"company": company}):
 		return frappe.get_doc("Electronic Payment Settings", {"company": company})
 	return None
+
+
+def get_party():
+	user = frappe.session.user
+	contact_name = get_contact_name(user)
+	party = None
+	party_type = None
+
+	if contact_name:
+		contact = frappe.get_doc("Contact", contact_name)
+		for link in contact.links:
+			if link.link_doctype == "Customer":
+				party = link.link_name
+				party_type = link.link_doctype
+				break
+
+			if link.link_doctype == "Supplier":
+				party = link.link_name
+				party_type = link.link_doctype
+				break
+
+	if not party:
+		frappe.throw(_("Not permitted"), frappe.PermissionError)
+
+	return {"party": party, "party_type": party_type}

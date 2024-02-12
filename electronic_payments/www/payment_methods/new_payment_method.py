@@ -1,37 +1,20 @@
 import json
 import frappe
 from frappe import _
-from frappe.contacts.doctype.contact.contact import get_contact_name
 from erpnext import get_default_company
-from electronic_payments.www.payment_methods.index import get_electronic_payment_settings
+from electronic_payments.www.payment_methods.index import (
+	get_electronic_payment_settings,
+	get_party,
+)
 
 no_cache = 1
 
 
 def get_context(context):
+	party_data = get_party()
+	context.party = party_data["party"]
+	context.party_type = party_data["party_type"]
 	context.add_breadcrumbs = 1
-	user = frappe.session.user
-	contact_name = get_contact_name(user)
-	party = None
-
-	if contact_name:
-		contact = frappe.get_doc("Contact", contact_name)
-		for link in contact.links:
-			if link.link_doctype == "Customer":
-				party = link.link_name
-				party_type = link.link_doctype
-				break
-
-			if link.link_doctype == "Supplier":
-				party = link.link_name
-				party_type = link.link_doctype
-				break
-
-	if not party:
-		frappe.throw(_("Not permitted"), frappe.PermissionError)
-
-	context.party = party
-	context.party_type = party_type
 
 
 @frappe.whitelist()
@@ -39,10 +22,10 @@ def new_portal_payment_method(payment_method):
 	data = frappe._dict(json.loads(payment_method))
 
 	settings = get_electronic_payment_settings()
-	
+
 	if not settings:
 		return {"error_message": _("You cannot add a new Payment Method.")}
-	
+
 	client = settings.client()
 	doc = frappe._dict({"company": get_default_company(), "customer": data.party})
 	data.mode_of_payment = data.payment_type
