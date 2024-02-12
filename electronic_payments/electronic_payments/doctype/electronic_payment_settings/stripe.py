@@ -66,7 +66,7 @@ class Stripe:
 		if mop.startswith("Saved"):
 			if data.get("subject_to_credit_limit") and exceeds_credit_limit(doc, data):
 				return {"error": "Credit Limit exceeded for selected Mode of Payment"}
-			if data.get("ppm_name"):
+			if data.get("ppm_name") and not data.get("additional_charges"):
 				data.update({"additional_charges": calculate_payment_method_fees(doc, data)})
 			response = self.charge_customer_profile(doc, data)
 		elif mop == "ACH":
