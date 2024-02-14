@@ -1,4 +1,5 @@
 from . import __version__ as app_version  # noqa: F401
+import frappe
 
 app_name = "electronic_payments"
 app_title = "Electronic Payments"
@@ -12,6 +13,13 @@ required_apps = ["frappe/erpnext", "frappe/payments"]
 
 # Includes in <head>
 # ------------------
+
+# Template pages in apps are loaded in opposite order for Jinga (.html/.md files) vs path to .py get_context order
+# see frappe.utils.jinga.get_jloader vs frappe.website.page_renderers.templage_page.TemplatePage.set_template_path
+# Setting this flag (which is then reversed in get_jloader) ensures they're loaded in the same order
+frappe.local.flags.web_pages_apps = list(
+	reversed(frappe.get_installed_apps(_ensure_on_bench=True))
+)
 
 # include js, css files in header of desk.html
 # app_include_css = "/assets/electronic_payments/css/electronic_payments.css"
@@ -99,7 +107,7 @@ after_migrate = "electronic_payments.customize.load_customizations"
 # Override standard doctype classes
 
 override_doctype_class = {
-	"Journal Entry": "electronic_payments.overrides.journal_entry.CustomElectronicPaymentsJournalEntry"
+	"Journal Entry": "electronic_payments.overrides.journal_entry.CustomElectronicPaymentsJournalEntry",
 }
 
 # Document Events
