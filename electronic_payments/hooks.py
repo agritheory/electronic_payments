@@ -106,13 +106,16 @@ override_doctype_class = {
 # ---------------
 # Hook on document methods and events
 
-# doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-# 	}
-# }
+doc_events = {
+	"Journal Entry": {
+		"on_submit": "electronic_payments.overrides.payment_schedule.update_payment_schedule_for_electronic_payment",
+		"on_cancel": "electronic_payments.overrides.payment_schedule.update_payment_schedule_for_electronic_payment",
+	},
+	"Payment Entry": {
+		"on_submit": "electronic_payments.overrides.payment_schedule.update_payment_schedule_for_electronic_payment",
+		"on_cancel": "electronic_payments.overrides.payment_schedule.update_payment_schedule_for_electronic_payment",
+	},
+}
 
 # Scheduled Tasks
 # ---------------
