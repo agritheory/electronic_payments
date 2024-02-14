@@ -18,15 +18,35 @@ def exceeds_credit_limit(doc, data):
 	return credit_limit > 0 and doc.grand_total > credit_limit
 
 
+def get_payment_amount(doc, data):
+	"""
+	Given a `doc` (SO/SI/PO/PI) and `data` dict, returns the payment amount. If the `data` dict
+	has a "payment_term" key with the docname of a Payment Schedule payment term, the payment
+	amount is the minimum of the doc's outstanding amount or the payment term outstanding amount.
+	If not, the payment amount is `outstanding_amount` for Invoices and `grand_total` -
+	`advance_paid` for Orders.
+	"""
+	outstanding_amount = (
+		doc.outstanding_amount if "Invoice" in doc.doctype else doc.grand_total - doc.advance_paid
+	)
+	payment_amount = (
+		frappe.get_value("Payment Schedule", data.payment_term, "outstanding")
+		if data.get("payment_term")
+		else doc.grand_total
+	)
+	return min(payment_amount, outstanding_amount)
+
+
 def calculate_payment_method_fees(doc, data):
 	"""
-	Given a document (with a grand_total) and a data dict with payment method information,
-	returns any fees associated with that payment method
+	Given a `doc` (SO/SI/PO/PI) and `data` dict with payment method information, returns any
+	fees associated with that payment method. Percentage-based fees use the payment amount.
 	"""
 	if not data.get("ppm_name"):
 		return 0.0
 	ppm = frappe.get_doc("Portal Payment Method", data.get("ppm_name"))
-	return ppm.calculate_payment_method_fees(doc)
+	payment_amount = get_payment_amount(doc, data)
+	return ppm.calculate_payment_method_fees(doc, amount=payment_amount)
 
 
 def process_electronic_payment(doc, data, transaction_id):
@@ -54,6 +74,12 @@ def create_payment_entry(doc, data, transaction_id):
 		settings.sending_fee_account if "Purchase" in doc.doctype else settings.accepting_fee_account
 	)
 	fees = data.get("additional_charges") or 0
+	payment_amount = get_payment_amount(doc, data)
+	payment_term = (
+		frappe.get_value("Payment Schedule", data.payment_term, "payment_term")
+		if data.get("payment_term")
+		else ""
+	)
 
 	pe = frappe.new_doc("Payment Entry")
 	ppm_mop = (
@@ -72,8 +98,8 @@ def create_payment_entry(doc, data, transaction_id):
 	pe.paid_from = (
 		bank_account if doc.doctype == "Purchase Invoice" else account
 	)  # Withdrawal Account for PO/PI, Accounts Receivable for SO/SI (doc.debit_to field)
-	pe.paid_amount = doc.grand_total
-	pe.received_amount = doc.grand_total
+	pe.paid_amount = payment_amount
+	pe.received_amount = payment_amount
 	pe.reference_no = str(transaction_id)
 	pe.reference_date = pe.posting_date
 	pe.append(
@@ -81,7 +107,9 @@ def create_payment_entry(doc, data, transaction_id):
 		{
 			"reference_doctype": doc.doctype,
 			"reference_name": doc.name,
-			"allocated_amount": doc.grand_total,
+			"allocated_amount": payment_amount,
+			"payment_term": payment_term,
+			"electronic_payments_payment_term": data.get("payment_term") or "",
 		},
 	)
 	if fees:
@@ -117,7 +145,7 @@ def create_journal_entry(doc, data, transaction_id):
 		else settings.accepting_clearing_account
 	)
 	account_key = (
-		"debit" if doc.doctype == "Purchase Invoice" else "credit"
+		"debit" if "Purchase" in doc.doctype else "credit"
 	)  # Accounting term for reducing the account. A/R account for SO/SI -> "credit" or A/P account for PO/PI -> "debit"
 	account_currency_key = account_key + "_in_account_currency"
 	contra_account_key = "credit" if account_key == "debit" else "debit"
@@ -128,6 +156,7 @@ def create_journal_entry(doc, data, transaction_id):
 		settings.sending_fee_account if "Purchase" in doc.doctype else settings.accepting_fee_account
 	)
 	fees = data.get("additional_charges") or 0
+	payment_amount = get_payment_amount(doc, data)
 
 	je = frappe.new_doc("Journal Entry")
 	je.posting_date = today()
@@ -137,16 +166,18 @@ def create_journal_entry(doc, data, transaction_id):
 		else None
 	)
 	je.mode_of_payment = ppm_mop or settings.mode_of_payment
+
 	je.append(
 		"accounts",
 		{  # Reduce the account: either debit A/P for PO/PI or credit A/R for SO/SI
 			"account": account,
 			"party_type": party_type,
 			"party": party,
-			account_key: doc.grand_total,
-			account_currency_key: doc.grand_total,
+			account_key: payment_amount,
+			account_currency_key: payment_amount,
 			"reference_type": doc.doctype,
 			"reference_name": doc.name,
+			"electronic_payments_payment_term": data.get("payment_term") or "",
 			"is_advance": "Yes" if is_advance else "No",
 			"user_remarks": str(transaction_id),
 			# need a general purpose function to move all accounting dimensions
@@ -160,8 +191,8 @@ def create_journal_entry(doc, data, transaction_id):
 			"account": clearing_account,
 			"party_type": party_type,
 			"party": party,
-			contra_account_key: doc.grand_total + fees,
-			contra_account_currency_key: doc.grand_total + fees,
+			contra_account_key: payment_amount + fees,
+			contra_account_currency_key: payment_amount + fees,
 			"user_remarks": str(transaction_id),
 			# need a general purpose function to move all accounting dimensions
 			"cost_center": doc.cost_center,
