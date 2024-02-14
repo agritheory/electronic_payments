@@ -52,7 +52,6 @@ def edit_portal_payment_method(payment_method):
 		response = client.edit_customer_payment_profile(
 			settings.company, portal_payment_method.electronic_payment_profile, data
 		)
-		print(response)
 		if response.get("error"):
 			return {"error_message": response["error"]}
 		return {"success_message": _("Your Payment Method has been updated successfully")}
