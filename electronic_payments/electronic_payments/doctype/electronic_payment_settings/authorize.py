@@ -19,6 +19,7 @@ from authorizenet.apicontrollers import (
 )
 from electronic_payments.electronic_payments.doctype.electronic_payment_settings.common import (
 	exceeds_credit_limit,
+	get_payment_amount,
 	calculate_payment_method_fees,
 	process_electronic_payment,
 	queue_method_as_admin,
@@ -45,8 +46,6 @@ class AuthorizeNet:
 		if mop.startswith("Saved"):
 			if data.get("subject_to_credit_limit") and exceeds_credit_limit(doc, data):
 				return {"error": "Credit Limit exceeded for selected Mode of Payment"}
-			if data.get("ppm_name") and not data.get("additional_charges"):
-				data.update({"additional_charges": calculate_payment_method_fees(doc, data)})
 			response = self.charge_customer_profile(doc, data)
 		elif mop == "Card" and data.get("save_data") == "Charge now":
 			response = self.process_credit_card(doc, data)
@@ -74,8 +73,11 @@ class AuthorizeNet:
 		payment = apicontractsv1.paymentType()
 		payment.creditCard = creditCard
 
+		payment_amount = get_payment_amount(doc, data)
+		if data.get("ppm_name") and not data.get("additional_charges"):
+			data.update({"additional_charges": calculate_payment_method_fees(doc, data)})
 		total_to_charge = flt(
-			doc.grand_total + (data.get("additional_charges") or 0),
+			payment_amount + (data.get("additional_charges") or 0),
 			frappe.get_precision(doc.doctype, "grand_total"),
 		)
 
@@ -249,8 +251,11 @@ class AuthorizeNet:
 			customer_profile_id = data.get("customer_profile_id")
 
 		payment_profile_id = data.get("payment_profile_id")
+		payment_amount = get_payment_amount(doc, data)
+		if data.get("ppm_name") and not data.get("additional_charges"):
+			data.update({"additional_charges": calculate_payment_method_fees(doc, data)})
 		total_to_charge = flt(
-			doc.grand_total + (data.get("additional_charges") or 0),
+			payment_amount + (data.get("additional_charges") or 0),
 			frappe.get_precision(doc.doctype, "grand_total"),
 		)
 		merchantAuth = self.merchant_auth(doc.company)
