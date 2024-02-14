@@ -34,15 +34,13 @@
 				</a>
 			</ul>
 		</div>
-		{% if show_pay_button and not doc.get('payment_schedule') and (doc.outstanding_amount > 0 if 'Invoice' in doc.doctype else doc.grand_total > doc.advance_paid) %}
+		{% if show_pay_button and not show_payment_terms and outstanding_amount > 0 %}
 			<div class="form-column col-sm-6">
 				<div class="page-header-actions-block" data-html-block="header-actions">
-					<!-- <p>Has usable pts? {{ _(bool(has_usable_payment_terms)) }}</p> -->
 					<p>
 						<a href="/api/method/erpnext.accounts.doctype.payment_request.payment_request.make_payment_request?dn={{ doc.name }}&dt={{ doc.doctype }}&submit_doc=1&order_type=Shopping Cart"
 							class="btn btn-primary btn-sm" id="pay-for-order">
-							{{ _("Pay") }} {{ doc.get_formatted("outstanding_amount") if 'Invoice' in doc.doctype else doc.grand_total - doc.advance_paid }}
-							<!-- TODO: format Order grand_total - advance_paid amount -->
+							{{ _("Pay") }} {{ formatted_outstanding_amount }}
 						</a>
 					</p>
 				</div>
@@ -128,7 +126,7 @@
 				{% endfor %}
 			</div>
 
-			<!-- taxes -->
+			<!-- TAXES -->
 			<div class="">
 				{% include "electronic_payments/templates/includes/order/order_taxes.html" %}
 			</div>
@@ -136,7 +134,6 @@
 	</div>
 
 	<!-- LOYALTY POINTS -->
-	<!-- TODO: INTEGRATE LOYALTY POINT FOR SALES INVOICES/ORDERS WITH PAYMENT SCHEDULE-->
 	{% if enabled_checkout and ((doc.doctype=="Sales Order" and doc.per_billed <= 0)
 		or (doc.doctype=="Sales Invoice" and doc.outstanding_amount> 0)) %}
 		<div class="panel panel-default">
@@ -171,8 +168,9 @@
 			</div>
 		</div>
 	{% endif %}
+	
 	<!-- PAYMENT SCHEDULE -->
-	{% if doc.doctype in ['Sales Order', 'Sales Invoice', 'Purchase Order', 'Purchase Invoice'] and doc.get('payment_schedule') and (doc.outstanding_amount > 0 if 'Invoice' in doc.doctype else doc.grand_total > doc.advance_paid) %}
+	{% if show_payment_terms %}
 		<h3 class="m-0">Payment Schedule</h3>
 		<div class="order-container">
 			<!-- items -->
@@ -194,6 +192,7 @@
 						{{ _("Make Payment") }}
 					</span>
 				</div>
+				<!-- TODO: UPDATE FOR DISCOUNTS IN PAYMENT TERMS -->
 				{% for pt in doc.payment_schedule %}
 				<div class="order-items row align-items-center">
 					<span class="col-3 pr-0">
@@ -204,20 +203,19 @@
 					</span>
 					<span class="pl-4 col-2 text-right">
 						{{ frappe.utils.fmt_money(pt.payment_amount, currency=doc.currency) }}
-						<!-- {{ pt.get_formatted("payment_amount") }} -->
 					</span>
 					<span class="col-2 text-right">
-						{{ frappe.utils.fmt_money(min(pt.outstanding, doc.outstanding_amount) if 'Invoice' in doc.doctype else min(pt.outstanding, doc.grand_total - doc.advance_paid), currency=doc.currency) }}
+						{{ frappe.utils.fmt_money(min(pt.outstanding, outstanding_amount), currency=doc.currency) }}
 					</span>
 					<!-- PAYMENT BUTTON -->
 					<span class="col-3 text-center">
-						{% if show_pay_button and (min(pt.outstanding, doc.outstanding_amount) if 'Invoice' in doc.doctype else min(pt.outstanding, doc.grand_total - doc.advance_paid)) > 0 %}
+						{% if show_pay_button and min(pt.outstanding, outstanding_amount) > 0 %}
 						<div class="form-column col-sm-6">
 							<div>
 								<p>
 									<a href="/api/method/erpnext.accounts.doctype.payment_request.payment_request.make_payment_request?dn={{ pt.name }}&dt={{ pt.doctype }}&submit_doc=1&order_type=Shopping Cart"
 										class="btn btn-primary btn-sm" id="pay-for-order">
-										{{ _("Pay") }} {{ frappe.utils.fmt_money(min(pt.outstanding, doc.outstanding_amount) if 'Invoice' in doc.doctype else min(pt.outstanding, doc.grand_total - doc.advance_paid), currency=doc.currency) }}
+										{{ _("Pay") }} {{ frappe.utils.fmt_money(min(pt.outstanding, outstanding_amount), currency=doc.currency) }}
 									</a>
 								</p>
 							</div>

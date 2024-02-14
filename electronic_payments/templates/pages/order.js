@@ -4,7 +4,6 @@
 frappe.ready(function () {
 	var loyalty_points_input = document.getElementById('loyalty-point-to-redeem')
 	var loyalty_points_status = document.getElementById('loyalty-points-status')
-	// console.log(loyalty_points_input, loyalty_points_status)
 	if (loyalty_points_input) {
 		loyalty_points_input.onblur = apply_loyalty_points
 	}
