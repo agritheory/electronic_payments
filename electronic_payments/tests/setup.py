@@ -830,7 +830,7 @@ def create_sales_invoices(settings):
 		si = frappe.new_doc("Sales Invoice")
 		si.posting_date = today
 		si.company = settings.company
-		si.customer = customer
+		si.customer = customer[0]
 		si.append(
 			"items",
 			{
