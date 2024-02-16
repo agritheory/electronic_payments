@@ -13,10 +13,39 @@ frappe.ready(async () => {
 		}
 	}
 
+	function set_required_fields() {
+		const payment_type = document.getElementById('ppm_payment_type')
+		if (payment_type.value == 'Card') {
+			document.getElementById('ppm_card_number').required = true
+			document.getElementById('ppm_card_cvc').required = true
+			document.getElementById('ppm_cardholder_name').required = true
+			document.getElementById('ppm_card_expiration_date').required = true
+
+			document.getElementById('ppm_account_holders_name').required = false
+			document.getElementById('ppm_dl_state').required = false
+			document.getElementById('ppm_dl_number').required = false
+			document.getElementById('ppm_routing_number').required = false
+			document.getElementById('ppm_account_number').required = false
+		} else {
+			document.getElementById('ppm_card_number').required = false
+			document.getElementById('ppm_card_cvc').required = false
+			document.getElementById('ppm_cardholder_name').required = false
+			document.getElementById('ppm_card_expiration_date').required = false
+
+			document.getElementById('ppm_account_holders_name').required = true
+			document.getElementById('ppm_dl_state').required = true
+			document.getElementById('ppm_dl_number').required = true
+			document.getElementById('ppm_routing_number').required = true
+			document.getElementById('ppm_account_number').required = true
+		}
+	}
+
 	fields_display()
+	set_required_fields()
 
 	$('#ppm_payment_type').change(function () {
 		fields_display()
+		set_required_fields()
 	})
 
 	$('#submit-button').on('click', event => {
