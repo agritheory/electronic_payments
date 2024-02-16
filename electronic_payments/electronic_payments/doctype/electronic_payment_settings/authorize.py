@@ -16,6 +16,7 @@ from authorizenet.apicontrollers import (
 	deleteCustomerPaymentProfileController,
 	getTransactionDetailsController,
 	createCustomerPaymentProfileController,
+	updateCustomerPaymentProfileController,
 	getTransactionListController,
 	getCustomerPaymentProfileController,
 )
@@ -163,7 +164,8 @@ class AuthorizeNet:
 		)
 
 		payment = apicontractsv1.paymentType()
-		profile = apicontractsv1.customerPaymentProfileType()
+		paymentProfile = apicontractsv1.customerPaymentProfileExType()
+		paymentProfile.billTo = apicontractsv1.customerAddressType()
 
 		if payment_profile.payment_type == "Card":
 			creditCard = apicontractsv1.creditCardType()
@@ -172,9 +174,8 @@ class AuthorizeNet:
 			creditCard.expirationDate = data.get("card_expiration_date")
 			creditCard.cardCode = str(data.get("card_cvc"))
 			payment.creditCard = creditCard
-			billTo = apicontractsv1.customerAddressType()
-			billTo.firstName = " ".join(data.get("cardholder_name").split(" ")[0:-1])
-			billTo.lastName = data.get("cardholder_name").split(" ")[-1]
+			paymentProfile.billTo.firstName = " ".join(data.get("cardholder_name").split(" ")[0:-1])
+			paymentProfile.billTo.lastName = data.get("cardholder_name").split(" ")[-1]
 		elif payment_profile.payment_type == "ACH":
 			account_number = str(data.get("account_number"))
 			last4 = account_number[-4:]
@@ -185,19 +186,18 @@ class AuthorizeNet:
 			bankAccount.accountNumber = account_number
 			bankAccount.nameOnAccount = data.get("account_holders_name")
 			payment.bankAccount = bankAccount
-			billTo = apicontractsv1.customerAddressType()
-			billTo.firstName = " ".join(data.get("account_holders_name").split(" ")[0:-1])
-			billTo.lastName = data.get("account_holders_name").split(" ")[-1]
+			paymentProfile.billTo.firstName = " ".join(data.get("account_holders_name").split(" ")[0:-1])
+			paymentProfile.billTo.lastName = data.get("account_holders_name").split(" ")[-1]
 
-		profile.payment = payment
-		profile.billTo = billTo
+		paymentProfile.payment = payment
+		paymentProfile.customerPaymentProfileId = str(payment_profile.payment_profile_id)
 
-		createCustomerPaymentProfile = apicontractsv1.createCustomerPaymentProfileRequest()
-		createCustomerPaymentProfile.merchantAuthentication = merchantAuth
-		createCustomerPaymentProfile.paymentProfile = profile
-		createCustomerPaymentProfile.customerProfileId = str(payment_profile.party_profile)
+		updateCustomerPaymentProfile = apicontractsv1.updateCustomerPaymentProfileRequest()
+		updateCustomerPaymentProfile.merchantAuthentication = merchantAuth
+		updateCustomerPaymentProfile.paymentProfile = paymentProfile
+		updateCustomerPaymentProfile.customerProfileId = str(payment_profile.party_profile)
 
-		controller = createCustomerPaymentProfileController(createCustomerPaymentProfile)
+		controller = updateCustomerPaymentProfileController(updateCustomerPaymentProfile)
 		controller.execute()
 
 		response = controller.getresponse()

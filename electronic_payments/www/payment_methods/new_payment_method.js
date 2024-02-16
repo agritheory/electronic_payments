@@ -22,8 +22,6 @@ frappe.ready(async () => {
 			document.getElementById('ppm_card_expiration_date').required = true
 
 			document.getElementById('ppm_account_holders_name').required = false
-			document.getElementById('ppm_dl_state').required = false
-			document.getElementById('ppm_dl_number').required = false
 			document.getElementById('ppm_routing_number').required = false
 			document.getElementById('ppm_account_number').required = false
 		} else {
@@ -33,8 +31,6 @@ frappe.ready(async () => {
 			document.getElementById('ppm_card_expiration_date').required = false
 
 			document.getElementById('ppm_account_holders_name').required = true
-			document.getElementById('ppm_dl_state').required = true
-			document.getElementById('ppm_dl_number').required = true
 			document.getElementById('ppm_routing_number').required = true
 			document.getElementById('ppm_account_number').required = true
 		}
@@ -93,8 +89,6 @@ frappe.ready(async () => {
 			'cardholder_name',
 			'card_expiration_date',
 			'account_holders_name',
-			'dl_state',
-			'dl_number',
 			'routing_number',
 			'account_number',
 		]

@@ -35,11 +35,11 @@
                     <div class="form-group row">
                         <div class="col-sm-6">
                             <label for="card_number" class="control-label text-muted small">{{ _("Card Number") }}</label>
-                            <input id="ppm_card_number" type="text" class="form-control" name="card_number" value="{{ portal_payment_method.card_number }}">
+                            <input id="ppm_card_number" type="text" class="form-control" name="card_number" placeholder="{{ portal_payment_method.card_number }}">
                         </div>
                         <div class="col-sm-6">
                             <label for="card_cvc" class="control-label text-muted small">{{ _("CVC") }}</label>
-                            <input id="ppm_card_cvc" type="text" class="form-control" name="card_cvc">
+                            <input id="ppm_card_cvc" type="text" class="form-control" name="card_cvc" placeholder="XXX">
                         </div>
                     </div>
                     <div class="form-group row">
@@ -49,7 +49,7 @@
                         </div>
                         <div class="col-sm-6">
                             <label for="card_expiration_date" class="control-label text-muted small">{{ _("Card Expiration Date") }}</label>
-                            <input id="ppm_card_expiration_date" type="text" placeholder="2022-12" class="form-control" name="card_expiration_date" value="{{ portal_payment_method.expiration_date }}">
+                            <input id="ppm_card_expiration_date" type="text" class="form-control" name="card_expiration_date" placeholder="{{ portal_payment_method.expiration_date }}">
                         </div>
                     </div>
                 </div>
@@ -59,25 +59,15 @@
                             <label for="account_holders_name" class="control-label text-muted small">{{ _("Account Holder's Name") }}</label>
                             <input id="ppm_account_holders_name" type="text" class="form-control" name="account_holders_name" value="{{ portal_payment_method.first_name }} {{ portal_payment_method.last_name }}">
                         </div>
-                        <div class="col-sm-6">
-                            <label for="dl_state" class="control-label text-muted small">{{ _("Drivers License State") }}</label>
-                            <input id="ppm_dl_state" type="text" class="form-control" name="dl_state">
-                        </div>
                     </div>
                     <div class="form-group row">
-                        <div class="col-sm-6">
-                            <label for="dl_number" class="control-label text-muted small">{{ _("Drivers License Number") }}</label>
-                            <input id="ppm_dl_number" type="text" class="form-control" name="dl_number">
-                        </div>
                         <div class="col-sm-6">
                             <label for="routing_number" class="control-label text-muted small">{{ _("Routing Number") }}</label>
-                            <input id="ppm_routing_number" type="text" class="form-control" name="routing_number" value="{{ portal_payment_method.routing_number }}">
+                            <input id="ppm_routing_number" type="text" class="form-control" name="routing_number" placeholder="{{ portal_payment_method.routing_number }}">
                         </div>
-                    </div>
-                    <div class="form-group row">
                         <div class="col-sm-6">
                             <label for="account_number" class="control-label text-muted small">{{ _("Checking Account Number") }}</label>
-                            <input id="ppm_account_number" type="text" class="form-control" name="account_number" value="{{ portal_payment_method.account_number }}">
+                            <input id="ppm_account_number" type="text" class="form-control" name="account_number" placeholder="{{ portal_payment_method.account_number }}">
                         </div>
                     </div>
                 </div>
