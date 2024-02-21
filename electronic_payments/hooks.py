@@ -69,7 +69,7 @@ doctype_js = {
 # ------------
 
 # before_install = "electronic_payments.install.before_install"
-# after_install = "electronic_payments.install.after_install"
+after_install = "electronic_payments.install.after_install"
 
 # Uninstallation
 # ------------
