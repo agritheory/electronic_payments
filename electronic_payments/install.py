@@ -29,23 +29,13 @@ def move_app_to_beginning_of_installed_app_global_list():
 
 
 def create_default_payment_term_template():
-	# Check for a default payment terms template for All Customer Groups and All Supplier Groups
-	if not frappe.db.exists("Customer Group", "All Customer Groups") or not frappe.db.exists(
-		"Supplier Group", "All Supplier Groups"
-	):
-		print("Returning")
-		return
-	cg_has_pmt_term_template = bool(
-		frappe.get_value("Customer Group", "All Customer Groups", "payment_terms")
-	)
-	sg_has_pmt_term_template = bool(
-		frappe.get_value("Supplier Group", "All Supplier Groups", "payment_terms")
-	)
+	# Check for a default payment terms template for all Companies
+	companies = frappe.get_all("Company", ["name", "payment_terms"])
 
-	if cg_has_pmt_term_template and sg_has_pmt_term_template:
+	if all(company.payment_terms for company in companies):
 		return
 
-	# One or both groups lack a default payment terms template - create one and link to it
+	# At least one Company lacks a default payment terms template - create one and link to it
 	template_name = "Default Due on Demand"
 	term_name = "Due on Demand"
 
@@ -73,10 +63,9 @@ def create_default_payment_term_template():
 	)
 	doc.save()
 
-	if not cg_has_pmt_term_template:
-		frappe.db.set_value("Customer Group", "All Customer Groups", "payment_terms", doc.name)
-
-	if not sg_has_pmt_term_template:
-		frappe.db.set_value("Supplier Group", "All Supplier Groups", "payment_terms", doc.name)
+	for company in companies:
+		if not company.payment_terms:
+			print("Setting pt for ", company.name)
+			frappe.db.set_value("Company", company.name, "payment_terms", doc.name)
 
 	frappe.db.commit()
