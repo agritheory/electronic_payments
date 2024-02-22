@@ -10,13 +10,13 @@ def after_install():
 def move_app_to_beginning_of_installed_app_global_list():
 	"""
 	Moving electronic_payments before erpnext and setting frappe.local.flags.web_pages_apps flag
-	in hooks.py ensures that the website reflects this app's changes to the orders template
-	override and frappe finds all files associated with it (.html/.md, .js, and .py).
-	Frappe traversed the installed app list in opposite directions when looking for jinga template
-	pages (reversed order, but checks for the flag) vs when looking for the path to get_context
-	(regular order). Setting the flag to the apps list in reversed order (which is then reversed
-	back to original
-	state)
+	ensures that the website reflects this app's changes to the orders template and frappe finds
+	all files associated with it (.html/.md, .js, and .py).
+	Frappe traverses the installed app list in opposite directions when looking for jinga template
+	pages (reversed order) vs when looking for the path to get_context (regular order). Since the
+	jinga code first checks the frappe.local.flags.web_pages_apps, it's possible to set the flag
+	to the reversed order as get_installed_apps, to ensure frappe uses a consistent order to find/
+	load override files.
 	"""
 	installed_apps = frappe.get_installed_apps()
 	app_name = "electronic_payments"
@@ -25,6 +25,9 @@ def move_app_to_beginning_of_installed_app_global_list():
 
 	installed_apps.insert(0, app_name)
 	frappe.db.set_global("installed_apps", json.dumps(installed_apps))
+
+	# Set the web_pages_apps flag to the reverse order
+	frappe.local.flags.web_pages_apps = list(reversed(installed_apps))
 	frappe.db.commit()
 
 
