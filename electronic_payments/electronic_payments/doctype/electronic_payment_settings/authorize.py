@@ -20,6 +20,7 @@ from authorizenet.apicontrollers import (
 from electronic_payments.electronic_payments.doctype.electronic_payment_settings.common import (
 	exceeds_credit_limit,
 	get_payment_amount,
+	get_discount_amount,
 	calculate_payment_method_fees,
 	process_electronic_payment,
 	queue_method_as_admin,
@@ -74,10 +75,11 @@ class AuthorizeNet:
 		payment.creditCard = creditCard
 
 		payment_amount = get_payment_amount(doc, data)
+		discount_amount = get_discount_amount(doc, data)
 		if data.get("ppm_name") and not data.get("additional_charges"):
 			data.update({"additional_charges": calculate_payment_method_fees(doc, data)})
 		total_to_charge = flt(
-			payment_amount + (data.get("additional_charges") or 0),
+			payment_amount - discount_amount + data.get("additional_charges", 0),
 			frappe.get_precision(doc.doctype, "grand_total"),
 		)
 
@@ -252,10 +254,11 @@ class AuthorizeNet:
 
 		payment_profile_id = data.get("payment_profile_id")
 		payment_amount = get_payment_amount(doc, data)
+		discount_amount = get_discount_amount(doc, data)
 		if data.get("ppm_name") and not data.get("additional_charges"):
 			data.update({"additional_charges": calculate_payment_method_fees(doc, data)})
 		total_to_charge = flt(
-			payment_amount + (data.get("additional_charges") or 0),
+			payment_amount - discount_amount + data.get("additional_charges", 0),
 			frappe.get_precision(doc.doctype, "grand_total"),
 		)
 		merchantAuth = self.merchant_auth(doc.company)
