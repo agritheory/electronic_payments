@@ -193,15 +193,15 @@
 					</span>
 				</div>
 				<!-- TODO: UPDATE FOR DISCOUNTS IN PAYMENT TERMS -->
-				{% for pt in doc.payment_schedule %}
+				{% for pt in payment_terms %}
 				<div class="order-items row align-items-center">
 					<span class="col-3 pr-0">
-						{{ pt.payment_term or 'Due in Full' }}
+						{{ pt.payment_term }}
 					</span>
 					<span class="col-2 pl-10 text-center">
-						{{ pt.get_formatted("due_date") }}
+						{{ pt.due_date }}
 					</span>
-					<span class="pl-4 col-2 text-right">
+					<span class="pl-4 col-2 text-right"> 
 						{{ frappe.utils.fmt_money(pt.payment_amount, currency=doc.currency) }}
 					</span>
 					<span class="col-2 text-right">
@@ -215,7 +215,7 @@
 								<p>
 									<a href="/api/method/erpnext.accounts.doctype.payment_request.payment_request.make_payment_request?dn={{ pt.name }}&dt={{ pt.doctype }}&submit_doc=1&order_type=Shopping Cart"
 										class="btn btn-primary btn-sm" id="pay-for-order">
-										{{ _("Pay") }} {{ frappe.utils.fmt_money(min(pt.outstanding, outstanding_amount), currency=doc.currency) }}
+										{{ _("Pay") }} {{ frappe.utils.fmt_money(min(pt.payment_amount, pt.outstanding, outstanding_amount), currency=doc.currency) }}
 									</a>
 								</p>
 							</div>
