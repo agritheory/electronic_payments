@@ -37,11 +37,13 @@ def get_context(context):
 	)
 
 	# Adjust Payment Term Schedule amounts and due dates to include discount amounts
+	has_discount = False
 	payment_terms = []
 	for pt in context.doc.payment_schedule:
 		due_date_key = "due_date"
 		discount_amount = 0
 		if pt.outstanding and pt.discount and getdate() <= pt.discount_date:
+			has_discount = True
 			data = frappe._dict(
 				{
 					"payment_term": pt.name,
@@ -61,3 +63,4 @@ def get_context(context):
 		)
 		payment_terms.append(term_dict)
 	context.payment_terms = payment_terms
+	context.has_discount = has_discount

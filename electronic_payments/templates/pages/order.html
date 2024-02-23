@@ -176,15 +176,21 @@
 			<!-- items -->
 			<div class="w-100">
 				<div class="order-items order-item-header mb-1 row text-muted">
-					<span class="col-3">
+					<span class="col-2">
 						{{ _("Payment Term") }}
 					</span>
 					<span class="col-2 text-center">
 						{{ _("Due Date") }}
 					</span>
-					<span class="col-2 pl-10 text-right">
+					{% if has_discount %}
+					<span class="col-3 pl-10 text-right">
+						{{ _("Discounted Amount") }}
+					</span>
+					{% else %}
+					<span class="col-3 pl-10 text-right">
 						{{ _("Amount") }}
 					</span>
+					{% endif %}
 					<span class="col-2 text-right">
 						{{ _("Outstanding") }}
 					</span>
@@ -192,25 +198,24 @@
 						{{ _("Make Payment") }}
 					</span>
 				</div>
-				<!-- TODO: UPDATE FOR DISCOUNTS IN PAYMENT TERMS -->
 				{% for pt in payment_terms %}
 				<div class="order-items row align-items-center">
-					<span class="col-3 pr-0">
+					<span class="col-2 pr-0">
 						{{ pt.payment_term }}
 					</span>
 					<span class="col-2 pl-10 text-center">
 						{{ pt.due_date }}
 					</span>
-					<span class="pl-4 col-2 text-right"> 
+					<span class="pl-4 col-3 text-right"> 
 						{{ frappe.utils.fmt_money(pt.payment_amount, currency=doc.currency) }}
 					</span>
 					<span class="col-2 text-right">
 						{{ frappe.utils.fmt_money(min(pt.outstanding, outstanding_amount), currency=doc.currency) }}
 					</span>
 					<!-- PAYMENT BUTTON -->
-					<span class="col-3 text-center">
+					<span class="col-3">
 						{% if show_pay_button and min(pt.outstanding, outstanding_amount) > 0 %}
-						<div class="form-column col-sm-6">
+						<div class="form-column col-sm-6" style="margin: auto">
 							<div>
 								<p>
 									<a href="/api/method/erpnext.accounts.doctype.payment_request.payment_request.make_payment_request?dn={{ pt.name }}&dt={{ pt.doctype }}&submit_doc=1&order_type=Shopping Cart"
