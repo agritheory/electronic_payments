@@ -7,6 +7,7 @@ from electronic_payments.electronic_payments.doctype.electronic_payment_settings
 from electronic_payments.electronic_payments.doctype.electronic_payment_settings.common import (
 	exceeds_credit_limit,
 	get_payment_amount,
+	get_discount_amount,
 )
 
 no_cache = 1
@@ -28,14 +29,17 @@ def get_context(context):
 	else:
 		context.doc = frappe.get_doc(dt, dn)
 	payment_amount = get_payment_amount(context.doc, data)
+	discount_amount = get_discount_amount(context.doc, data)
 	party = context.doc.customer if context.doc.customer else context.doc.supplier
 	payment_methods = []
 	for pm in frappe.get_all("Portal Payment Method", {"parent": party}, order_by="`default` DESC"):
 		payment_method = frappe.get_doc("Portal Payment Method", pm.name)
-		fees = payment_method.calculate_payment_method_fees(context.doc, amount=payment_amount)
+		fees = payment_method.calculate_payment_method_fees(
+			context.doc, amount=(payment_amount - discount_amount)
+		)
 		payment_method = payment_method.as_dict()
 		payment_method.total = flt(
-			payment_amount + fees,
+			payment_amount - discount_amount + fees,
 			frappe.get_precision(context.doc.doctype, "grand_total"),
 		)
 		payment_method.service_charge = (
@@ -44,7 +48,7 @@ def get_context(context):
 			frappe.get_precision(context.doc.doctype, "grand_total"),
 			context.doc.currency,
 		) } ({fmt_money(
-			payment_amount + fees,
+			payment_amount - discount_amount + fees,
 			frappe.get_precision(context.doc.doctype, "grand_total"),
 			context.doc.currency,
 		) })"""
@@ -87,13 +91,16 @@ def pay(dt, dn, payment_method):
 	data.ppm_mop = ppm.mode_of_payment
 	data.ppm_name = ppm.name
 	payment_amount = get_payment_amount(doc, data)
+	discount_amount = get_discount_amount(doc, data)
 
 	# Check credit limit
 	if ppm.subject_to_credit_limit and doc.get("customer") and exceeds_credit_limit(doc, data):
 		return {"error_message": "Credit Limit exceeded for selected Mode of Payment"}
 
 	# Calculate Portal Payment Method fees
-	data.additional_charges = ppm.calculate_payment_method_fees(doc, amount=payment_amount)
+	data.additional_charges = ppm.calculate_payment_method_fees(
+		doc, amount=(payment_amount - discount_amount)
+	)
 
 	# Process the payment
 	if ppm.electronic_payment_profile:
