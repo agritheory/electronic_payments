@@ -16,19 +16,16 @@ def move_app_to_beginning_of_installed_app_global_list():
 	pages (reversed order) vs when looking for the path to get_context (regular order). Since the
 	jinga code first checks the frappe.local.flags.web_pages_apps, it's possible to set the flag
 	to the reversed order as get_installed_apps, to ensure frappe uses a consistent order to find/
-	load override files.
+	load override files. This flag must be reset on load - that code is in order.py's get_context
 	"""
 	installed_apps = frappe.get_installed_apps()
 	app_name = "electronic_payments"
 	if app_name in installed_apps:
 		installed_apps.remove(app_name)
 
-	installed_apps.insert(0, app_name)
+	# Insert electronic_payments after frappe so frappe.provide works in custom JS files
+	installed_apps.insert(installed_apps.index("frappe") + 1, app_name)
 	frappe.db.set_global("installed_apps", json.dumps(installed_apps))
-
-	# Set the web_pages_apps flag to the reverse order
-	frappe.local.flags.web_pages_apps = list(reversed(installed_apps))
-	frappe.db.commit()
 
 
 def create_default_payment_term_template():

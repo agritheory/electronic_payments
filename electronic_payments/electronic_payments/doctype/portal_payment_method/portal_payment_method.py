@@ -16,7 +16,7 @@ class PortalPaymentMethod(Document):
 		(`outstanding_amount` for Invoices, `grand_total` - `advance_paid` for Orders).
 		"""
 		doc = frappe._dict(json.loads(doc)) if isinstance(doc, str) else doc
-		precision = doc.precision("grand_total")
+		precision = frappe.get_precision(doc.doctype, "grand_total")
 		fees = 0.0
 		if not self.service_charge:
 			return fees

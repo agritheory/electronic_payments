@@ -28,7 +28,7 @@ def get_payment_amount(doc, data):
 	If not, the payment amount is `outstanding_amount` for Invoices and `grand_total` -
 	`advance_paid` for Orders.
 	"""
-	precision = doc.precision("grand_total")
+	precision = frappe.get_precision(doc.doctype, "grand_total")
 	outstanding_amount = (
 		doc.outstanding_amount if "Invoice" in doc.doctype else doc.grand_total - doc.advance_paid
 	)
@@ -45,7 +45,7 @@ def get_discount_amount(doc, data):
 	Given a `doc` (SO/SI/PO/PI) and `data` dict, returns the discount amount tied to a payment term
 	if any.
 	"""
-	precision = doc.precision("grand_total")
+	precision = frappe.get_precision(doc.doctype, "grand_total")
 	reference_date = data.get("reference_date") or getdate()
 	reference_date = (
 		get_datetime(reference_date).date() if isinstance(reference_date, str) else reference_date
@@ -55,10 +55,7 @@ def get_discount_amount(doc, data):
 		term = frappe.get_doc("Payment Schedule", data.payment_term)
 		if not term.discounted_amount and term.discount and reference_date <= term.discount_date:
 			if term.discount_type == "Percentage":
-				discount_amount = flt(
-					doc.get("grand_total") * (term.discount / 100),
-					frappe.get_precision(doc.doctype, "grand_total"),
-				)
+				discount_amount = doc.get("grand_total") * (term.discount / 100)
 			else:
 				discount_amount = term.discount
 
@@ -160,7 +157,7 @@ def create_payment_entry(doc, data, transaction_id):
 		positive_or_negative = (
 			-1 if payment_type == "Pay" else 1
 		)  # determines whether entry will be a debit or credit on account
-		precision = doc.precision("grand_total")
+		precision = frappe.get_precision(doc.doctype, "grand_total")
 		book_tax_loss = frappe.db.get_single_value("Accounts Settings", "book_tax_discount_loss")
 		account = (
 			settings.sending_payment_discount_account
@@ -292,7 +289,7 @@ def create_journal_entry(doc, data, transaction_id):
 		)
 	if discount_amount:
 		# Discounts fall under same account_key (debit/credit) as the clearing account
-		precision = doc.precision("grand_total")
+		precision = frappe.get_precision(doc.doctype, "grand_total")
 		book_tax_loss = frappe.db.get_single_value("Accounts Settings", "book_tax_discount_loss")
 		account = (
 			settings.sending_payment_discount_account
@@ -359,7 +356,7 @@ def calculate_tax_discount_portion(doc, total_discount_percentage):
 	:return: list of dicts; information to append to PE or JE
 	"""
 	tax_discount_loss = {}
-	precision = doc.precision("grand_total")
+	precision = frappe.get_precision(doc.doctype, "grand_total")
 	deductions = []
 
 	# The same account head could be used more than once
