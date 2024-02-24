@@ -325,3 +325,13 @@ customers = [
 		"marcell@hydraproduce.ca",
 	),
 ]
+
+fruits = [
+	"Cloudberry",
+	"Gooseberry",
+	"Damson plum",
+	"Tayberry",
+	"Hairless rambutan",
+	"Kaduka lime",
+	"Hackberry",
+]

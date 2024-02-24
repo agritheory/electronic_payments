@@ -8,7 +8,13 @@ from frappe.desk.page.setup_wizard.setup_wizard import setup_complete
 from erpnext.setup.utils import enable_all_roles_and_domains, set_defaults_for_tests  # noqa: F401
 from erpnext.accounts.doctype.account.account import update_account_number
 
-from electronic_payments.tests.fixtures import suppliers, tax_authority, employees, customers
+from electronic_payments.tests.fixtures import (
+	suppliers,
+	tax_authority,
+	employees,
+	customers,
+	fruits,
+)
 
 
 def before_test():
@@ -214,6 +220,23 @@ def setup_accounts():
 
 
 def create_payment_terms_templates(settings):
+	if not frappe.db.exists("Payment Terms Template", "Default Due on Demand"):
+		doc = frappe.new_doc("Payment Terms Template")
+		doc.template_name = "Default Due on Demand"
+		pt = frappe.new_doc("Payment Term")
+		pt.payment_term_name = "Due on Demand"
+		pt.invoice_portion = 100
+		pt.due_date_based_on = "Day(s) after invoice date"
+		pt.credit_days = 0
+		pt.save()
+		doc.append(
+			"terms",
+			{
+				"payment_term": pt.name,
+			},
+		)
+		doc.save()
+	frappe.db.set_value("Company", settings.company, "payment_terms", doc.name)
 	if not frappe.db.exists("Payment Terms Template", "Net 30"):
 		doc = frappe.new_doc("Payment Terms Template")
 		doc.template_name = "Net 30"
@@ -271,6 +294,26 @@ def create_payment_terms_templates(settings):
 			},
 		)
 		doc.save()
+	if not frappe.db.exists("Payment Terms Template", "2% 10 Net 30"):
+		doc = frappe.new_doc("Payment Terms Template")
+		doc.template_name = "2% 10 Net 30"
+		pt = frappe.new_doc("Payment Term")
+		pt.payment_term_name = "2% 10 Net 30"
+		pt.invoice_portion = 100
+		pt.due_date_based_on = "Day(s) after invoice date"
+		pt.credit_days = 30
+		pt.discount_type = "Percentage"
+		pt.discount = 2.0
+		pt.discount_validity_based_on = "Day(s) after invoice date"
+		pt.discount_validity = 10
+		pt.save()
+		doc.append(
+			"terms",
+			{
+				"payment_term": pt.name,
+			},
+		)
+		doc.save()
 	if not frappe.db.exists("Payment Terms Template", "20 in 14 80 in 30"):
 		doc = frappe.new_doc("Payment Terms Template")
 		doc.template_name = "20 in 14 80 in 30"
@@ -285,9 +328,6 @@ def create_payment_terms_templates(settings):
 			"terms",
 			{
 				"payment_term": pt.name,
-				"invoice_portion": pt.invoice_portion,
-				"due_date_based_on": pt.due_date_based_on,
-				"credit_days": pt.credit_days,
 			},
 		)
 		# second payment term - 80% due in 30 days
@@ -301,9 +341,6 @@ def create_payment_terms_templates(settings):
 			"terms",
 			{
 				"payment_term": pt.name,
-				"invoice_portion": pt.invoice_portion,
-				"due_date_based_on": pt.due_date_based_on,
-				"credit_days": pt.credit_days,
 			},
 		)
 		doc.save()
@@ -421,22 +458,13 @@ def create_items(settings):
 		)
 		item.save()
 
-	fruits = [
-		"Cloudberry",
-		"Gooseberry",
-		"Damson plum",
-		"Tayberry",
-		"Hairless rambutan",
-		"Kaduka lime",
-		"Hackberry",
-	]
-
 	for fruit in fruits:
 		item = frappe.new_doc("Item")
 		item.item_code, item.item_name = fruit.title(), fruit.title()
 		item.item_group = "Products"
 		item.stock_uom = "Box"
 		item.maintain_stock = 1
+		item.is_stock_item = 1
 		item.include_item_in_manufacturing = 0
 		item.valuation_rate = round(random.uniform(5, 15), 2)
 		item.default_warehouse = settings["warehouse"]
@@ -827,19 +855,26 @@ def create_sales_invoices(settings):
 		so.save()
 		so.submit()
 
+	# Create Sales invoices for Andromeda with various Payment Term Templates
+	c = customers[0][0]
+	for idx, fruit in enumerate(fruits, 1):
 		si = frappe.new_doc("Sales Invoice")
 		si.posting_date = today
 		si.company = settings.company
-		si.customer = customer[0]
+		si.customer = c
 		si.append(
 			"items",
 			{
-				"item_code": "Hairless rambutan",
-				"qty": 2,
+				"item_code": fruit,
+				"qty": idx,
 			},
 		)
-		if idx < 3:
+		if idx == 1:
+			si.payment_terms_template = "Net 14"
+		elif 1 < idx < 4:
 			si.payment_terms_template = "20 in 14 80 in 30"
+		else:
+			si.payment_terms_template = "2% 10 Net 30"
 		si.save()
 		si.submit()
 
@@ -865,6 +900,9 @@ def create_electronic_payment_settings(settings):
 		eps.deposit_account = "1201 - Primary Checking - CFC"
 		eps.accepting_fee_account = "5223 - Electronic Payments Provider Fees - CFC"
 		eps.accepting_clearing_account = "1320 - Electronic Payments Receivable - CFC"
+		eps.accepting_payment_discount_account = frappe.get_value(
+			"Account", {"name": ["like", "%Sales - CFC%"]}, "name"
+		)
 		eps.save()
 	if (
 		os.environ.get("STRIPE_API_KEY")
@@ -879,6 +917,9 @@ def create_electronic_payment_settings(settings):
 		eps.deposit_account = "1201 - Primary Checking - CFC"
 		eps.accepting_fee_account = "5223 - Electronic Payments Provider Fees - CFC"
 		eps.accepting_clearing_account = "1320 - Electronic Payments Receivable - CFC"
+		eps.accepting_payment_discount_account = frappe.get_value(
+			"Account", {"name": ["like", "%Sales - CFC%"]}, "name"
+		)
 		eps.save()
 
 
