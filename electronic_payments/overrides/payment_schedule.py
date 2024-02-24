@@ -1,6 +1,10 @@
 import frappe
 import json
 
+from electronic_payments.electronic_payments.doctype.electronic_payment_settings.common import (
+	get_discount_amount,
+)
+
 
 def update_payment_schedule_for_electronic_payment(doc, method=None):
 	"""
@@ -25,11 +29,29 @@ def update_payment_schedule_for_electronic_payment(doc, method=None):
 			continue
 		if is_pe and ref.get("payment_term"):  # already updates via Payment Entry mechanism
 			continue
-		payment_amount = (
+
+		# Replicate code flow in erpnext.accounts.doctype.payment_entry.payment_entry update_payment_schedule
+		payment_term_doc = frappe.get_doc(
+			"Payment Schedule", ref.get("electronic_payments_payment_term")
+		)
+		pre_discount_payment_amount = (
 			ref.allocated_amount
 			if is_pe
 			else (ref.get("debit_in_account_currency") or ref.get("credit_in_account_currency"))
 		)
+		if payment_term_doc.discount and method == "on_submit":
+			orig_doc = frappe.get_doc(payment_term_doc.parenttype, payment_term_doc.parent)
+			data = frappe._dict(
+				{
+					"reference_date": doc.posting_date,
+					"payment_term": ref.get("electronic_payments_payment_term"),
+				}
+			)
+			discount_amount = get_discount_amount(orig_doc, data)
+		elif payment_term_doc.discount and method == "on_cancel":
+			discount_amount = payment_term_doc.discounted_amount
+		else:
+			discount_amount = 0
 
 		if method == "on_submit":
 			frappe.db.sql(
@@ -37,9 +59,15 @@ def update_payment_schedule_for_electronic_payment(doc, method=None):
 				UPDATE `tabPayment Schedule`
 				SET
 					paid_amount = `paid_amount` + %s,
+					discounted_amount = `discounted_amount` + %s,
 					outstanding = `outstanding` - %s
 				WHERE name = %s""",
-				(payment_amount, payment_amount, ref.electronic_payments_payment_term),
+				(
+					pre_discount_payment_amount - discount_amount,
+					discount_amount,
+					pre_discount_payment_amount,
+					ref.electronic_payments_payment_term,
+				),
 			)
 		elif method == "on_cancel":
 			frappe.db.sql(
@@ -47,7 +75,13 @@ def update_payment_schedule_for_electronic_payment(doc, method=None):
 				UPDATE `tabPayment Schedule`
 				SET
 					paid_amount = `paid_amount` - %s,
+					discounted_amount = `discounted_amount` - %s,
 					outstanding = `outstanding` + %s
 				WHERE name = %s""",
-				(payment_amount, payment_amount, ref.electronic_payments_payment_term),
+				(
+					pre_discount_payment_amount - discount_amount,
+					discount_amount,
+					pre_discount_payment_amount,
+					ref.electronic_payments_payment_term,
+				),
 			)
