@@ -213,7 +213,7 @@
 						{{ frappe.utils.fmt_money(min(pt.outstanding, outstanding_amount), currency=doc.currency) }}
 					</span>
 					<!-- PAYMENT BUTTON -->
-					<span class="col-3">
+					<span class="col-3 text-center">
 						{% if show_pay_button and min(pt.outstanding, outstanding_amount) > 0 %}
 						<div class="form-column col-sm-6" style="margin: auto">
 							<div>
