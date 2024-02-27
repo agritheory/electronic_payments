@@ -1,0 +1,29 @@
+{% extends "templates/web.html" %}
+
+{% block title %}{{ _("My Account") }}{% endblock %}
+{% block header %}<h1>{{ _("My Account") }}</h1>{% endblock %}
+
+{% block page_content %}
+
+<div class="row widget-row">
+
+	{% for item in sidebar_items -%}
+
+	<a href="{{ item.route }}" class="col-sm-4 portal-widget-col">
+		<div class="portal-widget">
+			<div class="whitespace-nowrap">
+				<span class="indicator-pill whitespace-nowrap green">
+				</span>
+				<h5>{{ _(item.title or item.label) }}</h5>
+			</div>
+		</div>
+	</a>
+	{%- endfor %}
+	<a href="/update-password" class="col-sm-4 portal-widget-col">
+		<div class="portal-widget">
+			<h5>{{ _("Reset Password") }}</h5>
+		</div>
+	</a>
+</div>
+<!-- no-cache -->
+{% endblock %}
