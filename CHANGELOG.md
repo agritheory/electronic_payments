@@ -2,7 +2,154 @@
 
 
 
+## v0.2.0 (2024-02-27)
+
+### Chore
+
+* chore: migrate to esbuild bundler ([`4e19e8a`](https://github.com/agritheory/electronic_payments/commit/4e19e8ac06981de4437635c637b47d5c396f1d40))
+
+* chore: fix mypy instructions in readme ([`9d9e300`](https://github.com/agritheory/electronic_payments/commit/9d9e3001c973df9e1aaec1f46bd7eaefad52f6dd))
+
+* chore: setup mypy dependency and instruction ([`6628edf`](https://github.com/agritheory/electronic_payments/commit/6628edf77d64f462a13120bbe5020110e5abb83c))
+
+* chore: prettier ([`e0c7b67`](https://github.com/agritheory/electronic_payments/commit/e0c7b67716bd2369c621e3b4ed12f368b0a74d8b))
+
+* chore: black ([`fa3b28c`](https://github.com/agritheory/electronic_payments/commit/fa3b28cb4ae84e2016299ced6fe8043231fc5f73))
+
+* chore: fix install on version-14 ([`9a3ed1d`](https://github.com/agritheory/electronic_payments/commit/9a3ed1d985ace6dba973a4fd6570ca28c65875fa))
+
+* chore: fix install on version-14 ([`7264926`](https://github.com/agritheory/electronic_payments/commit/7264926a8a74f41b3373157e68ac2cd5324d273d))
+
+### Ci
+
+* ci: fix job requirement ([`25f4d3a`](https://github.com/agritheory/electronic_payments/commit/25f4d3aa3b09ab836be902114dc52f30891d3e85))
+
+### Feature
+
+* feat: better styles in customer portal (#24) ([`ed52c12`](https://github.com/agritheory/electronic_payments/commit/ed52c12872a07b649a22f6eac886977d3528bce1))
+
+* feat: multiple payment methods (#17)
+
+* feat: multiple payment methods
+
+wip: integration with Electronic Payment Profile, Payment Gateway and credit limit
+
+* chore: prettier, black, validate customizations
+
+* fix: remove doubly-defined function
+
+* ci: install missing dateutil types
+
+* fix: accommodate if local file path includes app name
+
+* docs: update example data path
+
+* feat: update custom fields for customer ID and PPM table
+
+* test: move, add credit limit, update settings
+
+* fix: remove non-rendering doc.title
+
+* fix: include bypass config in JE credit_limit_check
+
+* feat: pass portal payment method data through dialog
+
+* feat: add multiple payment methods, fees, credit check
+
+* fix: remove extraneous new_doc call
+
+* feat: init file
+
+* test: ignore payment method setup
+
+* fix: delete method order of operations
+
+* feat: add config to create PPM when EPP is saved
+
+* refactor: use enqueue to process payment
+
+* fix: permission error by running in queue as admin
+
+* refactor: move fee calc to PPM, hide options as needed
+
+* test: use Authorize keys if present
+
+* chore: update to handle test data
+
+---------
+
+Co-authored-by: Heather Kusmierz &lt;heather.kusmierz@gmail.com&gt; ([`c383888`](https://github.com/agritheory/electronic_payments/commit/c383888774134e1c712bcc7ff7c97b899340fc15))
+
+### Style
+
+* style: prettify code ([`650c55f`](https://github.com/agritheory/electronic_payments/commit/650c55ff5436e13d60205159eedcf16f3de76bd0))
+
+* style: prettify code ([`8b27675`](https://github.com/agritheory/electronic_payments/commit/8b276756941d015f0d7d8e2a61b7ae45cbe6b911))
+
+### Unknown
+
+* [v14] Stripe (#16)
+
+* chore: update for field changes
+
+* wip: add stripe api code
+
+* wip: fix circular import issue
+
+* wip: add void and refund functions, load keys from settings, fix circular import
+
+* wip: add currency to calls
+
+* wip: stripe card workflow with UI
+
+* wip: update error log calls for v14 changes
+
+* wip: authorize.net request fixes following testing
+
+* wip: convert types for all response objects
+
+* tests: add so + si creation to test data, also eps if env exists
+
+* docs: add pre-commit instructions to readme
+
+* chore: remove future imports, no longer needed
+
+* chore: remove orphaned code
+
+* chore: fix flake 8 errors
+
+* chore: fix flake8 errors
+
+* chore: prettier
+
+* wip: clearing process
+
+* wip: update test data for new accounts
+
+* wip: update workflow for PE or JE with clearing account
+
+* fix: error handling
+
+* feat: do not show electronic payment on dirty/new documents
+
+* fix: create_journal_entry
+
+* fix: take all last name
+
+* fix: remove print statements, add todo mark
+
+* fix: validate customizations
+
+---------
+
+Co-authored-by: Heather Kusmierz &lt;heather.kusmierz@gmail.com&gt;
+Co-authored-by: Tyler Matteson &lt;tyler@agritheory.com&gt; ([`12e1907`](https://github.com/agritheory/electronic_payments/commit/12e19076b5bc55d9eeccc172e83724a39e6e6418))
+
+
 ## v0.1.1 (2023-11-02)
+
+
+## v14.1.1 (2023-11-02)
 
 ### Fix
 
@@ -10,6 +157,9 @@
 
 
 ## v0.1.0 (2023-11-02)
+
+
+## v14.1.0 (2023-11-02)
 
 ### Ci
 
