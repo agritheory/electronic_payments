@@ -928,6 +928,11 @@ def curate_portal_and_ecommerce_settings(settings=None):
 	ecom.enabled = 1
 	ecom.save()
 
+	for r in ("Customer", "Supplier"):
+		role = frappe.get_doc("Role", r)
+		role.home_page = "/me"
+		role.save()
+
 	portal = frappe.get_doc("Portal Settings", "Portal Settings")
 	portal.hide_standard_menu = 1
 	portal.append(
@@ -936,6 +941,16 @@ def curate_portal_and_ecommerce_settings(settings=None):
 			"title": "Orders",
 			"enabled": 1,
 			"route": "/orders",
+			"reference_doctype": "Sales Order",
+			"role": "Customer",
+		},
+	)
+	portal.append(
+		"custom_menu",
+		{
+			"title": "Invoices",
+			"enabled": 1,
+			"route": "/invoices",
 			"reference_doctype": "Sales Invoice",
 			"role": "Customer",
 		},
@@ -946,6 +961,16 @@ def curate_portal_and_ecommerce_settings(settings=None):
 			"title": "Orders",
 			"enabled": 1,
 			"route": "/orders",
+			"reference_doctype": "Purchase Order",
+			"role": "Supplier",
+		},
+	)
+	portal.append(
+		"custom_menu",
+		{
+			"title": "Invoices",
+			"enabled": 1,
+			"route": "/invoices",
 			"reference_doctype": "Purchase Invoice",
 			"role": "Supplier",
 		},
