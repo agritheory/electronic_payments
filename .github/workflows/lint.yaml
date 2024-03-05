@@ -28,7 +28,7 @@ jobs:
         run: pip install mypy
 
       - name: Install mypy types
-        run: mypy ./electronic_payments/. --install-types
+        run: mypy ./electronic_payments/. --install-types --non-interactive
 
       - name: Run mypy
         uses: sasanquaneuf/mypy-github-action@releases/v1
