@@ -60,7 +60,9 @@ def validate_module(customized_doctypes, set_module=False):
 	modules = (app_dir / this_app / "modules.txt").read_text().split("\n")
 	for doctype, customize_files in customized_doctypes.items():
 		for customize_file in customize_files:
-			if not this_app == customize_file.parent.parent.parent.parent.stem:  # Updated to accommodate local folders named same as app
+			if (
+				not this_app == customize_file.parent.parent.parent.parent.stem
+			):  # Updated to accommodate local folders named same as app
 				continue
 			module = customize_file.parent.parent.stem
 			file_contents = json.loads(customize_file.read_text())
