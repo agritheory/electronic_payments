@@ -3,11 +3,11 @@ import json
 
 
 def after_install():
-	move_app_to_beginning_of_installed_app_global_list()
+	move_app_after_frappe_in_installed_app_global_list()
 	create_default_payment_term_template()
 
 
-def move_app_to_beginning_of_installed_app_global_list():
+def move_app_after_frappe_in_installed_app_global_list():
 	"""
 	Moving electronic_payments before erpnext and setting frappe.local.flags.web_pages_apps flag
 	ensures that the website reflects this app's changes to the orders template and frappe finds
@@ -29,6 +29,13 @@ def move_app_to_beginning_of_installed_app_global_list():
 
 
 def create_default_payment_term_template():
+	"""
+	If not specified in Company Settings, creates and adds a default Payment Term Template that's
+	used in Orders/Invoices when there isn't one tied to the party or set by the user. This avoids
+	the default ERPNext behavior, which creates a payment schedule term without a name. The name
+	field is how to link to the term in a Payment Entry, so there would be no way to keep the
+	Payment Schedule up-to-date for payments in that situation.
+	"""
 	# Check for a default payment terms template for all Companies
 	companies = frappe.get_all("Company", ["name", "payment_terms"])
 
