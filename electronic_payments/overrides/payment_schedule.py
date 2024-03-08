@@ -53,35 +53,24 @@ def update_payment_schedule_for_electronic_payment(doc, method=None):
 		else:
 			discount_amount = 0
 
+		ps = frappe.qb.DocType("Payment Schedule").as_("ps")
 		if method == "on_submit":
-			frappe.db.sql(
-				"""
-				UPDATE `tabPayment Schedule`
-				SET
-					paid_amount = `paid_amount` + %s,
-					discounted_amount = `discounted_amount` + %s,
-					outstanding = `outstanding` - %s
-				WHERE name = %s""",
-				(
-					pre_discount_payment_amount - discount_amount,
-					discount_amount,
-					pre_discount_payment_amount,
-					ref.electronic_payments_payment_term,
-				),
-			)
+			frappe.qb.update(ps).set(
+				ps.paid_amount, ps.paid_amount + (pre_discount_payment_amount - discount_amount)
+			).where(ps.name == ref.electronic_payments_payment_term).run()
+			frappe.qb.update(ps).set(ps.discounted_amount, ps.discounted_amount + discount_amount).where(
+				ps.name == ref.electronic_payments_payment_term
+			).run()
+			frappe.qb.update(ps).set(ps.outstanding, ps.outstanding - pre_discount_payment_amount).where(
+				ps.name == ref.electronic_payments_payment_term
+			).run()
 		elif method == "on_cancel":
-			frappe.db.sql(
-				"""
-				UPDATE `tabPayment Schedule`
-				SET
-					paid_amount = `paid_amount` - %s,
-					discounted_amount = `discounted_amount` - %s,
-					outstanding = `outstanding` + %s
-				WHERE name = %s""",
-				(
-					pre_discount_payment_amount - discount_amount,
-					discount_amount,
-					pre_discount_payment_amount,
-					ref.electronic_payments_payment_term,
-				),
-			)
+			frappe.qb.update(ps).set(
+				ps.paid_amount, ps.paid_amount - (pre_discount_payment_amount - discount_amount)
+			).where(ps.name == ref.electronic_payments_payment_term).run()
+			frappe.qb.update(ps).set(ps.discounted_amount, ps.discounted_amount - discount_amount).where(
+				ps.name == ref.electronic_payments_payment_term
+			).run()
+			frappe.qb.update(ps).set(ps.outstanding, ps.outstanding + pre_discount_payment_amount).where(
+				ps.name == ref.electronic_payments_payment_term
+			).run()
