@@ -34,7 +34,7 @@
 				</a>
 			</ul>
 		</div>
-		{% if show_pay_button and not show_payment_terms and outstanding_amount > 0 %}
+		{% if show_pay_button and not show_payment_terms and has_portal_payment_method and outstanding_amount > 0 %}
 			<div class="form-column col-sm-6">
 				<div class="page-header-actions-block" data-html-block="header-actions">
 					<p>
@@ -45,6 +45,19 @@
 					</p>
 				</div>
 			</div>
+		{% endif %}
+		<!-- PLACEHOLDER - UPDATE WHEN SELF SERVICE PR MERGED -->
+		{% if not has_portal_payment_method %}
+		<div class="form-column col-sm-6">
+			<div class="page-header-actions-block" data-html-block="header-actions">
+				<p>
+					<a href=""
+						class="btn btn-primary btn-sm" id="add-portal-payment-method">
+						{{ _("Add Payment Method") }}
+					</a>
+				</p>
+			</div>
+		</div>
 		{% endif %}
 	</div>
 {% endblock %}  <!-- END OF HEADER_ACTIONS BLOCK -->

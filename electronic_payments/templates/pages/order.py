@@ -20,9 +20,21 @@ def get_context(context):
 		frappe.db.commit()
 
 	get_erpnext_order_context(context)
+	is_valid_doctype = context.doc.doctype in [
+		"Sales Order",
+		"Sales Invoice",
+		"Purchase Order",
+		"Purchase Invoice",
+	]
+	if is_valid_doctype:
+		party = context.doc.customer if "Sales" in context.doc.doctype else context.doc.supplier
+		context.has_portal_payment_method = (
+			len(frappe.get_all("Portal Payment Method", {"parent": party})) > 0
+		)
+	else:
+		context.has_portal_payment_method = False
 	context.show_payment_terms = (
-		context.doc.doctype in ["Sales Order", "Sales Invoice", "Purchase Order", "Purchase Invoice"]
-		and len(context.doc.payment_schedule) > 0
+		is_valid_doctype and len(context.doc.payment_schedule) > 0 and context.has_portal_payment_method
 	)
 	outstanding_amount = (
 		context.doc.outstanding_amount
