@@ -47,7 +47,7 @@ def remove_portal_payment_method(payment_method):
 			"Electronic Payment Profile", electronic_payment_profile, "payment_profile_id"
 		)
 		client = settings.client()
-		response = client.c(get_default_company(), payment_profile_id)
+		response = client.delete_payment_profile(get_default_company(), payment_profile_id)
 
 		if response.get("message") and response.get("message") == "Success":
 			return {"success_message": _("Your Payment Method has been removed successfully.")}
