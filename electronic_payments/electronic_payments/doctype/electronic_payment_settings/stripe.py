@@ -77,7 +77,7 @@ class Stripe:
 			if data.get("save_data") == "Charge now":
 				response = self.process_credit_card(doc, data)
 			else:  # saves payment data (will delete payment profile doc after charging if for txn only)
-				customer_response = self.create_customer_profile(doc, data)
+				customer_response = self.create_customer_profile(doc)
 				if customer_response.get("message") == "Success":
 					data.update({"customer_profile_id": customer_response.get("transaction_id")})
 					pmt_profile_response = self.create_customer_payment_profile(doc, data)
@@ -164,7 +164,7 @@ class Stripe:
 				doc.grand_total + (data.get("additional_charges") or 0),
 				frappe.get_precision(doc.doctype, "grand_total"),
 			)
-			customer_response = self.create_customer_profile(doc, data)
+			customer_response = self.create_customer_profile(doc)
 			if customer_response.get("message") == "Success":
 				currency = frappe.defaults.get_global_default("currency").lower()
 				response = stripe.PaymentIntent.create(
@@ -252,7 +252,7 @@ class Stripe:
 				frappe.log_error(message=frappe.get_traceback(), title=f"{e}")
 				return {"error": f"{e}"}
 
-	def create_customer_profile(self, doc, data):
+	def create_customer_profile(self, doc):
 		self.get_password(doc.company)
 		try:
 			existing_customer_id = frappe.get_value("Customer", doc.customer, "electronic_payment_profile")

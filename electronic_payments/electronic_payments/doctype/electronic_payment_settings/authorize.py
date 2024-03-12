@@ -54,7 +54,7 @@ class AuthorizeNet:
 		elif mop == "Card" and data.get("save_data") == "Charge now":
 			response = self.process_credit_card(doc, data)
 		else:  # charge new Card/ACH, save payment data (temporarily if txn only - payment profile deleted once charge is successful)
-			customer_response = self.create_customer_profile(doc, data)
+			customer_response = self.create_customer_profile(doc)
 			if customer_response.get("message") == "Success":
 				data.update({"customer_profile_id": customer_response.get("transaction_id")})
 				pmt_profile_response = self.create_customer_payment_profile(doc, data)
@@ -130,7 +130,7 @@ class AuthorizeNet:
 		frappe.log_error(message=frappe.get_traceback(), title=error_message)
 		return {"error": error_message}
 
-	def create_customer_profile(self, doc, data):
+	def create_customer_profile(self, doc):
 		existing_customer_id = frappe.get_value("Customer", doc.customer, "electronic_payment_profile")
 		if existing_customer_id:
 			return {"message": "Success", "transaction_id": existing_customer_id}
