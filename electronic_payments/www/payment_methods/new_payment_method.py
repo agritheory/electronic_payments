@@ -31,10 +31,16 @@ def new_portal_payment_method(payment_method):
 	data.save_data = "Retain payment data for this party"
 
 	try:
+		response = client.create_customer_profile(doc, {})
+		if response.get("error"):
+			return {"error_message": response["error"]}
+
+		data["customer_profile_id"] = response.get("transaction_id")
 		response = client.create_customer_payment_profile(doc, data)
 
 		if response.get("error"):
 			return {"error_message": response["error"]}
 		return {"success_message": _("Your Payment Method has been created successfully")}
+
 	except Exception as e:
 		return {"error_message": str(e)}
