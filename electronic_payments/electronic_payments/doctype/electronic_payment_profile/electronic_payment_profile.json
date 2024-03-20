@@ -4,7 +4,16 @@
 	"doctype": "DocType",
 	"editable_grid": 1,
 	"engine": "InnoDB",
-	"field_order": ["party_type", "party", "payment_type", "reference", "payment_profile_id", "party_profile", "retain"],
+	"field_order": [
+		"party_type",
+		"party",
+		"payment_type",
+		"reference",
+		"payment_profile_id",
+		"party_profile",
+		"payment_gateway",
+		"retain"
+	],
 	"fields": [
 		{
 			"fieldname": "payment_type",
@@ -52,11 +61,18 @@
 			"fieldtype": "Data",
 			"label": "Party Profile",
 			"read_only": 1
+		},
+		{
+			"default": "Authorize",
+			"fieldname": "payment_gateway",
+			"fieldtype": "Select",
+			"label": "Payment Gateway",
+			"options": "Authorize\nStripe"
 		}
 	],
 	"in_create": 1,
 	"links": [],
-	"modified": "2023-03-08 14:41:48.904785",
+	"modified": "2024-02-06 10:45:48.504982",
 	"modified_by": "Administrator",
 	"module": "Electronic Payments",
 	"name": "Electronic Payment Profile",
@@ -78,6 +94,7 @@
 	"read_only": 1,
 	"sort_field": "modified",
 	"sort_order": "DESC",
+	"states": [],
 	"track_changes": 1,
 	"track_seen": 1
 }

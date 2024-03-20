@@ -838,6 +838,26 @@ def curate_portal_and_ecommerce_settings(settings=None):
 			"role": "Supplier",
 		},
 	)
+	portal.append(
+		"custom_menu",
+		{
+			"title": "Portal Payment Methods",
+			"enabled": 1,
+			"route": "/payment_methods",
+			"reference_doctype": "",
+			"role": "Customer",
+		},
+	)
+	portal.append(
+		"custom_menu",
+		{
+			"title": "Portal Payment Methods",
+			"enabled": 1,
+			"route": "/payment_methods",
+			"reference_doctype": "",
+			"role": "Supplier",
+		},
+	)
 	portal.save()
 
 

@@ -6,6 +6,7 @@ import frappe
 from frappe import _
 from frappe.utils.password import get_decrypted_password
 from frappe.utils.data import flt
+from frappe.utils import cint
 
 import stripe
 from electronic_payments.electronic_payments.doctype.electronic_payment_settings.common import (
@@ -76,7 +77,7 @@ class Stripe:
 			if data.get("save_data") == "Charge now":
 				response = self.process_credit_card(doc, data)
 			else:  # saves payment data (will delete payment profile doc after charging if for txn only)
-				customer_response = self.create_customer_profile(doc, data)
+				customer_response = self.create_customer_profile(doc)
 				if customer_response.get("message") == "Success":
 					data.update({"customer_profile_id": customer_response.get("transaction_id")})
 					pmt_profile_response = self.create_customer_payment_profile(doc, data)
@@ -163,7 +164,7 @@ class Stripe:
 				doc.grand_total + (data.get("additional_charges") or 0),
 				frappe.get_precision(doc.doctype, "grand_total"),
 			)
-			customer_response = self.create_customer_profile(doc, data)
+			customer_response = self.create_customer_profile(doc)
 			if customer_response.get("message") == "Success":
 				currency = frappe.defaults.get_global_default("currency").lower()
 				response = stripe.PaymentIntent.create(
@@ -251,7 +252,7 @@ class Stripe:
 				frappe.log_error(message=frappe.get_traceback(), title=f"{e}")
 				return {"error": f"{e}"}
 
-	def create_customer_profile(self, doc, data):
+	def create_customer_profile(self, doc):
 		self.get_password(doc.company)
 		try:
 			existing_customer_id = frappe.get_value("Customer", doc.customer, "electronic_payment_profile")
@@ -268,6 +269,105 @@ class Stripe:
 			except Exception as _e:  # non-Stripe error, something else went wrong
 				frappe.log_error(message=frappe.get_traceback(), title=f"{e}")
 				return {"error": f"{e}"}
+
+	def get_customer_payment_profile(self, company, electronic_payment_profile_name):
+		self.get_password(company)
+		electronic_payment_profile = frappe.get_doc(
+			"Electronic Payment Profile", {"name": electronic_payment_profile_name}
+		)
+		response = stripe.PaymentMethod.retrieve(electronic_payment_profile.payment_profile_id)
+		if response.type == "card":
+			return {
+				"message": "Success",
+				"data": {
+					"first_name": " ".join(response.billing_details.name.split(" ")[0:-1]),
+					"last_name": response.billing_details.name.split(" ")[-1],
+					"card_number": f"**** **** **** {response.card.last4}",
+					"expiration_date": f"{response.card.exp_year}-{response.card.exp_month}",
+					"card_type": response.card.brand,
+				},
+			}
+		elif response.type == "us_bank_account":
+			return {
+				"message": "Success",
+				"data": {
+					"first_name": " ".join(response.billing_details.name.split(" ")[0:-1]),
+					"last_name": response.billing_details.name.split(" ")[-1],
+					"account_type": response.us_bank_account.account_type,
+					"routing_number": response.us_bank_account.routing_number,
+					"account_number": f"*{response.us_bank_account.last4}",
+					"name_on_account": response.us_bank_account.bank_name,
+					"echeck_type": "",
+				},
+			}
+
+	def edit_customer_payment_profile(self, company, electronic_payment_profile_name, data):
+		self.get_password(company)
+
+		payment_profile = frappe.get_doc(
+			"Electronic Payment Profile", {"name": electronic_payment_profile_name}
+		)
+
+		try:
+			if payment_profile.payment_type == "Card":
+				card_number = data.get("card_number")
+				card_number = card_number.replace(" ", "")
+				# TODO: replace with UI data collection
+				response = stripe.PaymentMethod.modify(
+					payment_profile.id,
+					card={
+						"number": card_number,
+						"exp_month": int(data.get("card_expiration_date").split("-")[1]),
+						"exp_year": int(data.get("card_expiration_date").split("-")[0]),
+						"cvc": data.get("card_cvc"),
+					},
+				)
+			elif (
+				payment_profile.payment_type == "ACH"
+			):  # TODO: replace with UI data collection / mandate / verification process
+				response = stripe.PaymentMethod.modify(
+					payment_profile.id,
+					us_bank_account={
+						"routing_number": str(data.get("routing_number")),
+						"account_number": str(data.get("account_number")),
+					},
+					billing_details={"name": data.get("account_holders_name"), "email": ""},
+				)
+			else:
+				frappe.throw(_("Unsupported payment method provided."))
+			pm_response = {"message": "Success", "transaction_id": response.id}
+		except Exception as e:
+			try:
+				frappe.log_error(message=frappe.get_traceback(), title=f"{e.code}: {e.type}. {e.message}")
+				pm_response = {
+					"error": f"{e.code}: {e.type}. {e.message}"
+				}  # e.code has status code, e.type is one of 4 error types, e.message is a human-readable message providing more details about the error
+			except Exception as _e:  # non-Stripe error, something else went wrong
+				frappe.log_error(message=frappe.get_traceback(), title=f"{e}")
+				pm_response = {"error": f"{e}"}
+
+		if pm_response.get("message") == "Success":
+			mop = payment_profile.payment_type
+			if mop == "Card":
+				card_number = data.get("card_number")
+				card_number = card_number.replace(" ", "")
+				last4 = card_number[-4:]
+			else:
+				account_number = data.get("account_number")
+				account_number = account_number.replace(" ", "")
+				last4 = account_number[-4:]
+
+			payment_profile.reference = f"**** **** **** {last4}" if mop == "Card" else f"*{last4}"
+			payment_profile.save(ignore_permissions=True)
+			ppm = frappe.get_doc(
+				"Portal Payment Method", {"electronic_payment_profile": payment_profile.name}
+			)
+			ppm.label = f"{mop}-{last4}"
+			ppm.default = cint(data.get("default", 0))
+			ppm.save(ignore_permissions=True)
+			return {"message": "Success", "payment_profile_doc": payment_profile}
+		else:  # error creating the payment method
+			return pm_response
 
 	def create_customer_payment_profile(self, doc, data):
 		self.get_password(doc.company)
@@ -297,11 +397,12 @@ class Stripe:
 				payment_profile.party_type = "Customer"
 				payment_profile.party = doc.customer
 				payment_profile.payment_type = mop
+				payment_profile.payment_gateway = "Stripe"
 				payment_profile.reference = f"**** **** **** {last4}" if mop == "Card" else f"*{last4}"
 				payment_profile.payment_profile_id = str(response.id)
 				payment_profile.party_profile = str(customer_profile_id)
 				payment_profile.retain = 1 if data.save_data == "Retain payment data for this party" else 0
-				payment_profile.save()
+				payment_profile.save(ignore_permissions=True)
 
 				if payment_profile.retain and frappe.get_value(
 					"Electronic Payment Settings", {"company": doc.company}, "create_ppm"
@@ -311,15 +412,15 @@ class Stripe:
 						"Electronic Payment Settings", {"company": doc.company}, "mode_of_payment"
 					)
 					ppm.label = f"{mop}-{last4}"
-					ppm.default = 0
+					ppm.default = cint(data.get("default", 0))
 					ppm.electronic_payment_profile = payment_profile.name
 					ppm.service_charge = 0
 					ppm.parent = payment_profile.party
 					ppm.parenttype = payment_profile.party_type
-					ppm.save()
+					ppm.save(ignore_permissions=True)
 					cust = frappe.get_doc("Customer", doc.customer)
 					cust.append("portal_payment_method", ppm)
-					cust.save()
+					cust.save(ignore_permissions=True)
 
 				return {"message": "Success", "payment_profile_doc": payment_profile}
 			else:  # error creating the payment method
@@ -435,8 +536,8 @@ class Stripe:
 		)
 		pmm_name = frappe.get_value("Portal Payment Method", {"electronic_payment_profile": epp_name})
 
-		frappe.delete_doc("Portal Payment Method", pmm_name)
-		frappe.delete_doc("Electronic Payment Profile", epp_name)
+		frappe.delete_doc("Portal Payment Method", pmm_name, ignore_permissions=True)
+		frappe.delete_doc("Electronic Payment Profile", epp_name, ignore_permissions=True)
 
 		# Delete from API
 		self.get_password(company)

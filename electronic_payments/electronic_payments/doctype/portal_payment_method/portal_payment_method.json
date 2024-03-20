@@ -11,7 +11,6 @@
 		"default",
 		"electronic_payment_profile",
 		"subject_to_credit_limit",
-		"payment_gateway",
 		"service_charge",
 		"percentage_or_rate",
 		"percentage",
@@ -34,12 +33,6 @@
 			"fieldtype": "Check",
 			"in_list_view": 1,
 			"label": "Default"
-		},
-		{
-			"fieldname": "payment_gateway",
-			"fieldtype": "Link",
-			"label": "Payment Gateway",
-			"options": "Payment Gateway"
 		},
 		{
 			"fieldname": "electronic_payment_profile",
@@ -95,7 +88,7 @@
 	"index_web_pages_for_search": 1,
 	"istable": 1,
 	"links": [],
-	"modified": "2024-01-30 10:57:22.898204",
+	"modified": "2024-02-06 10:44:00.330153",
 	"modified_by": "Administrator",
 	"module": "Electronic Payments",
 	"name": "Portal Payment Method",
