@@ -61,7 +61,11 @@ class AuthorizeNet:
 				if pmt_profile_response.get("message") == "Success":
 					pp_doc = pmt_profile_response.get("payment_profile_doc")
 					data.update({"payment_profile_id": pp_doc.payment_profile_id})
-					response = self.charge_party_profile(doc, data)
+					party = self.get_party_details(doc)
+					if party.doctype == "Customer":
+						response = self.charge_party_profile(doc, data)
+					else:
+						response = self.make_ach_payment(doc, data)
 				else:  # error creating the customer payment profile
 					return pmt_profile_response
 			else:  # error creating customer profile
@@ -473,6 +477,75 @@ class AuthorizeNet:
 	# def debit_bank_account(self, data):
 	# 	#https://github.com/AuthorizeNet/sample-code-python/blob/master/PaymentTransactions/debit-bank-account.py
 	# 	pass
+
+	def make_ach_payment(self, doc, data):
+		merchantAuth = self.merchant_auth(doc.company)
+		amount = data.get("amount")
+
+		party = self.get_party_details(doc)
+		if not data.get("party_profile_id"):
+			party_profile_id = frappe.get_value(party.doctype, party.name, "electronic_payment_profile")
+		else:
+			party_profile_id = data.get("party_profile_id")
+
+		# Get the party profile id payment data?
+
+		# Create the payment data for a bank account
+		bankAccount = apicontractsv1.bankAccountType()
+		accountType = apicontractsv1.bankAccountTypeEnum
+		bankAccount.accountType = accountType.checking
+		bankAccount.routingNumber = "121042882"
+		bankAccount.accountNumber = "1234567890"
+		bankAccount.nameOnAccount = "John Doe"
+
+		# Add the payment data to a paymentType object
+		payment = apicontractsv1.paymentType()
+		payment.bankAccount = bankAccount
+
+		# Create a transactionRequestType object and add the previous objects to it.
+		transactionrequest = apicontractsv1.transactionRequestType()
+		transactionrequest.transactionType = "refundTransaction"
+		transactionrequest.amount = amount
+		transactionrequest.payment = payment
+
+		# Assemble the complete transaction request
+		createtransactionrequest = apicontractsv1.createTransactionRequest()
+		createtransactionrequest.merchantAuthentication = merchantAuth
+		createtransactionrequest.refId = "MerchantID-0001"
+		createtransactionrequest.transactionRequest = transactionrequest
+
+		# Create the controller
+		createtransactioncontroller = createTransactionController(createtransactionrequest)
+		createtransactioncontroller.execute()
+
+		response = createtransactioncontroller.getresponse()
+
+		if response is not None:
+			if response.messages.resultCode == "Ok":
+				# Since the API request was successful, look for a transaction response
+				# and parse it to display the results of authorizing the card
+				if hasattr(response.transactionResponse, "messages"):
+					return {
+						"message": "Success",
+						"transaction_id": str(response.transactionResponse.transId),
+					}
+				elif hasattr(response.transactionResponse, "errors"):
+					error_message = str(response.transactionResponse.errors.error[0].errorText)
+				else:
+					error_message = "Transaction request error"
+			# Or, print errors if the API request wasn't successful
+			else:
+				if hasattr(response, "transactionResponse") and hasattr(
+					response.transactionResponse, "errors"
+				):
+					error_message = str(response.transactionResponse.errors.error[0].errorText)
+				else:
+					error_message = str(response.messages.message[0]["text"].text)
+		else:
+			error_message = "No Repsonse"
+
+		frappe.log_error(message=frappe.get_traceback(), title=error_message)
+		return {"error": error_message}
 
 	def refund_transaction(self, doc, data):
 		"""
