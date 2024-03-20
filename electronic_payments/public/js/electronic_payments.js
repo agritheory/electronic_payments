@@ -142,31 +142,56 @@ electronic_payments.electronic_payments = frm => {
 }
 
 function render_frm_data(frm) {
-	return (
-		'<table class="table table-borderless" style="margin-top: 0; margin-bottom: 0;">\
-		<tbody><tr><td style="border: 1px solid transparent">Amount: ' +
-		format_currency(cur_frm.doc.total) +
-		'<br>' +
-		'Tax Amount: ' +
-		format_currency(frm.doc.total_taxes_and_charges) +
-		'<br>' +
-		'Order: ' +
-		frm.doc.name +
-		'<br>' +
-		'Purchase Order: ' +
-		(frm.doc.po_no || 'N/A') +
-		'</td>' +
-		'<td style="border: 1px solid transparent">' +
-		frm.doc.customer_name +
-		'<br>' +
-		frm.doc.address_display +
-		'</td>' +
-		'<td style="border: 1px solid transparent">' +
-		frm.doc.customer_name +
-		'<br>' +
-		frm.doc.shipping_address +
-		'</td></tr></tbody></table>'
-	)
+	if (frm.doc.doctype.indexOf('Sales') >= 0) {
+		return (
+			'<table class="table table-borderless" style="margin-top: 0; margin-bottom: 0;">\
+			<tbody><tr><td style="border: 1px solid transparent">Amount: ' +
+			format_currency(cur_frm.doc.total) +
+			'<br>' +
+			'Tax Amount: ' +
+			format_currency(frm.doc.total_taxes_and_charges) +
+			'<br>' +
+			'Order: ' +
+			frm.doc.name +
+			'<br>' +
+			'Purchase Order: ' +
+			(frm.doc.po_no || 'N/A') +
+			'</td>' +
+			'<td style="border: 1px solid transparent">' +
+			frm.doc.customer_name +
+			'<br>' +
+			frm.doc.address_display +
+			'</td>' +
+			'<td style="border: 1px solid transparent">' +
+			frm.doc.customer_name +
+			'<br>' +
+			frm.doc.shipping_address +
+			'</td></tr></tbody></table>'
+		)
+	} else {
+		return (
+			'<table class="table table-borderless" style="margin-top: 0; margin-bottom: 0;">\
+			<tbody><tr><td style="border: 1px solid transparent">Amount: ' +
+			format_currency(frm.doc.total) +
+			'<br>' +
+			'Tax Amount: ' +
+			format_currency(frm.doc.total_taxes_and_charges) +
+			'<br>' +
+			'Order: ' +
+			frm.doc.name +
+			'</td>' +
+			'<td style="border: 1px solid transparent">' +
+			frm.doc.supplier_name +
+			'<br>' +
+			frm.doc.address_display +
+			'</td>' +
+			'<td style="border: 1px solid transparent">' +
+			frm.doc.supplier_name +
+			'<br>' +
+			frm.doc.shipping_address +
+			'</td></tr></tbody></table>'
+		)
+	}
 }
 
 async function process(frm, dialog) {
@@ -190,6 +215,7 @@ async function process(frm, dialog) {
 async function payment_options(frm) {
 	let payment_profiles = []
 	let saved_methods = []
+	let is_sales = frm.doc.doctype.indexOf('Sales') >= 0 ? true : false
 	await frappe
 		.xcall(
 			'electronic_payments.electronic_payments.doctype.electronic_payment_settings.electronic_payment_settings.get_payment_profiles',
@@ -204,10 +230,19 @@ async function payment_options(frm) {
 			}
 		})
 	if (frm.doc.pre_authorization_token || payment_profiles.length > 0) {
-		const options = saved_methods.concat(['New Card', 'New ACH']).join('\n')
+		let options = []
+		if (is_sales) {
+			options = saved_methods.concat(['New Card', 'New ACH']).join('\n')
+		} else {
+			options = saved_methods.concat(['New ACH']).join('\n')
+		}
 		return [options, payment_profiles]
 	} else {
-		return ['New Card\nNew ACH']
+		if (is_sales) {
+			return ['New Card\nNew ACH']
+		} else {
+			return ['New ACH']
+		}
 	}
 }
 
