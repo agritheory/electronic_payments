@@ -35,6 +35,8 @@ app_include_js = ["electronic_payments.bundle.js"]
 doctype_js = {
 	"Sales Order": "public/js/sales_order_custom.js",
 	"Sales Invoice": "public/js/sales_invoice_custom.js",
+    "Purchase Order": "public/js/purchase_order_custom.js",
+	"Purchase Invoice": "public/js/purchase_invoice_custom.js",
 }
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
