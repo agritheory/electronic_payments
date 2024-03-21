@@ -25,6 +25,7 @@ from electronic_payments.electronic_payments.doctype.electronic_payment_settings
 	calculate_payment_method_fees,
 	process_electronic_payment,
 	queue_method_as_admin,
+	get_party_details,
 )
 
 
@@ -45,12 +46,17 @@ class AuthorizeNet:
 
 	def process_transaction(self, doc, data):
 		mop = data.mode_of_payment.replace("New ", "")
+		party = get_party_details(doc)
+
 		if mop.startswith("Saved"):
 			if data.get("subject_to_credit_limit") and exceeds_credit_limit(doc, data):
 				return {"error": "Credit Limit exceeded for selected Mode of Payment"}
 			if data.get("ppm_name"):
 				data.update({"additional_charges": calculate_payment_method_fees(doc, data)})
-			response = self.charge_party_profile(doc, data)
+			if party.doctype == "Customer":
+				response = self.charge_party_profile(doc, data)
+			else:
+				response = self.debit_bank_account(doc, data)
 		elif mop == "Card" and data.get("save_data") == "Charge now":
 			response = self.process_credit_card(doc, data)
 		else:  # charge new Card/ACH, save payment data (temporarily if txn only - payment profile deleted once charge is successful)
@@ -61,11 +67,10 @@ class AuthorizeNet:
 				if pmt_profile_response.get("message") == "Success":
 					pp_doc = pmt_profile_response.get("payment_profile_doc")
 					data.update({"payment_profile_id": pp_doc.payment_profile_id})
-					party = self.get_party_details(doc)
 					if party.doctype == "Customer":
 						response = self.charge_party_profile(doc, data)
 					else:
-						response = self.make_ach_payment(doc, data)
+						response = self.debit_bank_account(doc, data)
 				else:  # error creating the customer payment profile
 					return pmt_profile_response
 			else:  # error creating customer profile
@@ -134,19 +139,8 @@ class AuthorizeNet:
 		frappe.log_error(message=frappe.get_traceback(), title=error_message)
 		return {"error": error_message}
 
-	def get_party_details(self, doc):
-		if getattr(doc, "customer"):
-			return frappe._dict(
-				{"doctype": "Customer", "name": doc.customer, "description": doc.customer_name}
-			)
-		else:
-			if getattr(doc, "supplier"):
-				return frappe._dict(
-					{"doctype": "Supplier", "name": doc.supplier, "description": doc.supplier_name}
-				)
-
 	def create_party_profile(self, doc):
-		party = self.get_party_details(doc)
+		party = get_party_details(doc)
 		existing_party_id = frappe.get_value(party.doctype, party.name, "electronic_payment_profile")
 		if existing_party_id:
 			return {"message": "Success", "transaction_id": existing_party_id}
@@ -281,7 +275,7 @@ class AuthorizeNet:
 			}
 
 	def create_party_payment_profile(self, doc, data):
-		party = self.get_party_details(doc)
+		party = get_party_details(doc)
 
 		if not data.get("party_profile_id"):
 			party_profile_id = frappe.get_value(party.doctype, party.name, "electronic_payment_profile")
@@ -373,7 +367,7 @@ class AuthorizeNet:
 			return {"error": error_message}
 
 	def charge_party_profile(self, doc, data):
-		party = self.get_party_details(doc)
+		party = get_party_details(doc)
 		if not data.get("party_profile_id"):
 			party_profile_id = frappe.get_value(party.doctype, party.name, "electronic_payment_profile")
 		else:
@@ -474,47 +468,38 @@ class AuthorizeNet:
 	# 	# https://github.com/AuthorizeNet/sample-code-python/blob/master/PaymentTransactions/credit-bank-account.py
 	# 	pass
 
-	# def debit_bank_account(self, data):
-	# 	#https://github.com/AuthorizeNet/sample-code-python/blob/master/PaymentTransactions/debit-bank-account.py
-	# 	pass
-
-	def make_ach_payment(self, doc, data):
+	def debit_bank_account(self, doc, data):
 		merchantAuth = self.merchant_auth(doc.company)
-		amount = data.get("amount")
+		party = get_party_details(doc)
 
-		party = self.get_party_details(doc)
 		if not data.get("party_profile_id"):
 			party_profile_id = frappe.get_value(party.doctype, party.name, "electronic_payment_profile")
 		else:
 			party_profile_id = data.get("party_profile_id")
 
-		# Get the party profile id payment data?
+		payment_profile_id = data.get("payment_profile_id")
 
-		# Create the payment data for a bank account
-		bankAccount = apicontractsv1.bankAccountType()
-		accountType = apicontractsv1.bankAccountTypeEnum
-		bankAccount.accountType = accountType.checking
-		bankAccount.routingNumber = "121042882"
-		bankAccount.accountNumber = "1234567890"
-		bankAccount.nameOnAccount = "John Doe"
+		total_to_charge = flt(
+			doc.grand_total + (data.get("additional_charges") or 0),
+			frappe.get_precision(doc.doctype, "grand_total"),
+		)
 
-		# Add the payment data to a paymentType object
-		payment = apicontractsv1.paymentType()
-		payment.bankAccount = bankAccount
+		profileToCharge = apicontractsv1.customerProfilePaymentType()
+		profileToCharge.customerProfileId = str(party_profile_id)
+		profileToCharge.paymentProfile = apicontractsv1.paymentProfile()
+		profileToCharge.paymentProfile.paymentProfileId = str(payment_profile_id)
 
-		# Create a transactionRequestType object and add the previous objects to it.
 		transactionrequest = apicontractsv1.transactionRequestType()
-		transactionrequest.transactionType = "refundTransaction"
-		transactionrequest.amount = amount
-		transactionrequest.payment = payment
+		transactionrequest.transactionType = "authCaptureTransaction"
+		transactionrequest.amount = Decimal(str(total_to_charge))
+		transactionrequest.currencyCode = frappe.defaults.get_global_default("currency")
+		transactionrequest.profile = profileToCharge
 
-		# Assemble the complete transaction request
 		createtransactionrequest = apicontractsv1.createTransactionRequest()
 		createtransactionrequest.merchantAuthentication = merchantAuth
-		createtransactionrequest.refId = "MerchantID-0001"
+		createtransactionrequest.refId = doc.name
 		createtransactionrequest.transactionRequest = transactionrequest
 
-		# Create the controller
 		createtransactioncontroller = createTransactionController(createtransactionrequest)
 		createtransactioncontroller.execute()
 

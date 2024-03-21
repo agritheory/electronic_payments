@@ -229,3 +229,15 @@ def queue_method_as_admin(method, **kwargs):
 		job_id=job_id,
 		on_failure=truncate_failed_registry,
 	)
+
+
+def get_party_details(doc):
+	if getattr(doc, "customer"):
+		return frappe._dict(
+			{"doctype": "Customer", "name": doc.customer, "description": doc.customer_name}
+		)
+	else:
+		if getattr(doc, "supplier"):
+			return frappe._dict(
+				{"doctype": "Supplier", "name": doc.supplier, "description": doc.supplier_name}
+			)
