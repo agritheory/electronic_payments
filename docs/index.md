@@ -17,9 +17,15 @@ Once the app is installed and configured, you can begin utilizing its features.
 
 Electronic Payments is set up to allow portal users to log in and add credit card (Stripe and Authorize.net) and ACH (Authorize.net only) payment methods associated with their account. Note that the payment method details are never saved on your system at any point. The app immediately passes the data to the provider API and, if the API successfully creates a payment method, it only saves the provider's token and last few account or card digits to identify that payment method.
 
-<!-- TODO: add screen shots of portal and how to add a portal payment method -->
+![Screen shot of the portal home screen for a customer, with the links to Manage Payment Methods page highlighted.](./assets/ep_portal_home.png)
+
+![Screen shot of the Manage Payment Method page with an empty table and the + New Payment Method button highlighted. The table has columns for Payment Type, Reference, Default, and Service Charge. There are two empty columns to the right, if a payment method is in the table, those would be to Edit or Remove it.](./assets/ep_add_portal_payment_method.png)
+
+![Screen shot of the dialog box to add payment method details - the shown fields will differ between a credit card and ACH account.](./assets/ep_adding_payment_method_dialog.png)
 
 The portal also allows the customer to remove or edit a saved payment method. When making changes to an existing method, they must re-enter all information, since it's not stored in ERPNext and providers don't allow requests for payment method details.
+
+![Screen shot showing the same Manage Payment Methods page but the table now shows a credit card available for use. There are now Edit and Remove options.](./assets/ep_edit_remove_in_table.png)
 
 There's an important consideration regarding the Electronic Payment Settings and payment methods being added via the portal. As noted in the [Configuration and Settings page](./configuration.md), Electronic Payment Settings are specified on a per-company basis. When a portal user adds a payment method, there's no way to associate it to a company, so the app uses the *default company* set in ERPNext to find the provider and API keys to use. This will link the payment method to the default company's provider account. For this reason, an Electronic Payments Settings document should always exist for the default company.
 
