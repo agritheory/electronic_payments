@@ -63,7 +63,7 @@ doctype_js = {
 # ------------
 
 # before_install = "electronic_payments.install.before_install"
-# after_install = "electronic_payments.install.after_install"
+after_install = "electronic_payments.install.after_install"
 
 # Uninstallation
 # ------------
@@ -101,20 +101,23 @@ after_migrate = "electronic_payments.customize.load_customizations"
 # Override standard doctype classes
 
 override_doctype_class = {
-	"Journal Entry": "electronic_payments.overrides.journal_entry.CustomElectronicPaymentsJournalEntry"
+	"Journal Entry": "electronic_payments.overrides.journal_entry.CustomElectronicPaymentsJournalEntry",
 }
 
 # Document Events
 # ---------------
 # Hook on document methods and events
 
-# doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-# 	}
-# }
+doc_events = {
+	"Journal Entry": {
+		"on_submit": "electronic_payments.overrides.payment_schedule.update_payment_schedule_for_electronic_payment",
+		"on_cancel": "electronic_payments.overrides.payment_schedule.update_payment_schedule_for_electronic_payment",
+	},
+	"Payment Entry": {
+		"on_submit": "electronic_payments.overrides.payment_schedule.update_payment_schedule_for_electronic_payment",
+		"on_cancel": "electronic_payments.overrides.payment_schedule.update_payment_schedule_for_electronic_payment",
+	},
+}
 
 # Scheduled Tasks
 # ---------------

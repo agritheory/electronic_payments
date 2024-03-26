@@ -6,7 +6,8 @@ from electronic_payments.electronic_payments.doctype.electronic_payment_settings
 )
 from electronic_payments.electronic_payments.doctype.electronic_payment_settings.common import (
 	exceeds_credit_limit,
-	calculate_payment_method_fees,
+	get_payment_amount,
+	get_discount_amount,
 )
 
 no_cache = 1
@@ -16,15 +17,29 @@ def get_context(context):
 	if frappe.session.user == "Guest":
 		frappe.throw(frappe._("You need to be logged in to access this page"), frappe.PermissionError)
 
-	context.doc = frappe.get_doc(frappe.request.args.get("dt"), frappe.request.args.get("dn"))
+	dt = frappe.request.args.get("dt")
+	dn = frappe.request.args.get("dn")
+	data = frappe._dict({})
+	if dt == "Payment Schedule":
+		payment_schedule_pmt_term = frappe.get_doc(dt, dn)
+		context.doc = frappe.get_doc(
+			payment_schedule_pmt_term.parenttype, payment_schedule_pmt_term.parent
+		)
+		data.payment_term = dn
+	else:
+		context.doc = frappe.get_doc(dt, dn)
+	payment_amount = get_payment_amount(context.doc, data)
+	discount_amount = get_discount_amount(context.doc, data)
 	party = context.doc.customer if context.doc.customer else context.doc.supplier
 	payment_methods = []
 	for pm in frappe.get_all("Portal Payment Method", {"parent": party}, order_by="`default` DESC"):
 		payment_method = frappe.get_doc("Portal Payment Method", pm.name)
-		fees = payment_method.calculate_payment_method_fees(context.doc)
+		fees = payment_method.calculate_payment_method_fees(
+			context.doc, amount=(payment_amount - discount_amount)
+		)
 		payment_method = payment_method.as_dict()
 		payment_method.total = flt(
-			context.doc.grand_total + fees,
+			payment_amount - discount_amount + fees,
 			frappe.get_precision(context.doc.doctype, "grand_total"),
 		)
 		payment_method.service_charge = (
@@ -33,7 +48,7 @@ def get_context(context):
 			frappe.get_precision(context.doc.doctype, "grand_total"),
 			context.doc.currency,
 		) } ({fmt_money(
-			context.doc.grand_total + fees,
+			payment_amount - discount_amount + fees,
 			frappe.get_precision(context.doc.doctype, "grand_total"),
 			context.doc.currency,
 		) })"""
@@ -66,17 +81,26 @@ def pay(dt, dn, payment_method):
 	:return: dict[str: str] of form {"success_message": ...} or {"error_message": ...}
 	"""
 	ppm = frappe.get_doc("Portal Payment Method", payment_method)
-	doc = frappe.get_doc(dt, dn)
 	data = frappe._dict({})
+	if dt == "Payment Schedule":
+		payment_schedule_pmt_term = frappe.get_doc(dt, dn)
+		doc = frappe.get_doc(payment_schedule_pmt_term.parenttype, payment_schedule_pmt_term.parent)
+		data.payment_term = dn
+	else:
+		doc = frappe.get_doc(dt, dn)
 	data.ppm_mop = ppm.mode_of_payment
 	data.ppm_name = ppm.name
+	payment_amount = get_payment_amount(doc, data)
+	discount_amount = get_discount_amount(doc, data)
 
 	# Check credit limit
 	if ppm.subject_to_credit_limit and doc.get("customer") and exceeds_credit_limit(doc, data):
 		return {"error_message": "Credit Limit exceeded for selected Mode of Payment"}
 
 	# Calculate Portal Payment Method fees
-	data.additional_charges = calculate_payment_method_fees(doc, data)
+	data.additional_charges = ppm.calculate_payment_method_fees(
+		doc, amount=(payment_amount - discount_amount)
+	)
 
 	# Process the payment
 	if ppm.electronic_payment_profile:

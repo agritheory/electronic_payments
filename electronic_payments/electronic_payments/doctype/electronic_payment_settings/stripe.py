@@ -11,6 +11,8 @@ from frappe.utils import cint
 import stripe
 from electronic_payments.electronic_payments.doctype.electronic_payment_settings.common import (
 	exceeds_credit_limit,
+	get_payment_amount,
+	get_discount_amount,
 	calculate_payment_method_fees,
 	process_electronic_payment,
 	queue_method_as_admin,
@@ -70,8 +72,6 @@ class Stripe:
 		if mop.startswith("Saved"):
 			if data.get("subject_to_credit_limit") and exceeds_credit_limit(doc, data):
 				return {"error": "Credit Limit exceeded for selected Mode of Payment"}
-			if data.get("ppm_name"):
-				data.update({"additional_charges": calculate_payment_method_fees(doc, data)})
 			if party.doctype == "Customer":
 				response = self.charge_party_profile(doc, data)
 			else:
@@ -215,8 +215,12 @@ class Stripe:
 				currency = frappe.defaults.get_global_default("currency").lower()
 				card_number = data.get("card_number")
 				card_number = card_number.replace(" ", "")
+				payment_amount = get_payment_amount(doc, data)
+				discount_amount = get_discount_amount(doc, data)
+				if data.get("ppm_name") and not data.get("additional_charges"):
+					data.update({"additional_charges": calculate_payment_method_fees(doc, data)})
 				total_to_charge = flt(
-					doc.grand_total + (data.get("additional_charges") or 0),
+					payment_amount - discount_amount + data.get("additional_charges", 0),
 					frappe.get_precision(doc.doctype, "grand_total"),
 				)
 				response = stripe.PaymentIntent.create(
@@ -458,8 +462,12 @@ class Stripe:
 
 		try:
 			currency = frappe.defaults.get_global_default("currency").lower()
+			payment_amount = get_payment_amount(doc, data)
+			discount_amount = get_discount_amount(doc, data)
+			if data.get("ppm_name") and not data.get("additional_charges"):
+				data.update({"additional_charges": calculate_payment_method_fees(doc, data)})
 			total_to_charge = flt(
-				doc.grand_total + (data.get("additional_charges") or 0),
+				payment_amount - discount_amount + data.get("additional_charges", 0),
 				frappe.get_precision(doc.doctype, "grand_total"),
 			)
 			response = stripe.PaymentIntent.create(
