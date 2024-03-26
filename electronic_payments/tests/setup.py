@@ -8,7 +8,13 @@ from frappe.desk.page.setup_wizard.setup_wizard import setup_complete
 from erpnext.setup.utils import enable_all_roles_and_domains, set_defaults_for_tests  # noqa: F401
 from erpnext.accounts.doctype.account.account import update_account_number
 
-from electronic_payments.tests.fixtures import suppliers, tax_authority, employees, customers
+from electronic_payments.tests.fixtures import (
+	suppliers,
+	tax_authority,
+	employees,
+	customers,
+	fruits,
+)
 
 
 def before_test():
@@ -214,42 +220,127 @@ def setup_accounts():
 
 
 def create_payment_terms_templates(settings):
-	if not frappe.db.exists("Payment Terms Template", "Net 30"):
+	if not frappe.db.exists("Payment Terms Template", "Default Due on Demand"):
 		doc = frappe.new_doc("Payment Terms Template")
-		doc.template_name = "Net 30"
+		doc.template_name = "Default Due on Demand"
+		pt = frappe.new_doc("Payment Term")
+		pt.payment_term_name = "Due on Demand"
+		pt.invoice_portion = 100
+		pt.due_date_based_on = "Day(s) after invoice date"
+		pt.credit_days = 0
+		pt.save()
 		doc.append(
 			"terms",
 			{
-				"payment_term": "Net 30",
-				"invoice_portion": 100,
-				"due_date_based_on": "Day(s) after invoice date",
-				"credit_days": 30,
+				"payment_term": pt.name,
+			},
+		)
+		doc.save()
+	frappe.db.set_value("Company", settings.company, "payment_terms", doc.name)
+	if not frappe.db.exists("Payment Terms Template", "Net 30"):
+		doc = frappe.new_doc("Payment Terms Template")
+		doc.template_name = "Net 30"
+		pt = frappe.new_doc("Payment Term")
+		pt.payment_term_name = "Net 30"
+		pt.invoice_portion = 100
+		pt.due_date_based_on = "Day(s) after invoice date"
+		pt.credit_days = 30
+		pt.save()
+		doc.append(
+			"terms",
+			{
+				"payment_term": pt.name,
+				"invoice_portion": pt.invoice_portion,
+				"due_date_based_on": pt.due_date_based_on,
+				"credit_days": pt.credit_days,
 			},
 		)
 		doc.save()
 	if not frappe.db.exists("Payment Terms Template", "Due on Receipt"):
 		doc = frappe.new_doc("Payment Terms Template")
 		doc.template_name = "Due on Receipt"
+		pt = frappe.new_doc("Payment Term")
+		pt.payment_term_name = "Due on Receipt"
+		pt.invoice_portion = 100
+		pt.due_date_based_on = "Day(s) after invoice date"
+		pt.credit_days = 0
+		pt.save()
 		doc.append(
 			"terms",
 			{
-				"payment_term": "Due on Receipt",
-				"invoice_portion": 100,
-				"due_date_based_on": "Day(s) after invoice date",
-				"credit_days": 0,
+				"payment_term": pt.name,
+				"invoice_portion": pt.invoice_portion,
+				"due_date_based_on": pt.due_date_based_on,
+				"credit_days": pt.credit_days,
 			},
 		)
 		doc.save()
 	if not frappe.db.exists("Payment Terms Template", "Net 14"):
 		doc = frappe.new_doc("Payment Terms Template")
 		doc.template_name = "Net 14"
+		pt = frappe.new_doc("Payment Term")
+		pt.payment_term_name = "Net 14"
+		pt.invoice_portion = 100
+		pt.due_date_based_on = "Day(s) after invoice date"
+		pt.credit_days = 14
+		pt.save()
 		doc.append(
 			"terms",
 			{
-				"payment_term": "Net 14",
-				"invoice_portion": 100,
-				"due_date_based_on": "Day(s) after invoice date",
-				"credit_days": 14,
+				"payment_term": pt.name,
+				"invoice_portion": pt.invoice_portion,
+				"due_date_based_on": pt.due_date_based_on,
+				"credit_days": pt.credit_days,
+			},
+		)
+		doc.save()
+	if not frappe.db.exists("Payment Terms Template", "2% 10 Net 30"):
+		doc = frappe.new_doc("Payment Terms Template")
+		doc.template_name = "2% 10 Net 30"
+		pt = frappe.new_doc("Payment Term")
+		pt.payment_term_name = "2% 10 Net 30"
+		pt.invoice_portion = 100
+		pt.due_date_based_on = "Day(s) after invoice date"
+		pt.credit_days = 30
+		pt.discount_type = "Percentage"
+		pt.discount = 2.0
+		pt.discount_validity_based_on = "Day(s) after invoice date"
+		pt.discount_validity = 10
+		pt.save()
+		doc.append(
+			"terms",
+			{
+				"payment_term": pt.name,
+			},
+		)
+		doc.save()
+	if not frappe.db.exists("Payment Terms Template", "20 in 14 80 in 30"):
+		doc = frappe.new_doc("Payment Terms Template")
+		doc.template_name = "20 in 14 80 in 30"
+		# first payment term - 20% due in 14 days
+		pt = frappe.new_doc("Payment Term")
+		pt.payment_term_name = "20 Percent in 14 Days"
+		pt.invoice_portion = 20
+		pt.due_date_based_on = "Day(s) after invoice date"
+		pt.credit_days = 14
+		pt.save()
+		doc.append(
+			"terms",
+			{
+				"payment_term": pt.name,
+			},
+		)
+		# second payment term - 80% due in 30 days
+		pt = frappe.new_doc("Payment Term")
+		pt.payment_term_name = "80 Percent in 30 Days"
+		pt.invoice_portion = 80
+		pt.due_date_based_on = "Day(s) after invoice date"
+		pt.credit_days = 30
+		pt.save()
+		doc.append(
+			"terms",
+			{
+				"payment_term": pt.name,
 			},
 		)
 		doc.save()
@@ -367,22 +458,13 @@ def create_items(settings):
 		)
 		item.save()
 
-	fruits = [
-		"Cloudberry",
-		"Gooseberry",
-		"Damson plum",
-		"Tayberry",
-		"Hairless rambutan",
-		"Kaduka lime",
-		"Hackberry",
-	]
-
 	for fruit in fruits:
 		item = frappe.new_doc("Item")
 		item.item_code, item.item_name = fruit.title(), fruit.title()
 		item.item_group = "Products"
 		item.stock_uom = "Box"
 		item.maintain_stock = 1
+		item.is_stock_item = 1
 		item.include_item_in_manufacturing = 0
 		item.valuation_rate = round(random.uniform(5, 15), 2)
 		item.default_warehouse = settings["warehouse"]
@@ -757,7 +839,8 @@ def create_payroll_journal_entry(settings):
 
 
 def create_sales_invoices(settings):
-	for customer in customers:
+	today = frappe.utils.getdate()
+	for idx, customer in enumerate(customers):
 		so = frappe.new_doc("Sales Order")
 		so.company = settings.company
 		so.transaction_date = so.delivery_date = settings.day
@@ -771,6 +854,29 @@ def create_sales_invoices(settings):
 		)
 		so.save()
 		so.submit()
+
+	# Create Sales invoices for Andromeda with various Payment Term Templates
+	c = customers[0][0]
+	for idx, fruit in enumerate(fruits, 1):
+		si = frappe.new_doc("Sales Invoice")
+		si.posting_date = today
+		si.company = settings.company
+		si.customer = c
+		si.append(
+			"items",
+			{
+				"item_code": fruit,
+				"qty": idx,
+			},
+		)
+		if idx == 1:
+			si.payment_terms_template = "Net 14"
+		elif 1 < idx < 4:
+			si.payment_terms_template = "20 in 14 80 in 30"
+		else:
+			si.payment_terms_template = "2% 10 Net 30"
+		si.save()
+		si.submit()
 
 
 def create_electronic_payment_settings(settings):
@@ -794,6 +900,9 @@ def create_electronic_payment_settings(settings):
 		eps.deposit_account = "1201 - Primary Checking - CFC"
 		eps.accepting_fee_account = "5223 - Electronic Payments Provider Fees - CFC"
 		eps.accepting_clearing_account = "1320 - Electronic Payments Receivable - CFC"
+		eps.accepting_payment_discount_account = frappe.get_value(
+			"Account", {"name": ["like", "%Sales - CFC%"]}, "name"
+		)
 		eps.save()
 	if (
 		os.environ.get("STRIPE_API_KEY")
@@ -808,6 +917,9 @@ def create_electronic_payment_settings(settings):
 		eps.deposit_account = "1201 - Primary Checking - CFC"
 		eps.accepting_fee_account = "5223 - Electronic Payments Provider Fees - CFC"
 		eps.accepting_clearing_account = "1320 - Electronic Payments Receivable - CFC"
+		eps.accepting_payment_discount_account = frappe.get_value(
+			"Account", {"name": ["like", "%Sales - CFC%"]}, "name"
+		)
 		eps.save()
 
 
@@ -815,6 +927,11 @@ def curate_portal_and_ecommerce_settings(settings=None):
 	ecom = frappe.get_doc("E Commerce Settings", "E Commerce Settings")
 	ecom.enabled = 1
 	ecom.save()
+
+	for r in ("Customer", "Supplier"):
+		role = frappe.get_doc("Role", r)
+		role.home_page = "/me"
+		role.save()
 
 	portal = frappe.get_doc("Portal Settings", "Portal Settings")
 	portal.hide_standard_menu = 1
@@ -824,6 +941,16 @@ def curate_portal_and_ecommerce_settings(settings=None):
 			"title": "Orders",
 			"enabled": 1,
 			"route": "/orders",
+			"reference_doctype": "Sales Order",
+			"role": "Customer",
+		},
+	)
+	portal.append(
+		"custom_menu",
+		{
+			"title": "Invoices",
+			"enabled": 1,
+			"route": "/invoices",
 			"reference_doctype": "Sales Invoice",
 			"role": "Customer",
 		},
@@ -834,6 +961,16 @@ def curate_portal_and_ecommerce_settings(settings=None):
 			"title": "Orders",
 			"enabled": 1,
 			"route": "/orders",
+			"reference_doctype": "Purchase Order",
+			"role": "Supplier",
+		},
+	)
+	portal.append(
+		"custom_menu",
+		{
+			"title": "Invoices",
+			"enabled": 1,
+			"route": "/invoices",
 			"reference_doctype": "Purchase Invoice",
 			"role": "Supplier",
 		},
