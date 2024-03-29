@@ -152,7 +152,7 @@ class AuthorizeNet:
 			createCustomerProfile = apicontractsv1.createCustomerProfileRequest()
 			createCustomerProfile.merchantAuthentication = self.merchant_auth(doc.company)
 			createCustomerProfile.profile = apicontractsv1.customerProfileType(
-				merchantCustomerId=f"{uuid.uuid4().int>>64}",
+				merchantCustomerId=f"{uuid.uuid4().int >> 64}",
 				description=party.description,
 				email="",
 			)
@@ -471,7 +471,6 @@ class AuthorizeNet:
 
 		frappe.log_error(message=frappe.get_traceback(), title=error_message)
 		return {"error": error_message}
-
 
 	def credit_bank_account(self, doc, data):
 		merchantAuth = self.merchant_auth(doc.company)
