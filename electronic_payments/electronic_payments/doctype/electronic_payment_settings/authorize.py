@@ -96,7 +96,7 @@ class AuthorizeNet:
 		)
 
 		transactionrequest = apicontractsv1.transactionRequestType()
-		transactionrequest.transactionType = "authCaptureTransaction"
+		transactionrequest.transactionType = "refundTransaction"
 		transactionrequest.amount = Decimal(str(total_to_charge))
 		transactionrequest.currencyCode = frappe.defaults.get_global_default("currency")
 		transactionrequest.payment = payment
@@ -487,8 +487,12 @@ class AuthorizeNet:
 
 		payment_profile_id = data.get("payment_profile_id")
 
+		payment_amount = get_payment_amount(doc, data)
+		discount_amount = get_discount_amount(doc, data)
+		if data.get("ppm_name") and not data.get("additional_charges"):
+			data.update({"additional_charges": calculate_payment_method_fees(doc, data)})
 		total_to_charge = flt(
-			doc.grand_total + (data.get("additional_charges") or 0),
+			payment_amount - discount_amount + data.get("additional_charges", 0),
 			frappe.get_precision(doc.doctype, "grand_total"),
 		)
 
@@ -515,18 +519,22 @@ class AuthorizeNet:
 
 		if response is not None:
 			if response.messages.resultCode == "Ok":
-				# Since the API request was successful, look for a transaction response
-				# and parse it to display the results of authorizing the card
-				if hasattr(response.transactionResponse, "messages"):
-					return {
-						"message": "Success",
-						"transaction_id": str(response.transactionResponse.transId),
-					}
-				elif hasattr(response.transactionResponse, "errors"):
-					error_message = str(response.transactionResponse.errors.error[0].errorText)
-				else:
-					error_message = "Transaction request error"
-			# Or, print errors if the API request wasn't successful
+				frappe.db.set_value(
+					doc.doctype,
+					doc.name,
+					"electronic_payment_reference",
+					str(response.transactionResponse.transId),
+				)
+				queue_method_as_admin(
+					process_electronic_payment,
+					doc=doc,
+					data=data,
+					transaction_id=str(response.transactionResponse.transId),
+				)
+				return {
+					"message": "Success",
+					"transaction_id": str(response.transactionResponse.transId),
+				}
 			else:
 				if hasattr(response, "transactionResponse") and hasattr(
 					response.transactionResponse, "errors"
@@ -535,7 +543,7 @@ class AuthorizeNet:
 				else:
 					error_message = str(response.messages.message[0]["text"].text)
 		else:
-			error_message = "No Repsonse"
+			error_message = "No response"
 
 		frappe.log_error(message=frappe.get_traceback(), title=error_message)
 		return {"error": error_message}
@@ -631,7 +639,7 @@ class AuthorizeNet:
 				else:
 					error_message = str(response.messages.message[0]["text"].text)
 		else:
-			error_message = "No Repsonse"
+			error_message = "No Response"
 
 		frappe.log_error(message=frappe.get_traceback(), title=error_message)
 		return {"error": error_message}
@@ -676,7 +684,7 @@ class AuthorizeNet:
 				else:
 					error_message = str(response.messages.message[0]["text"].text)
 		else:
-			error_message = "No Repsonse"
+			error_message = "No Response"
 
 		frappe.log_error(message=frappe.get_traceback(), title=error_message)
 		return {"error": error_message}
