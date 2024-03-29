@@ -56,7 +56,7 @@ class AuthorizeNet:
 			if party.doctype == "Customer":
 				response = self.charge_party_profile(doc, data)
 			else:
-				response = self.debit_bank_account(doc, data)
+				response = self.credit_bank_account(doc, data)
 		elif mop == "Card" and data.get("save_data") == "Charge now":
 			response = self.process_credit_card(doc, data)
 		else:  # charge new Card/ACH, save payment data (temporarily if txn only - payment profile deleted once charge is successful)
@@ -70,7 +70,7 @@ class AuthorizeNet:
 					if party.doctype == "Customer":
 						response = self.charge_party_profile(doc, data)
 					else:
-						response = self.debit_bank_account(doc, data)
+						response = self.credit_bank_account(doc, data)
 				else:  # error creating the customer payment profile
 					return pmt_profile_response
 			else:  # error creating customer profile
@@ -472,11 +472,8 @@ class AuthorizeNet:
 		frappe.log_error(message=frappe.get_traceback(), title=error_message)
 		return {"error": error_message}
 
-	# def credit_bank_account(self, data):
-	# 	# https://github.com/AuthorizeNet/sample-code-python/blob/master/PaymentTransactions/credit-bank-account.py
-	# 	pass
 
-	def debit_bank_account(self, doc, data):
+	def credit_bank_account(self, doc, data):
 		merchantAuth = self.merchant_auth(doc.company)
 		party = get_party_details(doc)
 
