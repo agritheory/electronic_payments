@@ -18,6 +18,7 @@ def get_context(context):
 
 @frappe.whitelist()
 def new_portal_payment_method(payment_method):
+	party_data = get_party()
 	data = frappe._dict(json.loads(payment_method))
 
 	settings = get_electronic_payment_settings()
@@ -26,17 +27,17 @@ def new_portal_payment_method(payment_method):
 		return {"error_message": _("You cannot add a new Payment Method.")}
 
 	client = settings.client()
-	doc = frappe._dict({"company": settings.company, "customer": data.party})
+	doc = frappe._dict({"company": settings.company, party_data["party_type"].lower(): data.party})
 	data.mode_of_payment = data.payment_type
 	data.save_data = "Retain payment data for this party"
 
 	try:
-		response = client.create_customer_profile(doc)
+		response = client.create_party_profile(doc)
 		if response.get("error"):
 			return {"error_message": response["error"]}
 
-		data["customer_profile_id"] = response.get("transaction_id")
-		response = client.create_customer_payment_profile(doc, data)
+		data["party_profile_id"] = response.get("transaction_id")
+		response = client.create_party_payment_profile(doc, data)
 
 		if response.get("error"):
 			return {"error_message": response["error"]}

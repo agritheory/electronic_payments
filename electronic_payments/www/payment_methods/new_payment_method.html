@@ -23,8 +23,12 @@
                     <div class="col-sm-6">
                         <label for="payment_type" class="control-label text-muted small">{{ _("Payment Type") }}</label>
                         <select id="ppm_payment_type" class="form-control" name="payment_type" data-label="payment_type" data-fieldtype="Select">
-							<option value="Card" selected>{{ _("Card") }}</option>
-							<option value="ACH">{{ _("ACH") }}</option>
+                            {% if party_type == "Customer" %}
+                                <option value="Card" selected>{{ _("Card") }}</option>
+                                <option value="ACH">{{ _("ACH") }}</option>
+                            {% else %}
+                                <option value="ACH" selected>{{ _("ACH") }}</option>
+                            {% endif %}
 						</select>
                     </div>
                     <div class="col-sm-6">
