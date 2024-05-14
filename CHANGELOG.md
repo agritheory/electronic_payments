@@ -2,7 +2,206 @@
 
 
 
-## v0.2.0 (2024-02-27)
+## v14.3.1 (2024-05-14)
+
+### Fix
+
+* fix: sets field even when no default method (#33) ([`08b387b`](https://github.com/agritheory/electronic_payments/commit/08b387b1d1c9f5eef4bf7aecf61ced6857a49add))
+
+
+## v14.3.0 (2024-03-29)
+
+### Ci
+
+* ci: add more linters to CI (#25)
+
+* ci: add more linters to CI
+
+* ci: install mypy types
+
+* chore: black
+
+* ci: add --non-interactive flag ([`ae9f018`](https://github.com/agritheory/electronic_payments/commit/ae9f0186cb43ef14f70a2008610792d5dfdfba1f))
+
+### Unknown
+
+* Make Electronic Payment to Supplier with Authorize (#28)
+
+* wip: payment for suppliers
+
+* feat: wip make_ach_payment
+
+* feat: updated stripe for compatibility in portal
+
+* fixes: review comments
+
+* fixes: review comments
+
+* chore: fix black formatting errors
+
+* feat: show button only when payments enabled
+
+* docs: update for currency, ACH, payment restrictions
+
+---------
+
+Co-authored-by: Heather Kusmierz &lt;heather.kusmierz@gmail.com&gt; ([`e383190`](https://github.com/agritheory/electronic_payments/commit/e383190307ee2c1c7deead1c62a6cc271b0baf23))
+
+* Draft: feat: allow for billed per agmt in shopping cart checkout (#23)
+
+* test: add payment term template and SIs
+
+* feat: add field to track payment term
+
+* feat: check data for additional_charges
+
+* feat: include order template
+
+* feat: update payment schedule in JE and PE
+
+* feat: adjust to accommodate payment amount that&#39;s not grand total
+
+* fix: change installed app order
+
+* refactor: use context variables
+
+* tests: fix si customer link
+
+* feat: create all suppler/customer group payment term template after install
+
+* refactor: add default payment terms to company, not supplier/customer groups
+
+* refactor: move all app order code to after install hook
+
+* feat: add discount amount to order page
+
+* feat: add fields for discount accounts
+
+* refactor: add precision
+
+* feat: add discount calc to authorize and stripe
+
+* style: fix alignment
+
+* feat: add discount
+
+* feat: incorporate payment term discount
+
+* test: add discounted payment term templates
+
+* fix: precision call, app ordering
+
+* style: fix text alignment
+
+* test: update portal routing settings
+
+* feat: patch app order and default pmt template
+
+* refactor: use frappe.qb.update
+
+* feat: add payment method button when none exists, remove js
+
+* ci: black formatting
+
+* docs: update for billed as agreed, settings, workflows
+
+* docs: add limitations, contributing provider, more screen shots
+
+* docs: screen shots of portal payment management
+
+* feat: update href link add pmt if none available ([`843a8b5`](https://github.com/agritheory/electronic_payments/commit/843a8b5ce6d60b1d6d169fc5bbd03570ae054b5e))
+
+* Self Service Payment Methods (#21)
+
+* feat: multiple payment methods
+
+wip: integration with Electronic Payment Profile, Payment Gateway and credit limit
+
+* chore: prettier, black, validate customizations
+
+* fix: remove doubly-defined function
+
+* ci: install missing dateutil types
+
+* fix: accommodate if local file path includes app name
+
+* docs: update example data path
+
+* feat: update custom fields for customer ID and PPM table
+
+* test: move, add credit limit, update settings
+
+* fix: remove non-rendering doc.title
+
+* fix: include bypass config in JE credit_limit_check
+
+* feat: pass portal payment method data through dialog
+
+* feat: add multiple payment methods, fees, credit check
+
+* fix: remove extraneous new_doc call
+
+* feat: init file
+
+* test: ignore payment method setup
+
+* fix: delete method order of operations
+
+* feat: add config to create PPM when EPP is saved
+
+* refactor: use enqueue to process payment
+
+* fix: permission error by running in queue as admin
+
+* refactor: move fee calc to PPM, hide options as needed
+
+* test: use Authorize keys if present
+
+* chore: update to handle test data
+
+* feat: wip manage portal payment methods
+
+* feat: improvements
+
+* feat: improvements
+
+* feat: fields display
+
+* wip: manage payment methods
+
+* chore: prettier
+
+* feat: remove_portal_payment_method
+
+* feat: new_portal_payment_method
+
+* feat: edit payment method
+
+* feat: improvement
+
+* wip: edit_customer_payment_profile
+
+* feat: edit_customer_payment_profile
+
+* fix: rm print
+
+* feat: add fields to be required
+
+* feat: authorize edit, remove unused fields
+
+* fix: method call
+
+* fix: add missing create_customer_profile
+
+* feat: remove unused param
+
+---------
+
+Co-authored-by: Tyler Matteson &lt;tyler@agritheory.com&gt;
+Co-authored-by: Heather Kusmierz &lt;heather.kusmierz@gmail.com&gt; ([`288bd68`](https://github.com/agritheory/electronic_payments/commit/288bd68aaa0d60fda4cddd120ae3c2ffc79d6d63))
+
+
+## v14.2.0 (2024-02-27)
 
 ### Chore
 
