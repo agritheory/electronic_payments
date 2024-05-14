@@ -32,6 +32,7 @@ def get_context(context):
 	discount_amount = get_discount_amount(context.doc, data)
 	party = context.doc.customer if context.doc.customer else context.doc.supplier
 	payment_methods = []
+	has_default = False
 	for pm in frappe.get_all("Portal Payment Method", {"parent": party}, order_by="`default` DESC"):
 		payment_method = frappe.get_doc("Portal Payment Method", pm.name)
 		fees = payment_method.calculate_payment_method_fees(
@@ -59,7 +60,12 @@ def get_context(context):
 			context.doc.grand_total_with_service_charge = fmt_money(
 				payment_method.total, frappe.get_precision(context.doc.doctype, "grand_total")
 			)
+			has_default = True
 		payment_methods.append(payment_method)
+	if not has_default:
+		context.doc.grand_total_with_service_charge = fmt_money(
+			payment_methods[0].total, frappe.get_precision(context.doc.doctype, "grand_total")
+		)
 	context.payment_methods = payment_methods
 
 	# get customer configured payment methods
