@@ -1,5 +1,5 @@
 {% extends "templates/web.html" %}
-{% from "erpnext/templates/includes/order/order_macros.html" import item_name_and_description %}
+{% from "webshop/templates/includes/order/order_macros.html" import item_name_and_description %}
 
 {% block breadcrumbs %}
 	{% include "templates/includes/breadcrumbs.html" %}
@@ -34,7 +34,7 @@
 				</a>
 			</ul>
 		</div>
-		{% if show_pay_button and not show_payment_terms and has_portal_payment_method and outstanding_amount > 0 %}
+		{% if not show_payment_terms and has_portal_payment_method and outstanding_amount > 0 %}
 			<div class="form-column col-sm-6">
 				<div class="page-header-actions-block" data-html-block="header-actions">
 					<p>
@@ -140,51 +140,14 @@
 
 			<!-- TAXES -->
 			<div class="">
-				{% include "electronic_payments/templates/includes/order/order_taxes.html" %}
+				{% include "webshop/templates/includes/order/order_taxes.html" %}
 			</div>
 		</div>
-	</div>
-
-	<!-- LOYALTY POINTS -->
-	{% if enabled_checkout and ((doc.doctype=="Sales Order" and doc.per_billed <= 0)
-		or (doc.doctype=="Sales Invoice" and doc.outstanding_amount> 0)) %}
-		<div class="panel panel-default">
-			<div class="panel-collapse">
-				<div class="panel-body text-muted small">
-					<div class="row">
-						<div class="form-column col-sm-6">
-							{% if available_loyalty_points %}
-							<div class="panel-heading">
-								<div class="row">
-									<div class="form-column col-sm-6 address-title">
-										<strong>Loyalty Points</strong>
-									</div>
-								</div>
-							</div>
-
-							<div class="form-group">
-								<div class="h6">Enter Loyalty Points</div>
-								<div class="control-input-wrapper">
-									<div class="control-input">
-										<input class="form-control" type="number" min="0"
-											max="{{ available_loyalty_points }}" id="loyalty-point-to-redeem">
-									</div>
-									<p class="help-box small text-muted d-none d-sm-block"> Available Points: {{
-										available_loyalty_points }} </p>
-								</div>
-							</div>
-							{% endif %}
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
-	{% endif %}
 	
-	<!-- PAYMENT SCHEDULE -->
-	{% if show_payment_terms %}
+		<!-- PAYMENT SCHEDULE -->
+		{% if show_payment_terms %}
 		<h3 class="m-0">Payment Schedule</h3>
-		<div class="order-container">
+		<div class="order-container mt-4">
 			<!-- items -->
 			<div class="w-100">
 				<div class="order-items order-item-header mb-1 row text-muted">
@@ -218,21 +181,21 @@
 					<span class="col-2 pl-10 text-center">
 						{{ pt.due_date }}
 					</span>
-					<span class="pl-4 col-3 text-right"> 
+					<span class="pl-4 col-3 text-right">
 						{{ frappe.utils.fmt_money(pt.payment_amount, currency=doc.currency) }}
 					</span>
 					<span class="col-2 text-right">
-						{{ frappe.utils.fmt_money(min(pt.outstanding, outstanding_amount), currency=doc.currency) }}
+						{{ frappe.utils.fmt_money(pt.outstanding, currency=doc.currency) }}
 					</span>
 					<!-- PAYMENT BUTTON -->
 					<span class="col-3 text-center">
-						{% if show_pay_button and min(pt.outstanding, outstanding_amount) > 0 %}
+						{% if pt.outstanding > 0 %}
 						<div class="form-column col-sm-6" style="margin: auto">
 							<div>
 								<p>
 									<a href="/api/method/erpnext.accounts.doctype.payment_request.payment_request.make_payment_request?dn={{ pt.name }}&dt={{ pt.doctype }}&submit_doc=1&order_type=Shopping Cart"
 										class="btn btn-primary btn-sm" id="pay-for-order">
-										{{ _("Pay") }} {{ frappe.utils.fmt_money(min(pt.payment_amount, pt.outstanding, outstanding_amount), currency=doc.currency) }}
+										{{ _("Pay") }} {{ frappe.utils.fmt_money(pt.outstanding, currency=doc.currency) }}
 									</a>
 								</p>
 							</div>
@@ -243,6 +206,43 @@
 					</span>
 				</div>
 				{% endfor %}
+			</div>
+		</div>
+		{% endif %}
+	</div> <!-- END PAGE CONTENT DIV -->
+
+	<!-- LOYALTY POINTS -->
+	{% if enabled_checkout and ((doc.doctype=="Sales Order" and doc.per_billed <= 0)
+		or (doc.doctype=="Sales Invoice" and doc.outstanding_amount> 0)) %}
+		<div class="panel panel-default">
+			<div class="panel-collapse">
+				<div class="panel-body text-muted small">
+					<div class="row">
+						<div class="form-column col-sm-6">
+							{% if available_loyalty_points %}
+							<div class="panel-heading">
+								<div class="row">
+									<div class="form-column col-sm-6 address-title">
+										<strong>Loyalty Points</strong>
+									</div>
+								</div>
+							</div>
+
+							<div class="form-group">
+								<div class="h6">Enter Loyalty Points</div>
+								<div class="control-input-wrapper">
+									<div class="control-input">
+										<input class="form-control" type="number" min="0"
+											max="{{ available_loyalty_points }}" id="loyalty-point-to-redeem">
+									</div>
+									<p class="help-box small text-muted d-none d-sm-block"> Available Points: {{
+										available_loyalty_points }} </p>
+								</div>
+							</div>
+							{% endif %}
+						</div>
+					</div>
+				</div>
 			</div>
 		</div>
 	{% endif %}

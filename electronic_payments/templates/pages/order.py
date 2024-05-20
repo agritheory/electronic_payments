@@ -4,7 +4,7 @@
 import frappe
 from frappe.utils.data import fmt_money, getdate
 
-from erpnext.templates.pages.order import get_context as get_erpnext_order_context
+from webshop.templates.pages.order import get_context as get_webshop_order_context
 
 from electronic_payments.electronic_payments.doctype.electronic_payment_settings.common import (
 	get_discount_amount,
@@ -12,14 +12,7 @@ from electronic_payments.electronic_payments.doctype.electronic_payment_settings
 
 
 def get_context(context):
-	# Set flag so jinga loader finds electronic_payments app changes first
-	local_web_pages_app_list = frappe.local.flags.web_pages_apps
-	if not local_web_pages_app_list or local_web_pages_app_list[0] != "electronic_payments":
-		installed_apps = frappe.get_installed_apps()
-		frappe.local.flags.web_pages_apps = list(reversed(installed_apps))
-		frappe.db.commit()
-
-	get_erpnext_order_context(context)
+	get_webshop_order_context(context)
 	is_valid_doctype = context.doc.doctype in [
 		"Sales Order",
 		"Sales Invoice",
@@ -68,7 +61,7 @@ def get_context(context):
 				"payment_term": pt.payment_term or "Due on Demand",
 				"due_date": pt.get_formatted(due_date_key),
 				"payment_amount": pt.payment_amount - discount_amount,
-				"outstanding": pt.outstanding,
+				"outstanding": min(pt.payment_amount - discount_amount, pt.outstanding, outstanding_amount),
 				"name": pt.name,
 				"doctype": pt.doctype,
 			}
