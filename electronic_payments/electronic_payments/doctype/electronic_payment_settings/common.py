@@ -4,7 +4,6 @@ from frappe.utils.background_jobs import (
 	get_queue,
 	execute_job,
 	create_job_id,
-	truncate_failed_registry,
 	RQ_JOB_FAILURE_TTL,
 	RQ_RESULTS_TTL,
 )
@@ -424,23 +423,23 @@ def queue_method_as_admin(method, **kwargs):
 
 	return q.enqueue_call(
 		execute_job,
+		on_success=None,
+		on_failure=None,
 		timeout=timeout,
 		kwargs=queue_args,
 		at_front=at_front,
 		failure_ttl=frappe.conf.get("rq_job_failure_ttl") or RQ_JOB_FAILURE_TTL,
 		result_ttl=frappe.conf.get("rq_results_ttl") or RQ_RESULTS_TTL,
 		job_id=job_id,
-		on_failure=truncate_failed_registry,
 	)
 
 
 def get_party_details(doc):
-	if getattr(doc, "customer"):
+	if hasattr(doc, "customer"):
 		return frappe._dict(
 			{"doctype": "Customer", "name": doc.customer, "description": doc.customer_name}
 		)
-	else:
-		if getattr(doc, "supplier"):
-			return frappe._dict(
-				{"doctype": "Supplier", "name": doc.supplier, "description": doc.supplier_name}
-			)
+	elif hasattr(doc, "supplier"):
+		return frappe._dict(
+			{"doctype": "Supplier", "name": doc.supplier, "description": doc.supplier_name}
+		)
