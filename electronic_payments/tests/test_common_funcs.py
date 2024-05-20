@@ -402,7 +402,7 @@ def test_receiving_payment_create_payment_entry_discount():
 	precision = frappe.get_precision(doc.doctype, "grand_total")
 	epsilon = 1 / pow(10, precision + 1)
 
-	assert abs(pe.paid_amount - flt(doc.grand_total - pt.discounted_amount, precision)) < epsilon
+	assert abs(pe.paid_amount - (doc.grand_total - flt(pt.discounted_amount, precision))) < epsilon
 	assert pt.outstanding == 0 and frappe.get_value(doc.doctype, doc.name, "outstanding_amount") == 0
 	assert pe.references[0].reference_name == doc.name
 	assert pe.references[0].payment_term == pt.payment_term
@@ -933,7 +933,7 @@ def test_sending_payment_create_payment_entry_discount():
 	precision = frappe.get_precision(doc.doctype, "grand_total")
 	epsilon = 1 / pow(10, precision + 1)
 
-	assert abs(pe.paid_amount - flt(doc.grand_total - pt.discounted_amount, precision)) < epsilon
+	assert abs(pe.paid_amount - (doc.grand_total - flt(pt.discounted_amount, precision))) < epsilon
 	assert pt.outstanding == 0 and frappe.get_value(doc.doctype, doc.name, "outstanding_amount") == 0
 	assert pe.references[0].reference_name == doc.name
 	assert pe.references[0].payment_term == pt.payment_term
