@@ -45,7 +45,7 @@ bench get-app payments https://github.com/frappe/payments --branch ${BRANCH_NAME
 bench get-app webshop https://github.com/frappe/webshop --branch ${BRANCH_NAME} --skip-assets
 bench get-app electronic_payments "${GITHUB_WORKSPACE}" --skip-assets
 
-printf '%s\n' 'frappe' 'erpnext' 'payments' 'electronic_payments' > ~/frappe-bench/sites/apps.txt
+printf '%s\n' 'frappe' 'erpnext' 'payments' 'webshop' 'electronic_payments' > ~/frappe-bench/sites/apps.txt
 bench setup requirements --python
 bench use test_site
 
