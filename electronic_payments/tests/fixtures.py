@@ -60,7 +60,7 @@ suppliers = [
 		"Internet Services",
 		"Check",
 		150.00,
-		"2% 10 Net 30",
+		"Net 30",
 		{
 			"address_line1": "955 Winding Highway",
 			"city": "Glassboro",
@@ -74,7 +74,7 @@ suppliers = [
 		"Phone Services",
 		"ACH/EFT",
 		250.00,
-		"20 in 14 80 in 30",
+		"Net 30",
 		{
 			"address_line1": "1198 Carpenter Road",
 			"city": "Rolla",

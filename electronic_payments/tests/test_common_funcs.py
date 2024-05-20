@@ -1,8 +1,10 @@
+import datetime
+import pytest
+from random import randint
+
 import frappe
 import frappe.defaults
 from frappe.utils import flt
-import pytest
-from random import randint
 
 from electronic_payments.electronic_payments.doctype.electronic_payment_settings.common import (
 	exceeds_credit_limit,
@@ -745,19 +747,516 @@ def test_receiving_payment_create_journal_entry_discount():
 
 @pytest.mark.order(30)
 def test_sending_payment_create_payment_entry_multiple_payment_terms():
-	pass
+	"""
+	The Payment Entry should have the following logic:
+
+	- Paid amount = payment term payment amount, doc still has outstanding amount
+	- References table linked to relevant Purchase Invoice and allocated amount is the
+	amount of the payment term, links to correct payment term
+
+	Payment Entry accounting:
+	- Grand total of $100, first payment term due is for 20% ($20)
+
+	| Account                                        | Debit   |  Credit |
+	| ---------------------------------------------- | -------:| -------:|
+	| 2110 - Accounts Payable - CFC                  |  $20.00 |         |
+	| 1201 - Primary Checking - CFC                  |         |  $20.00 |
+	"""
+	settings = create_electronic_payment_settings("Authorize.net", "Use Payment Entry")
+	party = "Sphere Cellular"
+	party_type = "Supplier"
+	template = "20 in 14 80 in 30"
+	term_1 = "20 Percent in 14 Days"
+	term_2 = "80 Percent in 30 Days"
+
+	# Add dummy Portal Payment Method with no service charge
+	ppm_name = create_party_payment_method(party, party_type, False)
+
+	# Create a Purchase Invoice
+	doc = frappe.new_doc("Purchase Invoice")
+	doc.company = frappe.defaults.get_defaults().company
+	doc.set_posting_time = 1
+	doc.posting_date = frappe.utils.getdate()
+	doc.supplier = party
+	doc.append(
+		"items",
+		{
+			"item_code": "Phone Services",
+			"rate": 100,
+			"qty": 1,
+		},
+	)
+	doc.payment_terms_template = template
+	doc.save()
+	doc.submit()
+
+	# Test payment of one of multiple payment terms, no discounts, no provider fees
+	data = frappe._dict(
+		{
+			"ppm_name": ppm_name,
+		}
+	)
+	data.payment_term = frappe.get_value(
+		"Payment Schedule", {"parent": doc.name, "payment_term": term_1}
+	)
+	data.additional_charges = calculate_payment_method_fees(doc, data)
+	assert data.additional_charges == 0
+	transaction_id = str(randint(100000000, 999999999))
+	process_electronic_payment(doc, data, transaction_id)
+	pe = frappe.get_doc("Payment Entry", {"reference_no": transaction_id})
+	pt = frappe.get_doc("Payment Schedule", {"parent": doc.name, "payment_term": term_1})
+	unpaid_pt = frappe.get_doc("Payment Schedule", {"parent": doc.name, "payment_term": term_2})
+	precision = frappe.get_precision(doc.doctype, "grand_total")
+	epsilon = 1 / pow(10, precision + 1)
+
+	assert (
+		pe.paid_amount == pt.paid_amount
+		and abs(pe.paid_amount - flt(pt.invoice_portion / 100 * doc.grand_total, precision)) < epsilon
+	)
+	assert pt.outstanding == 0 and frappe.get_value(doc.doctype, doc.name, "outstanding_amount") > 0
+	assert frappe.get_value(doc.doctype, doc.name, "outstanding_amount") == unpaid_pt.payment_amount
+	assert pe.references[0].reference_name == doc.name
+	assert pe.references[0].payment_term == pt.payment_term
+	assert pe.references[0].allocated_amount == pt.payment_amount
+
+	gl1 = frappe.get_doc(
+		"GL Entry", {"voucher_no": pe.name, "account": "2110 - Accounts Payable - CFC"}
+	)
+	assert flt(gl1.debit, precision) == flt(pt.invoice_portion / 100 * doc.grand_total, precision)
+
+	gl2 = frappe.get_doc("GL Entry", {"voucher_no": pe.name, "account": settings.withdrawal_account})
+	assert flt(gl2.credit, precision) == flt(gl1.debit, precision)
 
 
 @pytest.mark.order(31)
 def test_sending_payment_create_payment_entry_discount():
-	pass
+	"""
+	The Payment Entry should have the following logic:
+
+	- Paid amount = Discounted payment amount
+	- References table linked to relevant Purchase Invoice and allocated amount is the non-
+	discounted amount of the payment term, links to correct payment term
+	- Electronic Payment fees accounted for in the taxes table with account head same as account
+	specified in Electronic Payment Settings
+	- Discounts accounted for in the deductions table (entries are positive for debits, negative
+	for credits to given account head)
+
+	Payment Entry accounting, assuming no discount allocation goes to taxes):
+	- Grand total of $115
+	- Item total of $100
+	- 2% discount of $2.30, all allocated to items
+	- Taxes of $10 for Freight and Forwarding, $5 to Marketing Expenses
+	- $2 of provider fees
+
+	| Account                                        | Debit   |  Credit |
+	| ---------------------------------------------- | -------:| -------:|
+	| 2110 - Accounts Payable - CFC                  | $115.00 |         |
+	| 1201 - Primary Checking - CFC                  |         | $114.70 |
+	| 5221 - Miscellaneous Expenses - CFC            |         |   $2.30 |
+	| 5205 - Freight and Forwarding Charges - CFC    |         |         |
+	| 5207 - Marketing Expenses - CFC                |         |         |
+	| 5223 - Electronic Payments Provider Fees - CFC |  $2.00  |         |
+
+	Payment Entry accounting, assuming discount gets allocated to taxes:
+	- 2% discount of $2.30, $2.00 allocated to items, remaining $0.30 split to taxes by relative amount
+	- Taxes of $10 for Freight and Forwarding ($0.20 of discount), $5 to Marketing Expenses ($0.10 of discount)
+
+	| Account                                        | Debit   |  Credit |
+	| ---------------------------------------------- | -------:| -------:|
+	| 2110 - Accounts Payable - CFC                  | $115.00 |         |
+	| 1201 - Primary Checking - CFC                  |         | $114.70 |
+	| 5221 - Miscellaneous Expenses - CFC            |         |   $2.00 |
+	| 5205 - Freight and Forwarding Charges - CFC    |         |   $0.20 |
+	| 5207 - Marketing Expenses - CFC                |         |   $0.10 |
+	| 5223 - Electronic Payments Provider Fees - CFC |  $2.00  |         |
+	"""
+	settings = create_electronic_payment_settings("Authorize.net", "Use Payment Entry")
+	party = "Sphere Cellular"
+	party_type = "Supplier"
+	template = "2% 10 Net 30"
+
+	# Add dummy Portal Payment Method with $2.00 service charge
+	ppm_name = create_party_payment_method(party, party_type, True)
+
+	# Create a Purchase Invoice
+	doc = frappe.new_doc("Purchase Invoice")
+	doc.company = frappe.defaults.get_defaults().company
+	doc.set_posting_time = 1
+	doc.posting_date = frappe.utils.getdate()
+	doc.supplier = party
+	doc.append(
+		"items",
+		{
+			"item_code": "Phone Services",
+			"rate": 100,
+			"qty": 1,
+		},
+	)
+	doc.append(
+		"taxes",
+		{
+			"charge_type": "Actual",
+			"account_head": frappe.get_value("Account", {"name": ["like", "%Freight%"]}),
+			"description": "Freight",
+			"cost_center": "Main - CFC",
+			"tax_amount": 10,
+		},
+	)
+	doc.append(
+		"taxes",
+		{
+			"charge_type": "Actual",
+			"account_head": frappe.get_value("Account", {"name": ["like", "%Marketing Expenses%"]}),
+			"description": "Marketing",
+			"cost_center": "Main - CFC",
+			"tax_amount": 5,
+		},
+	)
+	doc.payment_terms_template = template
+	doc.due_date = doc.posting_date + datetime.timedelta(days=30)
+	doc.save()
+	doc.submit()
+
+	# Test Discount Payment Term with provider fees
+	data = frappe._dict(
+		{
+			"ppm_name": ppm_name,
+		}
+	)
+	data.payment_term = frappe.get_value("Payment Schedule", {"parent": doc.name})
+	data.additional_charges = calculate_payment_method_fees(doc, data)
+	assert data.additional_charges == 2
+	transaction_id = str(randint(100000000, 999999999))
+	process_electronic_payment(doc, data, transaction_id)
+	pe = frappe.get_doc("Payment Entry", {"reference_no": transaction_id})
+	pt = frappe.get_doc("Payment Schedule", {"parent": doc.name})
+	precision = frappe.get_precision(doc.doctype, "grand_total")
+	epsilon = 1 / pow(10, precision + 1)
+
+	assert abs(pe.paid_amount - flt(doc.grand_total - pt.discounted_amount, precision)) < epsilon
+	assert pt.outstanding == 0 and frappe.get_value(doc.doctype, doc.name, "outstanding_amount") == 0
+	assert pe.references[0].reference_name == doc.name
+	assert pe.references[0].payment_term == pt.payment_term
+	assert pe.references[0].allocated_amount == pt.payment_amount == doc.grand_total
+	assert pe.deductions and pe.deductions[0].account == settings.sending_payment_discount_account
+	assert (
+		abs(flt(pt.discounted_amount, precision) + flt(pe.deductions[0].amount, precision)) < epsilon
+	)
+	assert pe.taxes and pe.taxes[0].account_head == settings.sending_fee_account
+	assert pe.taxes[0].tax_amount == 2
+
+	gl1 = frappe.get_doc(
+		"GL Entry", {"voucher_no": pe.name, "account": "2110 - Accounts Payable - CFC"}
+	)
+	assert flt(gl1.debit, precision) == doc.grand_total
+
+	gl2 = frappe.get_doc("GL Entry", {"voucher_no": pe.name, "account": settings.sending_fee_account})
+	assert flt(gl2.debit, precision) == data.additional_charges
+
+	gl3 = frappe.get_doc(
+		"GL Entry", {"voucher_no": pe.name, "account": settings.sending_payment_discount_account}
+	)
+	assert flt(gl3.credit, precision) == flt(pt.discounted_amount, precision)
+
+	gl4 = frappe.get_doc("GL Entry", {"voucher_no": pe.name, "account": settings.withdrawal_account})
+	assert flt(gl4.credit, precision) == doc.grand_total + data.additional_charges - flt(
+		pt.discounted_amount, precision
+	)
+
+	# Cancel the Payment Entry
+	pe.cancel()
+	assert (
+		frappe.get_value(doc.doctype, doc.name, "outstanding_amount") > 0
+		and frappe.get_value("Payment Schedule", {"parent": doc.name}, "outstanding") > 0
+	)
+
+	# Update Accounts Settings to allocate discount to taxes
+	frappe.db.set_single_value("Accounts Settings", "book_tax_discount_loss", 1)
+	process_electronic_payment(doc, data, transaction_id)
+	pe = frappe.get_doc("Payment Entry", {"reference_no": transaction_id, "docstatus": 1})
+	pt = frappe.get_doc("Payment Schedule", {"parent": doc.name})
+
+	assert pe.deductions and len(pe.deductions) == 3
+	discount_percent = pt.discount / 100
+	discount_dict = {
+		discount.account: -1 * discount.amount for discount in pe.deductions
+	}  # Discounts are negative so GL Entry is credit
+	tax_amount_dict = {
+		tax.account_head: tax.base_tax_amount_after_discount_amount for tax in doc.taxes
+	}
+
+	assert (
+		abs(sum(discount_dict.values()) - flt(discount_percent * doc.grand_total, precision)) < epsilon
+	)
+	for tax_acct, tax_amount in tax_amount_dict.items():
+		assert abs(flt(discount_percent * tax_amount, precision) - discount_dict[tax_acct]) < epsilon
+	assert (
+		abs(
+			discount_dict[settings.sending_payment_discount_account]
+			- flt(discount_percent * doc.base_net_total, precision)
+		)
+		< epsilon
+	)
+
+	gl1 = frappe.get_doc(
+		"GL Entry", {"voucher_no": pe.name, "account": "2110 - Accounts Payable - CFC"}
+	)
+	assert flt(gl1.debit, precision) == doc.grand_total
+
+	gl2 = frappe.get_doc("GL Entry", {"voucher_no": pe.name, "account": settings.sending_fee_account})
+	assert flt(gl2.debit, precision) == data.additional_charges
+
+	gl3 = frappe.get_doc("GL Entry", {"voucher_no": pe.name, "account": settings.withdrawal_account})
+	assert flt(gl3.credit, precision) == doc.grand_total + data.additional_charges - flt(
+		pt.discounted_amount, precision
+	)
+
+	for row in pe.deductions:
+		gl_tax = frappe.get_doc("GL Entry", {"voucher_no": pe.name, "account": row.account})
+		assert flt(gl_tax.credit, precision) == -1 * row.amount
+
+	# Revert Accounts Settings change
+	frappe.db.set_single_value("Accounts Settings", "book_tax_discount_loss", 0)
 
 
 @pytest.mark.order(32)
 def test_sending_payment_create_journal_entry_multiple_payment_terms():
-	pass
+	"""
+	Journal Entry accounting:
+	- Grand total of $100, first payment term due is for 20% ($20)
+
+	| Account                                        | Debit   |  Credit |
+	| ---------------------------------------------- | -------:| -------:|
+	| 2110 - Accounts Payable - CFC                  |  $20.00 |         |
+	| 2130 - Electronic Payments Payable - CFC       |         |  $20.00 |
+	"""
+	settings = create_electronic_payment_settings("Authorize.net")
+	party = "Sphere Cellular"
+	party_type = "Supplier"
+	template = "20 in 14 80 in 30"
+	term_1 = "20 Percent in 14 Days"
+	term_2 = "80 Percent in 30 Days"
+
+	# Add dummy Portal Payment Method with no service charge
+	ppm_name = create_party_payment_method(party, party_type, False)
+
+	# Create a Purchase Invoice
+	doc = frappe.new_doc("Purchase Invoice")
+	doc.company = frappe.defaults.get_defaults().company
+	doc.set_posting_time = 1
+	doc.posting_date = frappe.utils.getdate()
+	doc.supplier = party
+	doc.append(
+		"items",
+		{
+			"item_code": "Phone Services",
+			"rate": 100,
+			"qty": 1,
+		},
+	)
+	doc.payment_terms_template = template
+	doc.save()
+	doc.submit()
+
+	# Test payment of one of multiple payment terms, no discounts, no provider fees
+	data = frappe._dict(
+		{
+			"ppm_name": ppm_name,
+		}
+	)
+	data.payment_term = frappe.get_value(
+		"Payment Schedule", {"parent": doc.name, "payment_term": term_1}
+	)
+	data.additional_charges = calculate_payment_method_fees(doc, data)
+	assert data.additional_charges == 0
+	transaction_id = str(randint(100000000, 999999999))
+	process_electronic_payment(doc, data, transaction_id)
+	je = frappe.get_last_doc("Journal Entry")
+	pt = frappe.get_doc("Payment Schedule", {"parent": doc.name, "payment_term": term_1})
+	unpaid_pt = frappe.get_doc("Payment Schedule", {"parent": doc.name, "payment_term": term_2})
+	precision = frappe.get_precision(doc.doctype, "grand_total")
+	epsilon = 1 / pow(10, precision + 1)
+
+	assert abs(pt.paid_amount - flt(pt.invoice_portion / 100 * doc.grand_total, precision)) < epsilon
+	assert pt.outstanding == 0 and frappe.get_value(doc.doctype, doc.name, "outstanding_amount") > 0
+	assert frappe.get_value(doc.doctype, doc.name, "outstanding_amount") == unpaid_pt.payment_amount
+	assert je.accounts[0].reference_name == doc.name
+	assert je.accounts[0].electronic_payments_payment_term == pt.name
+
+	gl1 = frappe.get_doc(
+		"GL Entry", {"voucher_no": je.name, "account": "2110 - Accounts Payable - CFC"}
+	)
+	assert flt(gl1.debit, precision) == flt(pt.invoice_portion / 100 * doc.grand_total, precision)
+
+	gl2 = frappe.get_doc(
+		"GL Entry", {"voucher_no": je.name, "account": settings.sending_clearing_account}
+	)
+	assert flt(gl2.credit, precision) == flt(gl1.debit, precision)
 
 
-@pytest.mark.order(31)
+@pytest.mark.order(33)
 def test_sending_payment_create_journal_entry_discount():
-	pass
+	"""
+	Journal Entry accounting, assuming no discount allocation goes to taxes):
+	- Grand total of $115
+	- Item total of $100
+	- 2% discount of $2.30, all allocated to items
+	- Taxes of $10 for Freight and Forwarding, $5 to Marketing Expenses
+	- $2 of provider fees
+
+	| Account                                        | Debit   |  Credit |
+	| ---------------------------------------------- | -------:| -------:|
+	| 2110 - Accounts Payable - CFC                  | $115.00 |         |
+	| 2130 - Electronic Payments Payable - CFC       |         | $114.70 |
+	| 5221 - Miscellaneous Expenses - CFC            |         |   $2.30 |
+	| 5205 - Freight and Forwarding Charges - CFC    |         |         |
+	| 5207 - Marketing Expenses - CFC                |         |         |
+	| 5223 - Electronic Payments Provider Fees - CFC |  $2.00  |         |
+
+	Journal Entry accounting, assuming discount gets allocated to taxes:
+	- Grand total of $115
+	- Item total of $100
+	- 2% discount of $2.30, $2.00 allocated to items, remaining $0.30 split to taxes by relative amount
+	- Taxes of $10 for Freight and Forwarding ($0.20 of discount), $5 to Marketing Expenses ($0.10 of discount)
+	- $2 of provider fees
+
+	| Account                                        | Debit   |  Credit |
+	| ---------------------------------------------- | -------:| -------:|
+	| 2110 - Accounts Payable - CFC                  | $115.00 |         |
+	| 2130 - Electronic Payments Payable - CFC       |         | $114.70 |
+	| 5221 - Miscellaneous Expenses - CFC            |         |   $2.00 |
+	| 5205 - Freight and Forwarding Charges - CFC    |         |   $0.20 |
+	| 5207 - Marketing Expenses - CFC                |         |   $0.10 |
+	| 5223 - Electronic Payments Provider Fees - CFC |  $2.00  |         |
+	"""
+	settings = create_electronic_payment_settings("Authorize.net")
+	party = "Sphere Cellular"
+	party_type = "Supplier"
+	template = "2% 10 Net 30"
+
+	# Add dummy Portal Payment Method with $2.00 service charge
+	ppm_name = create_party_payment_method(party, party_type, True)
+
+	# Create a Purchase Invoice
+	doc = frappe.new_doc("Purchase Invoice")
+	doc.company = frappe.defaults.get_defaults().company
+	doc.set_posting_time = 1
+	doc.posting_date = frappe.utils.getdate()
+	doc.supplier = party
+	doc.append(
+		"items",
+		{
+			"item_code": "Phone Services",
+			"rate": 100,
+			"qty": 1,
+		},
+	)
+	doc.append(
+		"taxes",
+		{
+			"charge_type": "Actual",
+			"account_head": frappe.get_value("Account", {"name": ["like", "%Freight%"]}),
+			"description": "Freight",
+			"cost_center": "Main - CFC",
+			"tax_amount": 10,
+		},
+	)
+	doc.append(
+		"taxes",
+		{
+			"charge_type": "Actual",
+			"account_head": frappe.get_value("Account", {"name": ["like", "%Marketing Expenses%"]}),
+			"description": "Marketing",
+			"cost_center": "Main - CFC",
+			"tax_amount": 5,
+		},
+	)
+	doc.payment_terms_template = template
+	doc.due_date = doc.posting_date + datetime.timedelta(days=30)
+	doc.save()
+	doc.submit()
+
+	# Test Discount Payment Term with provider fees
+	data = frappe._dict(
+		{
+			"ppm_name": ppm_name,
+		}
+	)
+	data.payment_term = frappe.get_value("Payment Schedule", {"parent": doc.name})
+	data.additional_charges = calculate_payment_method_fees(doc, data)
+	assert data.additional_charges == 2
+	transaction_id = str(randint(100000000, 999999999))
+	process_electronic_payment(doc, data, transaction_id)
+	je = frappe.get_last_doc("Journal Entry")
+	pt = frappe.get_doc("Payment Schedule", {"parent": doc.name})
+	precision = frappe.get_precision(doc.doctype, "grand_total")
+	epsilon = 1 / pow(10, precision + 1)
+
+	assert pt.outstanding == 0 and frappe.get_value(doc.doctype, doc.name, "outstanding_amount") == 0
+	assert je.accounts[0].reference_name == doc.name
+	assert je.accounts[0].electronic_payments_payment_term == pt.name
+	assert len(je.accounts) == 4
+
+	gl1 = frappe.get_doc(
+		"GL Entry", {"voucher_no": je.name, "account": "2110 - Accounts Payable - CFC"}
+	)
+	assert flt(gl1.debit, precision) == doc.grand_total
+
+	gl2 = frappe.get_doc("GL Entry", {"voucher_no": je.name, "account": settings.sending_fee_account})
+	assert flt(gl2.debit, precision) == data.additional_charges
+
+	gl3 = frappe.get_doc(
+		"GL Entry", {"voucher_no": je.name, "account": settings.sending_payment_discount_account}
+	)
+	assert flt(gl3.credit, precision) == flt(pt.discounted_amount, precision)
+
+	gl4 = frappe.get_doc(
+		"GL Entry", {"voucher_no": je.name, "account": settings.sending_clearing_account}
+	)
+	assert flt(gl4.credit, precision) == doc.grand_total + data.additional_charges - flt(
+		pt.discounted_amount, precision
+	)
+
+	# Cancel the Payment Entry
+	je.cancel()
+	assert (
+		frappe.get_value(doc.doctype, doc.name, "outstanding_amount") > 0
+		and frappe.get_value("Payment Schedule", {"parent": doc.name}, "outstanding") > 0
+	)
+
+	# Update Accounts Settings to allocate discount to taxes
+	frappe.db.set_single_value("Accounts Settings", "book_tax_discount_loss", 1)
+	process_electronic_payment(doc, data, transaction_id)
+	je = frappe.get_last_doc("Journal Entry")
+	pt = frappe.get_doc("Payment Schedule", {"parent": doc.name})
+
+	assert len(je.accounts) == 6
+	discount_percent = pt.discount / 100
+	tax_amount_dict = {
+		tax.account_head: tax.base_tax_amount_after_discount_amount for tax in doc.taxes
+	}
+	tax_amount_dict.update({settings.sending_payment_discount_account: doc.base_net_total})
+
+	gl1 = frappe.get_doc(
+		"GL Entry", {"voucher_no": je.name, "account": "2110 - Accounts Payable - CFC"}
+	)
+	assert flt(gl1.debit, precision) == doc.grand_total
+
+	gl2 = frappe.get_doc("GL Entry", {"voucher_no": je.name, "account": settings.sending_fee_account})
+	assert flt(gl2.debit, precision) == data.additional_charges
+
+	gl3 = frappe.get_doc(
+		"GL Entry", {"voucher_no": je.name, "account": settings.sending_clearing_account}
+	)
+	assert flt(gl3.credit, precision) == doc.grand_total + data.additional_charges - flt(
+		pt.discounted_amount, precision
+	)
+
+	for tax_acct, tax_amount in tax_amount_dict.items():
+		gl_tax = frappe.get_doc("GL Entry", {"voucher_no": je.name, "account": tax_acct})
+		assert (
+			abs(flt(gl_tax.credit, precision) - flt(discount_percent * tax_amount, precision)) < epsilon
+		)
+
+	# Revert Accounts Settings change
+	frappe.db.set_single_value("Accounts Settings", "book_tax_discount_loss", 0)
