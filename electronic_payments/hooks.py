@@ -8,7 +8,7 @@ app_icon = "octicon octicon-file-directory"
 app_color = "grey"
 app_email = "support@agritheory.dev"
 app_license = "MIT"
-required_apps = ["frappe/erpnext", "frappe/payments"]
+required_apps = ["erpnext", "payments", "webshop"]
 
 # Includes in <head>
 # ------------------

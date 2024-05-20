@@ -3,29 +3,28 @@ import json
 
 
 def after_install():
-	move_app_after_frappe_in_installed_app_global_list()
+	move_app_after_erpnext_and_webshop_in_installed_app_global_list
 	create_default_payment_term_template()
 
 
-def move_app_after_frappe_in_installed_app_global_list():
+def move_app_after_erpnext_and_webshop_in_installed_app_global_list():
 	"""
-	Moving electronic_payments before erpnext and setting frappe.local.flags.web_pages_apps flag
-	ensures that the website reflects this app's changes to the orders template and frappe finds
-	all files associated with it (.html/.md, .js, and .py).
-	Frappe traverses the installed app list in opposite directions when looking for jinga template
-	pages (reversed order) vs when looking for the path to get_context (regular order). Since the
-	jinga code first checks the frappe.local.flags.web_pages_apps, it's possible to set the flag
-	to the reversed order as get_installed_apps, to ensure frappe uses a consistent order to find/
-	load override files. This flag must be reset on load - that code is in order.py's get_context
+	For the app's template Order page changes to render, it must come after both ERPNext and
+	Webshop in Installed Applications, which should happen since they're required in hooks.py.
+	This function ensures the proper ordering for the Order page to render.
 	"""
 	installed_apps = frappe.get_installed_apps()
 	app_name = "electronic_payments"
-	if app_name in installed_apps:
-		installed_apps.remove(app_name)
+	erpnext_idx = installed_apps.index("erpnext") if "erpnext" in installed_apps else 100
+	webshop_idx = installed_apps.index("webshop") if "webshop" in installed_apps else 100
+	elec_pmts_idx = installed_apps.index(app_name)
 
-	# Insert electronic_payments after frappe so frappe.provide works in custom JS files
-	installed_apps.insert(installed_apps.index("frappe") + 1, app_name)
-	frappe.db.set_global("installed_apps", json.dumps(installed_apps))
+	if elec_pmts_idx > erpnext_idx and elec_pmts_idx > webshop_idx:
+		return
+	else:  # Move to end of installed apps
+		installed_apps.remove(app_name)
+		installed_apps.append(app_name)
+		frappe.db.set_global("installed_apps", json.dumps(installed_apps))
 
 
 def create_default_payment_term_template():
