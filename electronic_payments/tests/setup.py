@@ -855,28 +855,73 @@ def create_sales_invoices(settings):
 		so.save()
 		so.submit()
 
-	# Create Sales invoices for Andromeda with various Payment Term Templates
-	c = customers[0][0]
-	for idx, fruit in enumerate(fruits, 1):
-		si = frappe.new_doc("Sales Invoice")
-		si.posting_date = today
-		si.company = settings.company
-		si.customer = c
-		si.append(
-			"items",
-			{
-				"item_code": fruit,
-				"qty": idx,
-			},
-		)
-		if idx == 1:
-			si.payment_terms_template = "Net 14"
-		elif 1 < idx < 4:
-			si.payment_terms_template = "20 in 14 80 in 30"
-		else:
-			si.payment_terms_template = "2% 10 Net 30"
-		si.save()
-		si.submit()
+	# Create Sales Order that exceeds Cassiopeia's credit limit
+	c = customers[2][0]
+	highest_priced_item = frappe.get_all(
+		"Item Price",
+		{"price_list": "Standard Selling"},
+		["item_code", "price_list_rate"],
+		order_by="price_list_rate DESC",
+		limit=1,
+	)
+	item = highest_priced_item[0]["item_code"]
+	price = highest_priced_item[0]["price_list_rate"]
+	qty = int(300 / price) + 1
+	so = frappe.new_doc("Sales Order")
+	so.company = settings.company
+	so.transaction_date = so.delivery_date = settings.day
+	so.customer = c
+	so.append(
+		"items",
+		{
+			"item_code": item,
+			"qty": qty,
+		},
+	)
+	so.payment_terms_template = "Due on Receipt"
+	so.save()
+	so.submit()
+
+	# Create Sales Invoices for Andromeda and Betelgeuse with various Payment Term Templates
+	custs = (customers[0][0], customers[1][0])
+	for c in custs:
+		pmt_terms = ("Net 14", "20 in 14 80 in 30", "2% 10 Net 30")
+		for ptt, fruit in zip(pmt_terms, fruits):
+			si = frappe.new_doc("Sales Invoice")
+			si.posting_date = today
+			si.company = settings.company
+			si.customer = c
+			si.append(
+				"items",
+				{
+					"item_code": fruit,
+					"qty": 3,
+				},
+			)
+			if ptt == "2% 10 Net 30":
+				si.append(
+					"taxes",
+					{
+						"charge_type": "Actual",
+						"account_head": frappe.get_value("Account", {"name": ["like", "%Sales Expenses%"]}),
+						"description": "Other sales expenses",
+						"cost_center": "Main - CFC",
+						"tax_amount": 5,
+					},
+				)
+				si.append(
+					"taxes",
+					{
+						"charge_type": "Actual",
+						"account_head": frappe.get_value("Account", {"name": ["like", "%Freight%"]}),
+						"description": "Freight",
+						"cost_center": "Main - CFC",
+						"tax_amount": 10,
+					},
+				)
+			si.payment_terms_template = ptt
+			si.save()
+			si.submit()
 
 
 def create_electronic_payment_settings(settings):
