@@ -417,21 +417,29 @@ def test_receiving_payment_create_payment_entry_discount():
 	gl1 = frappe.get_doc(
 		"GL Entry", {"voucher_no": pe.name, "account": "1310 - Accounts Receivable - CFC"}
 	)
-	assert flt(gl1.credit, precision) == doc.grand_total
+	assert abs(flt(gl1.credit, precision) - doc.grand_total) < epsilon
 
 	gl2 = frappe.get_doc(
 		"GL Entry", {"voucher_no": pe.name, "account": settings.accepting_fee_account}
 	)
-	assert flt(gl2.credit, precision) == data.additional_charges
+	assert abs(flt(gl2.credit, precision) - data.additional_charges) < epsilon
 
 	gl3 = frappe.get_doc(
 		"GL Entry", {"voucher_no": pe.name, "account": settings.accepting_payment_discount_account}
 	)
-	assert flt(gl3.debit, precision) == flt(pt.discounted_amount, precision)
+	assert abs(flt(gl3.debit, precision) - flt(pt.discounted_amount, precision)) < epsilon
 
 	gl4 = frappe.get_doc("GL Entry", {"voucher_no": pe.name, "account": settings.deposit_account})
-	assert flt(gl4.debit, precision) == doc.grand_total + data.additional_charges - flt(
-		pt.discounted_amount, precision
+	assert (
+		abs(
+			flt(gl4.debit, precision)
+			- (
+				flt(
+					doc.grand_total + data.additional_charges - flt(pt.discounted_amount, precision), precision
+				)
+			)
+		)
+		< epsilon
 	)
 
 	# Cancel the Payment Entry
@@ -474,21 +482,25 @@ def test_receiving_payment_create_payment_entry_discount():
 	gl1 = frappe.get_doc(
 		"GL Entry", {"voucher_no": pe.name, "account": "1310 - Accounts Receivable - CFC"}
 	)
-	assert flt(gl1.credit, precision) == doc.grand_total
+	assert abs(flt(gl1.credit, precision) - doc.grand_total) < epsilon
 
 	gl2 = frappe.get_doc(
 		"GL Entry", {"voucher_no": pe.name, "account": settings.accepting_fee_account}
 	)
-	assert flt(gl2.credit, precision) == data.additional_charges
+	assert abs(flt(gl2.credit, precision) - data.additional_charges) < epsilon
 
 	gl3 = frappe.get_doc("GL Entry", {"voucher_no": pe.name, "account": settings.deposit_account})
-	assert flt(gl3.debit, precision) == doc.grand_total + data.additional_charges - flt(
-		pt.discounted_amount, precision
+	assert (
+		abs(
+			flt(gl3.debit, precision)
+			- (doc.grand_total + data.additional_charges - flt(pt.discounted_amount, precision))
+		)
+		< epsilon
 	)
 
 	for row in pe.deductions:
 		gl_tax = frappe.get_doc("GL Entry", {"voucher_no": pe.name, "account": row.account})
-		assert flt(gl_tax.debit, precision) == row.amount
+		assert abs(flt(gl_tax.debit, precision) - row.amount) < epsilon
 
 	# Revert Accounts Settings change
 	frappe.db.set_single_value("Accounts Settings", "book_tax_discount_loss", 0)
@@ -679,23 +691,31 @@ def test_receiving_payment_create_journal_entry_discount():
 	gl1 = frappe.get_doc(
 		"GL Entry", {"voucher_no": je.name, "account": "1310 - Accounts Receivable - CFC"}
 	)
-	assert flt(gl1.credit, precision) == doc.grand_total
+	assert abs(flt(gl1.credit, precision) - doc.grand_total) < epsilon
 
 	gl2 = frappe.get_doc(
 		"GL Entry", {"voucher_no": je.name, "account": settings.accepting_fee_account}
 	)
-	assert flt(gl2.credit, precision) == data.additional_charges
+	assert abs(flt(gl2.credit, precision) - data.additional_charges) < epsilon
 
 	gl3 = frappe.get_doc(
 		"GL Entry", {"voucher_no": je.name, "account": settings.accepting_payment_discount_account}
 	)
-	assert flt(gl3.debit, precision) == flt(pt.discounted_amount, precision)
+	assert abs(flt(gl3.debit, precision) - flt(pt.discounted_amount, precision)) < epsilon
 
 	gl4 = frappe.get_doc(
 		"GL Entry", {"voucher_no": je.name, "account": settings.accepting_clearing_account}
 	)
-	assert flt(gl4.debit, precision) == doc.grand_total + data.additional_charges - flt(
-		pt.discounted_amount, precision
+	assert (
+		abs(
+			flt(gl4.debit, precision)
+			- (
+				flt(
+					doc.grand_total + data.additional_charges - flt(pt.discounted_amount, precision), precision
+				)
+			)
+		)
+		< epsilon
 	)
 
 	# Cancel the Payment Entry
@@ -721,18 +741,22 @@ def test_receiving_payment_create_journal_entry_discount():
 	gl1 = frappe.get_doc(
 		"GL Entry", {"voucher_no": je.name, "account": "1310 - Accounts Receivable - CFC"}
 	)
-	assert flt(gl1.credit, precision) == doc.grand_total
+	assert abs(flt(gl1.credit, precision) - doc.grand_total) < epsilon
 
 	gl2 = frappe.get_doc(
 		"GL Entry", {"voucher_no": je.name, "account": settings.accepting_fee_account}
 	)
-	assert flt(gl2.credit, precision) == data.additional_charges
+	assert abs(flt(gl2.credit, precision) - data.additional_charges) < epsilon
 
 	gl3 = frappe.get_doc(
 		"GL Entry", {"voucher_no": je.name, "account": settings.accepting_clearing_account}
 	)
-	assert flt(gl3.debit, precision) == doc.grand_total + data.additional_charges - flt(
-		pt.discounted_amount, precision
+	assert (
+		abs(
+			flt(gl3.debit, precision)
+			- (doc.grand_total + data.additional_charges - flt(pt.discounted_amount, precision))
+		)
+		< epsilon
 	)
 
 	for tax_acct, tax_amount in tax_amount_dict.items():
