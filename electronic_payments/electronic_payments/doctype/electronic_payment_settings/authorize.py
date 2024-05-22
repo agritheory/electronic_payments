@@ -103,7 +103,7 @@ class AuthorizeNet:
 
 		createtransactionrequest = apicontractsv1.createTransactionRequest()
 		createtransactionrequest.merchantAuthentication = self.merchant_auth(doc.company)
-		createtransactionrequest.refId = doc.name
+		createtransactionrequest.refId = doc.name[:20]  # Authorize.net length constraint
 		createtransactionrequest.transactionRequest = transactionrequest
 
 		createtransactioncontroller = createTransactionController(createtransactionrequest)
@@ -401,7 +401,7 @@ class AuthorizeNet:
 
 		createtransactionrequest = apicontractsv1.createTransactionRequest()
 		createtransactionrequest.merchantAuthentication = merchantAuth
-		createtransactionrequest.refId = doc.name
+		createtransactionrequest.refId = doc.name[:20]  # Authorize.net length constraint
 
 		createtransactionrequest.transactionRequest = transactionrequest
 		createtransactioncontroller = createTransactionController(createtransactionrequest)
@@ -505,7 +505,7 @@ class AuthorizeNet:
 
 		createtransactionrequest = apicontractsv1.createTransactionRequest()
 		createtransactionrequest.merchantAuthentication = merchantAuth
-		createtransactionrequest.refId = doc.name
+		createtransactionrequest.refId = doc.name[:20]  # Authorize.net length constraint
 		createtransactionrequest.transactionRequest = transactionrequest
 
 		createtransactioncontroller = createTransactionController(createtransactionrequest)
