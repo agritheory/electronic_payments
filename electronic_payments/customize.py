@@ -23,6 +23,7 @@ def load_customizations():
 				if existing_field
 				else frappe.new_doc("Custom Field")
 			)
+			field.pop("creation")
 			field.pop("modified")
 			{custom_field.set(key, value) for key, value in field.items()}
 			custom_field.flags.ignore_permissions = True
