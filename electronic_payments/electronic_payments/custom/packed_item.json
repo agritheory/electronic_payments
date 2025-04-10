@@ -4,12 +4,7 @@
 	"doctype": "Packed Item",
 	"property_setters": [
 		{
-			"_assign": null,
-			"_comments": null,
-			"_liked_by": null,
-			"_user_tags": null,
 			"creation": "2023-05-22 09:53:28.865581",
-			"default_value": null,
 			"doc_type": "Packed Item",
 			"docstatus": 0,
 			"doctype_or_field": "DocField",
@@ -20,12 +15,8 @@
 			"module": "Electronic Payments",
 			"name": "Packed Item-rate-read_only",
 			"owner": "Administrator",
-			"parent": null,
-			"parentfield": null,
-			"parenttype": null,
 			"property": "read_only",
 			"property_type": "Check",
-			"row_name": null,
 			"value": "1"
 		}
 	],

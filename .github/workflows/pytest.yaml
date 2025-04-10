@@ -1,20 +1,13 @@
-name: Pytest CI
+name: Tests
 
 on:
   push:
-    branches:
-      - version-14
-      - version-15
+    branches: [ version-15 ]
   pull_request:
-    branches:
-      - version-14
-      - version-15
+    branches: [ version-15 ]
+
 env:
     BRANCH_NAME: ${{ github.base_ref || github.ref_name }}
-
-# concurrency:
-#   group: develop-autoreader-${{ github.event.number }}
-#   cancel-in-progress: true
 
 jobs:
   tests:
@@ -47,7 +40,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
           check-latest: true
           cache: 'yarn'
 
@@ -58,9 +51,21 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/*requirements.txt', '**/pyproject.toml', '**/setup.py', '**/setup.cfg') }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml', '**/setup.py') }}
           restore-keys: |
             ${{ runner.os }}-pip-
+            ${{ runner.os }}-
+
+      - name: Cache node modules
+        uses: actions/cache@v4
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
             ${{ runner.os }}-
 
       - name: Install JS Dependencies
