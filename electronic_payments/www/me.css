@@ -7,13 +7,15 @@
 }
 
 .portal-widget {
-  /* position: absolute; */
-  top: 5px;
-  right: 5px;
-  bottom: 5px;
-  left: 5px;
-  border-radius: 5px;
-  box-shadow: 0px 1px 2px rgba(25, 39, 52, 0.05), 0px 0px 4px rgba(25, 39, 52, 0.1);
+	/* position: absolute; */
+	top: 5px;
+	right: 5px;
+	bottom: 5px;
+	left: 5px;
+	border-radius: 5px;
+	box-shadow:
+		0px 1px 2px rgba(25, 39, 52, 0.05),
+		0px 0px 4px rgba(25, 39, 52, 0.1);
 	padding: 15px;
 	margin: 5px;
 	min-height: 60px;
@@ -25,8 +27,8 @@
 }
 
 a.portal-widget-col {
-  position: relative;
-  text-decoration: none;
+	position: relative;
+	text-decoration: none;
 }
 
 .portal-widget-col h5 {
@@ -37,6 +39,6 @@ a.portal-widget-col {
 }
 
 .widget-row {
-  margin-top: 10px;
-  margin-bottom: 20px;
+	margin-top: 10px;
+	margin-bottom: 20px;
 }
