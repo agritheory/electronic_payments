@@ -1,19 +1,22 @@
+# Copyright (c) 2025, AgriTheory and contributors
+# For license information, please see license.txt
+
 import datetime
+import os
 import random
 import types
-import os
 
 import frappe
-from frappe.desk.page.setup_wizard.setup_wizard import setup_complete
-from erpnext.setup.utils import enable_all_roles_and_domains, set_defaults_for_tests  # noqa: F401
 from erpnext.accounts.doctype.account.account import update_account_number
+from erpnext.setup.utils import enable_all_roles_and_domains, set_defaults_for_tests  # noqa: F401
+from frappe.desk.page.setup_wizard.setup_wizard import setup_complete
 
 from electronic_payments.tests.fixtures import (
+	customers,
+	employees,
+	fruits,
 	suppliers,
 	tax_authority,
-	employees,
-	customers,
-	fruits,
 )
 
 
@@ -941,6 +944,7 @@ def create_electronic_payment_settings(settings):
 		eps = frappe.new_doc("Electronic Payment Settings")
 		eps.company = settings.company
 		eps.provider = "Authorize.net"
+		eps.endpoint = "https://apitest.authorize.net/xml/v1/request.api"
 		eps.api_key = os.environ.get("AUTHORIZE_API_KEY")
 		eps.transaction_key = os.environ.get("AUTHORIZE_TRANSACTION_KEY")
 		eps.create_ppm = 1
