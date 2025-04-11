@@ -37,7 +37,7 @@ pytest-order = "^1.2.1"
 test_utils = { git = "https://github.com/agritheory/test_utils.git" }
 
 [tool.pytest.ini_options]
-addopts = "--cov=check_run --cov-report term-missing"
+addopts = "--cov=electronic_payments --cov-report term-missing"
 
 [tool.black]
 line-length = 99
