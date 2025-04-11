@@ -1,33 +1,36 @@
+# Copyright (c) 2025, AgriTheory and contributors
+# For license information, please see license.txt
+
+import json
 import uuid
 from decimal import Decimal
-import json
 
 import frappe
-from frappe import _
-from frappe.utils.password import get_decrypted_password
-from frappe.utils.data import today, flt
-from frappe.utils import cint
-
 from authorizenet import apicontractsv1
 from authorizenet.apicontrollers import (
-	createTransactionController,
-	createCustomerProfileController,
-	deleteCustomerProfileController,
-	deleteCustomerPaymentProfileController,
-	getTransactionDetailsController,
 	createCustomerPaymentProfileController,
-	updateCustomerPaymentProfileController,
-	getTransactionListController,
+	createCustomerProfileController,
+	createTransactionController,
+	deleteCustomerPaymentProfileController,
+	deleteCustomerProfileController,
 	getCustomerPaymentProfileController,
+	getTransactionDetailsController,
+	getTransactionListController,
+	updateCustomerPaymentProfileController,
 )
+from frappe import _
+from frappe.utils import cint
+from frappe.utils.data import flt, today
+from frappe.utils.password import get_decrypted_password
+
 from electronic_payments.electronic_payments.doctype.electronic_payment_settings.common import (
-	exceeds_credit_limit,
-	get_payment_amount,
-	get_discount_amount,
 	calculate_payment_method_fees,
+	exceeds_credit_limit,
+	get_discount_amount,
+	get_party_details,
+	get_payment_amount,
 	process_electronic_payment,
 	queue_method_as_admin,
-	get_party_details,
 )
 
 
@@ -107,6 +110,8 @@ class AuthorizeNet:
 		createtransactionrequest.transactionRequest = transactionrequest
 
 		createtransactioncontroller = createTransactionController(createtransactionrequest)
+		endpoint = frappe.get_value("Electronic Payment Settings", {"company": doc.company}, "endpoint")
+		createtransactioncontroller.setenvironment(endpoint)
 		createtransactioncontroller.execute()
 
 		response = createtransactioncontroller.getresponse()
@@ -405,6 +410,8 @@ class AuthorizeNet:
 
 		createtransactionrequest.transactionRequest = transactionrequest
 		createtransactioncontroller = createTransactionController(createtransactionrequest)
+		endpoint = frappe.get_value("Electronic Payment Settings", {"company": doc.company}, "endpoint")
+		createtransactioncontroller.setenvironment(endpoint)
 		createtransactioncontroller.execute()
 
 		response = createtransactioncontroller.getresponse()
@@ -509,6 +516,8 @@ class AuthorizeNet:
 		createtransactionrequest.transactionRequest = transactionrequest
 
 		createtransactioncontroller = createTransactionController(createtransactionrequest)
+		endpoint = frappe.get_value("Electronic Payment Settings", {"company": doc.company}, "endpoint")
+		createtransactioncontroller.setenvironment(endpoint)
 		createtransactioncontroller.execute()
 
 		response = createtransactioncontroller.getresponse()
@@ -609,6 +618,8 @@ class AuthorizeNet:
 
 		createtransactionrequest.transactionRequest = transactionrequest
 		createtransactioncontroller = createTransactionController(createtransactionrequest)
+		endpoint = frappe.get_value("Electronic Payment Settings", {"company": doc.company}, "endpoint")
+		createtransactioncontroller.setenvironment(endpoint)
 		createtransactioncontroller.execute()
 
 		response = createtransactioncontroller.getresponse()
@@ -653,6 +664,8 @@ class AuthorizeNet:
 
 		createtransactionrequest.transactionRequest = transactionrequest
 		createtransactioncontroller = createTransactionController(createtransactionrequest)
+		endpoint = frappe.get_value("Electronic Payment Settings", {"company": doc.company}, "endpoint")
+		createtransactioncontroller.setenvironment(endpoint)
 		createtransactioncontroller.execute()
 
 		response = createtransactioncontroller.getresponse()
