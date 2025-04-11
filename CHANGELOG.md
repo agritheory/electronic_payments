@@ -1,6 +1,33 @@
 # CHANGELOG
 
 
+## v15.0.2 (2025-04-11)
+
+### Bug Fixes
+
+- Support Authorize.net production endpoint
+  ([#44](https://github.com/agritheory/electronic_payments/pull/44),
+  [`05b16dd`](https://github.com/agritheory/electronic_payments/commit/05b16dd3b8fbb5f96fe8a949aa3f9a22c00a9dac))
+
+* ci: add coverage, install dev deps via poetry
+
+* fix: support Authorize production endpoint
+
+* test: update settings doc for Authorize endpoint
+
+* docs: update configuration for endpoint, uncomment payment section
+
+### Continuous Integration
+
+- Update to poetry 2.0, pre-commit, test_utils, linting
+  ([#41](https://github.com/agritheory/electronic_payments/pull/41),
+  [`187c5b0`](https://github.com/agritheory/electronic_payments/commit/187c5b0a0faf9d2cbf75c1d709c330e36548a5c7))
+
+* ci: update to poetry 2.0, pre-commit, test_utils, linting
+
+* ci: update mariadb-client
+
+
 ## v15.0.1 (2025-01-03)
 
 ### Bug Fixes
