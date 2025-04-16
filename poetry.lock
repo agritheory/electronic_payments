@@ -2,25 +2,19 @@
 
 [[package]]
 name = "authorizenet"
-version = "2.0.0"
-description = ""
+version = "1.1.5"
+description = "Authorize.Net Python SDK"
 optional = false
-python-versions = ">3.10"
+python-versions = "*"
 groups = ["main"]
-markers = "python_full_version > \"3.10.0\""
-files = []
-develop = false
+files = [
+    {file = "authorizenet-1.1.5.tar.gz", hash = "sha256:ba8b538028201c01d7ed097ea0842f7732c220472006d105b4a6b948ddcaf4dc"},
+]
 
 [package.dependencies]
-lxml = "^4.9.3"
-pyxb-x = "^1.2.6.1"
-requests = "^2.31.0"
-
-[package.source]
-type = "git"
-url = "https://github.com/agritheory/authorizenet.git"
-reference = "HEAD"
-resolved_reference = "bb2d9cf03821cf19ff8f610e54e605ac7d97db12"
+lxml = "==4.*"
+PyXB-X = "*"
+requests = "==2.*"
 
 [[package]]
 name = "certifi"
@@ -278,7 +272,6 @@ description = "Powerful and Pythonic XML processing library combining libxml2/li
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, != 3.4.*"
 groups = ["main"]
-markers = "python_full_version > \"3.10.0\""
 files = [
     {file = "lxml-4.9.4-cp27-cp27m-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:e214025e23db238805a600f1f37bf9f9a15413c7bf5f9d6ae194f84980c78722"},
     {file = "lxml-4.9.4-cp27-cp27m-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:ec53a09aee61d45e7dbe7e91252ff0491b6b5fee3d85b2d45b173d8ab453efc1"},
@@ -539,7 +532,6 @@ description = "PyXB-X (\"pixbix\") is a pure Python package that generates Pytho
 optional = false
 python-versions = "*"
 groups = ["main"]
-markers = "python_full_version > \"3.10.0\""
 files = [
     {file = "PyXB_X-1.2.6.3-py3-none-any.whl", hash = "sha256:4c4a55d6b8c61c2d84ab4c2cb49ee74185599242bbfd1cf0bdd6be4a8a874006"},
     {file = "pyxb_x-1.2.6.3.tar.gz", hash = "sha256:bf401fa8d3e6bd6ea6648f49f02c7dc7ef460b4c61dc34bc2f1c4c3a952037b5"},
@@ -690,4 +682,4 @@ zstd = ["zstandard (>=0.18.0)"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.14"
-content-hash = "565e3846e2c460b05025a687b669d3097157a5a24cb6de404b5691b0ca867e13"
+content-hash = "ca9f5b19d4aa0d60420294712fd4fa75dfe2f6703ef69f326a1fe7fe5d038f48"
