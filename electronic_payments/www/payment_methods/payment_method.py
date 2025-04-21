@@ -1,6 +1,11 @@
+# Copyright (c) 2025, AgriTheory and contributors
+# For license information, please see license.txt
+
 import json
+
 import frappe
 from frappe import _
+
 from electronic_payments.www.payment_methods.index import (
 	get_electronic_payment_settings,
 	get_party,
@@ -27,7 +32,8 @@ def get_context(context):
 		)
 		portal_payment_method.electronic_payment_profile_object = electronic_payment_profile
 
-		client = settings.client()
+		doc = frappe._dict({party_data["party_type"].lower(): party})
+		client = settings.client(doc)
 		response = client.get_customer_payment_profile(settings.company, electronic_payment_profile.name)
 		if response["message"] == "Success":
 			portal_payment_method.update(response["data"])
@@ -42,13 +48,15 @@ def get_context(context):
 def edit_portal_payment_method(payment_method):
 	data = json.loads(payment_method)
 	settings = get_electronic_payment_settings()
+	party_data = get_party()
 
 	if not settings:
 		return {"error_message": _("You cannot edit this Payment Method.")}
 
 	portal_payment_method = frappe.get_doc("Portal Payment Method", data["name"])
 	try:
-		client = settings.client()
+		doc = frappe._dict({party_data["party_type"].lower(): party_data["party"]})
+		client = settings.client(doc)
 		response = client.edit_customer_payment_profile(
 			settings.company, portal_payment_method.electronic_payment_profile, data
 		)

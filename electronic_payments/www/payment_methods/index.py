@@ -1,7 +1,10 @@
+# Copyright (c) 2025, AgriTheory and contributors
+# For license information, please see license.txt
+
 import frappe
+from erpnext import get_default_company
 from frappe import _
 from frappe.contacts.doctype.contact.contact import get_contact_name
-from erpnext import get_default_company
 
 no_cache = 1
 
@@ -46,7 +49,9 @@ def remove_portal_payment_method(payment_method):
 		payment_profile_id = frappe.db.get_value(
 			"Electronic Payment Profile", electronic_payment_profile, "payment_profile_id"
 		)
-		client = settings.client()
+		party_data = get_party()
+		doc = frappe._dict({party_data["party_type"].lower(): party_data["party"]})
+		client = settings.client(doc)
 		response = client.delete_payment_profile(get_default_company(), payment_profile_id)
 
 		if response.get("message") and response.get("message") == "Success":

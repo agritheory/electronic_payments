@@ -1,6 +1,11 @@
+# Copyright (c) 2025, AgriTheory and contributors
+# For license information, please see license.txt
+
 import json
+
 import frappe
 from frappe import _
+
 from electronic_payments.www.payment_methods.index import (
 	get_electronic_payment_settings,
 	get_party,
@@ -26,8 +31,8 @@ def new_portal_payment_method(payment_method):
 	if not settings:
 		return {"error_message": _("You cannot add a new Payment Method.")}
 
-	client = settings.client()
 	doc = frappe._dict({"company": settings.company, party_data["party_type"].lower(): data.party})
+	client = settings.client(doc)
 	data.mode_of_payment = data.payment_type
 	data.save_data = "Retain payment data for this party"
 

@@ -7,10 +7,11 @@
 	"engine": "InnoDB",
 	"field_order": [
 		"company",
+		"create_ppm",
+		"accepting_config_section",
 		"provider",
 		"ref_id",
-		"create_ppm",
-		"column_break_3",
+		"column_break_zyrs",
 		"endpoint",
 		"api_key",
 		"transaction_key",
@@ -21,14 +22,23 @@
 		"column_break_7",
 		"use_clearing_account",
 		"accepting_clearing_account",
+		"mode_of_payment",
+		"section_break_avdt",
+		"enable_sending",
+		"sending_config_section",
+		"sending_provider",
+		"sending_ref_id",
+		"column_break_cssi",
+		"sending_endpoint",
+		"sending_api_key",
+		"sending_transaction_key",
 		"sending_payments_accounts_section",
 		"withdrawal_account",
 		"sending_payment_discount_account",
-		"enable_sending",
 		"column_break_ra5el",
 		"sending_fee_account",
 		"sending_clearing_account",
-		"mode_of_payment"
+		"sending_mode_of_payment"
 	],
 	"fields": [
 		{
@@ -73,14 +83,11 @@
 			"read_only": 1
 		},
 		{
-			"fieldname": "column_break_3",
-			"fieldtype": "Column Break"
-		},
-		{
 			"fieldname": "provider",
 			"fieldtype": "Select",
 			"label": "Provider",
-			"options": "\nAuthorize.net\nStripe"
+			"options": "\nAuthorize.net\nStripe",
+			"reqd": 1
 		},
 		{
 			"fieldname": "endpoint",
@@ -114,9 +121,11 @@
 			"fieldname": "accepting_clearing_account",
 			"fieldtype": "Link",
 			"label": "Clearing Account",
+			"mandatory_depends_on": "eval:doc.use_clearing_account === \"Use Journal Entry and Clearing Account\"",
 			"options": "Account"
 		},
 		{
+			"depends_on": "enable_sending",
 			"fieldname": "sending_payments_accounts_section",
 			"fieldtype": "Section Break",
 			"label": "Accounts: Sending Payments"
@@ -128,7 +137,6 @@
 			"label": "Enable Sending Electronic Payments"
 		},
 		{
-			"depends_on": "enable_sending",
 			"fieldname": "withdrawal_account",
 			"fieldtype": "Link",
 			"label": "Withdrawal Account",
@@ -136,7 +144,6 @@
 			"options": "Account"
 		},
 		{
-			"depends_on": "enable_sending",
 			"fieldname": "sending_fee_account",
 			"fieldtype": "Link",
 			"label": "Provider Fee Account",
@@ -148,10 +155,10 @@
 			"fieldtype": "Column Break"
 		},
 		{
-			"depends_on": "enable_sending",
 			"fieldname": "sending_clearing_account",
 			"fieldtype": "Link",
 			"label": "Clearing Account",
+			"mandatory_depends_on": "eval:doc.enable_sending && doc.use_clearing_account === \"Use Journal Entry and Clearing Account\"",
 			"options": "Account"
 		},
 		{
@@ -171,7 +178,6 @@
 			"reqd": 1
 		},
 		{
-			"depends_on": "enable_sending",
 			"description": "This account is credited by the discount amount.",
 			"fetch_from": "company.default_discount_account",
 			"fetch_if_empty": 1,
@@ -180,10 +186,69 @@
 			"label": "Payment Discount Account",
 			"mandatory_depends_on": "enable_sending",
 			"options": "Account"
+		},
+		{
+			"fieldname": "accepting_config_section",
+			"fieldtype": "Section Break",
+			"label": "Configuration: Accepting Payments"
+		},
+		{
+			"fieldname": "column_break_zyrs",
+			"fieldtype": "Column Break"
+		},
+		{
+			"depends_on": "enable_sending",
+			"fieldname": "sending_config_section",
+			"fieldtype": "Section Break",
+			"label": "Configuration: Sending Payments"
+		},
+		{
+			"fieldname": "sending_provider",
+			"fieldtype": "Select",
+			"label": "Sending Provider",
+			"mandatory_depends_on": "enable_sending",
+			"options": "\nAuthorize.net\nWise"
+		},
+		{
+			"fieldname": "sending_ref_id",
+			"fieldtype": "Data",
+			"label": "Sending Merchant ID"
+		},
+		{
+			"fieldname": "column_break_cssi",
+			"fieldtype": "Column Break"
+		},
+		{
+			"fieldname": "sending_endpoint",
+			"fieldtype": "Data",
+			"label": "Sending Endpoint",
+			"mandatory_depends_on": "eval:doc.enable_sending && (doc.provider !== doc.sending_provider) && (doc.sending_provider === \"Authorize.net\" || doc.sending_provider === \"Wise\")"
+		},
+		{
+			"fieldname": "sending_api_key",
+			"fieldtype": "Password",
+			"label": "Sending API Key"
+		},
+		{
+			"fieldname": "sending_transaction_key",
+			"fieldtype": "Password",
+			"label": "Sending Transaction Key"
+		},
+		{
+			"fieldname": "sending_mode_of_payment",
+			"fieldtype": "Link",
+			"hidden": 1,
+			"label": "Sending Mode of Payment",
+			"options": "Mode of Payment",
+			"read_only": 1
+		},
+		{
+			"fieldname": "section_break_avdt",
+			"fieldtype": "Section Break"
 		}
 	],
 	"links": [],
-	"modified": "2025-04-11 11:11:36.434244",
+	"modified": "2025-04-16 20:17:13.576642",
 	"modified_by": "Administrator",
 	"module": "Electronic Payments",
 	"name": "Electronic Payment Settings",
@@ -203,6 +268,7 @@
 			"write": 1
 		}
 	],
+	"row_format": "Dynamic",
 	"sort_field": "modified",
 	"sort_order": "DESC",
 	"states": [],

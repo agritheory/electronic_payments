@@ -40,12 +40,16 @@ class AuthorizeNet:
 		if not settings:
 			frappe.msgprint(_(f"No Electronic Payment Settings found for {company}-Authorize.net"))
 		else:
+			api_key_field = "api_key" if settings.provider == "Authorize.net" else "sending_api_key"
+			txn_key_field = (
+				"transaction_key" if settings.provider == "Authorize.net" else "sending_transaction_key"
+			)
 			merchantAuth = apicontractsv1.merchantAuthenticationType()
 			merchantAuth.name = get_decrypted_password(
-				settings.doctype, settings.name, "api_key", raise_exception=False
+				settings.doctype, settings.name, api_key_field, raise_exception=False
 			)
 			merchantAuth.transactionKey = get_decrypted_password(
-				settings.doctype, settings.name, "transaction_key", raise_exception=False
+				settings.doctype, settings.name, txn_key_field, raise_exception=False
 			)
 			return merchantAuth
 
@@ -81,6 +85,8 @@ class AuthorizeNet:
 		return response
 
 	def process_credit_card(self, doc, data):
+		settings = frappe.get_doc("Electronic Payment Settings", {"company": doc.company})
+		endpoint_field = "endpoint" if settings.provider == "Authorize.net" else "sending_endpoint"
 		card_number = data.get("card_number")
 		creditCard = apicontractsv1.creditCardType()
 		creditCard.cardNumber = card_number.replace(" ", "")
@@ -110,8 +116,7 @@ class AuthorizeNet:
 		createtransactionrequest.transactionRequest = transactionrequest
 
 		createtransactioncontroller = createTransactionController(createtransactionrequest)
-		endpoint = frappe.get_value("Electronic Payment Settings", {"company": doc.company}, "endpoint")
-		createtransactioncontroller.setenvironment(endpoint)
+		createtransactioncontroller.setenvironment(settings.get(endpoint_field))
 		createtransactioncontroller.execute()
 
 		response = createtransactioncontroller.getresponse()
@@ -338,6 +343,7 @@ class AuthorizeNet:
 		response = controller.getresponse()
 
 		if response.messages.resultCode == "Ok":
+			settings = frappe.get_doc("Electronic Payment Settings", {"company": doc.company})
 			payment_profile = frappe.new_doc("Electronic Payment Profile")
 			payment_profile.party_type = party.doctype
 			payment_profile.party = party.name
@@ -349,14 +355,12 @@ class AuthorizeNet:
 			payment_profile.retain = 1 if data.save_data == "Retain payment data for this party" else 0
 			payment_profile.save(ignore_permissions=True)
 
-			if payment_profile.retain and frappe.get_value(
-				"Electronic Payment Settings", {"company": doc.company}, "create_ppm"
-			):
-				# TODO: review assumptions around MOP, service charge, default
-				ppm = frappe.new_doc("Portal Payment Method")
-				ppm.mode_of_payment = frappe.get_value(
-					"Electronic Payment Settings", {"company": doc.company}, "mode_of_payment"
+			if payment_profile.retain and settings.create_ppm:
+				mop_field = (
+					"mode_of_payment" if settings.provider == "Authorize.net" else "sending_mode_of_payment"
 				)
+				ppm = frappe.new_doc("Portal Payment Method")
+				ppm.mode_of_payment = settings.get(mop_field)
 				ppm.label = f"{mop}-{last4}"
 				ppm.default = cint(data.get("default", 0))
 				ppm.electronic_payment_profile = payment_profile.name
@@ -376,6 +380,8 @@ class AuthorizeNet:
 			return {"error": error_message}
 
 	def charge_party_profile(self, doc, data):
+		settings = frappe.get_doc("Electronic Payment Settings", {"company": doc.company})
+		endpoint_field = "endpoint" if settings.provider == "Authorize.net" else "sending_endpoint"
 		party = get_party_details(doc)
 		if not data.get("party_profile_id"):
 			party_profile_id = frappe.get_value(party.doctype, party.name, "electronic_payment_profile")
@@ -410,7 +416,7 @@ class AuthorizeNet:
 
 		createtransactionrequest.transactionRequest = transactionrequest
 		createtransactioncontroller = createTransactionController(createtransactionrequest)
-		endpoint = frappe.get_value("Electronic Payment Settings", {"company": doc.company}, "endpoint")
+		endpoint = settings.get(endpoint_field)
 		createtransactioncontroller.setenvironment(endpoint)
 		createtransactioncontroller.execute()
 
@@ -481,6 +487,8 @@ class AuthorizeNet:
 
 	def credit_bank_account(self, doc, data):
 		merchantAuth = self.merchant_auth(doc.company)
+		settings = frappe.get_doc("Electronic Payment Settings", {"company": doc.company})
+		endpoint_field = "endpoint" if settings.provider == "Authorize.net" else "sending_endpoint"
 		party = get_party_details(doc)
 
 		if not data.get("party_profile_id"):
@@ -516,7 +524,7 @@ class AuthorizeNet:
 		createtransactionrequest.transactionRequest = transactionrequest
 
 		createtransactioncontroller = createTransactionController(createtransactionrequest)
-		endpoint = frappe.get_value("Electronic Payment Settings", {"company": doc.company}, "endpoint")
+		endpoint = settings.get(endpoint_field)
 		createtransactioncontroller.setenvironment(endpoint)
 		createtransactioncontroller.execute()
 
@@ -566,6 +574,8 @@ class AuthorizeNet:
 		  - Bank account refunds need routing number, account number, and account holder's name
 		"""
 		merchantAuth = self.merchant_auth(doc.company)
+		settings = frappe.get_doc("Electronic Payment Settings", {"company": doc.company})
+		endpoint_field = "endpoint" if settings.provider == "Authorize.net" else "sending_endpoint"
 		orig_transaction_id = doc.electronic_payment_reference
 		amount = data.get("amount")
 
@@ -618,7 +628,7 @@ class AuthorizeNet:
 
 		createtransactionrequest.transactionRequest = transactionrequest
 		createtransactioncontroller = createTransactionController(createtransactionrequest)
-		endpoint = frappe.get_value("Electronic Payment Settings", {"company": doc.company}, "endpoint")
+		endpoint = settings.get(endpoint_field)
 		createtransactioncontroller.setenvironment(endpoint)
 		createtransactioncontroller.execute()
 
@@ -653,6 +663,8 @@ class AuthorizeNet:
 
 	def void_transaction(self, doc, data):
 		merchantAuth = self.merchant_auth(doc.company)
+		settings = frappe.get_doc("Electronic Payment Settings", {"company": doc.company})
+		endpoint_field = "endpoint" if settings.provider == "Authorize.net" else "sending_endpoint"
 		orig_transaction_id = doc.electronic_payment_reference
 
 		transactionrequest = apicontractsv1.transactionRequestType()
@@ -664,7 +676,7 @@ class AuthorizeNet:
 
 		createtransactionrequest.transactionRequest = transactionrequest
 		createtransactioncontroller = createTransactionController(createtransactionrequest)
-		endpoint = frappe.get_value("Electronic Payment Settings", {"company": doc.company}, "endpoint")
+		endpoint = settings.get(endpoint_field)
 		createtransactioncontroller.setenvironment(endpoint)
 		createtransactioncontroller.execute()
 
@@ -774,7 +786,8 @@ class AuthorizeNet:
 		)
 		pmm_name = frappe.get_value("Portal Payment Method", {"electronic_payment_profile": epp_name})
 
-		frappe.delete_doc("Portal Payment Method", pmm_name, ignore_permissions=True)
+		if pmm_name:
+			frappe.delete_doc("Portal Payment Method", pmm_name, ignore_permissions=True)
 		frappe.delete_doc("Electronic Payment Profile", epp_name, ignore_permissions=True)
 
 		# Delete from API
