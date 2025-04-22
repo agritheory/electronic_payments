@@ -405,6 +405,18 @@ def create_suppliers(settings):
 		user.append("roles", {"role": "Supplier"})
 		user.save()
 
+		contact = frappe.new_doc("Contact")
+		contact.first_name = user.first_name
+		contact.last_name = user.last_name
+		contact.user = user.name
+		contact.address = addr.name
+		contact.append("email_ids", {"email_id": user.name, "is_primary": 1})
+		contact.append("links", {"link_doctype": "Supplier", "link_name": biz.name})
+		contact.save()
+
+		biz.append("portal_users", {"user": user.name})
+		biz.save()
+
 	addr = frappe.new_doc("Address")
 	addr.address_type = "Billing"
 	addr.address_title = "HIJ Telecom - Burlingame"
