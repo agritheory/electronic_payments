@@ -97,7 +97,7 @@ class ElectronicPaymentSettings(Document):
 		or "supplier".
 		:return: class instance for relevant provider.
 		"""
-		if hasattr(doc, "supplier") and self.enable_sending:
+		if hasattr(doc, "supplier") and doc.get("supplier") and self.enable_sending:
 			provider_field = "sending_provider"
 		else:  # accepting payment workflow
 			provider_field = "provider"
