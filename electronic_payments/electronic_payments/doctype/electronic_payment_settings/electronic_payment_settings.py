@@ -26,8 +26,9 @@ from electronic_payments.electronic_payments.doctype.electronic_payment_settings
 
 class ElectronicPaymentSettings(Document):
 	def validate(self):
-		# self.create_electronic_payment_mop()
+		self.create_electronic_payment_mop()
 		self.copy_api_config_if_same_providers()
+		self.validate_wise_merchant_id()
 
 	def create_electronic_payment_mop(self):
 		if self.provider:
@@ -70,6 +71,20 @@ class ElectronicPaymentSettings(Document):
 					self.doctype, self.name, "transaction_key", raise_exception=False
 				)
 				self.sending_transaction_key = t_key
+
+	def validate_wise_merchant_id(self):
+		if self.enable_sending and self.sending_provider == "Wise" and not self.sending_ref_id:
+			client = Wise()
+			profiles_resp = client.get_profiles(self.company)
+			if profiles_resp.get("message") == "Success":
+				if not profiles_resp["profiles"]:
+					message = "Please fill in the Merchant ID field for Wise. There were no profiles found associated with this Wise account, you can create them in the Wise platform."
+				else:
+					m1 = "</li><li>".join(profiles_resp["profiles"])
+					message = f"Please fill in the Merchant ID field for Wise. The following profiles were found for this account:<br><ul><li>{m1}</li></ul>"
+			else:
+				message = f"Please fill in the Merchant ID field for Wise. {profiles_resp['error']}"
+			frappe.throw(msg=message, title="Missing Required Field")
 
 	def client(self, doc):
 		"""

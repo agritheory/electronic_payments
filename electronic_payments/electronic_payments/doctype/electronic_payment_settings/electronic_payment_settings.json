@@ -210,6 +210,7 @@
 			"options": "\nAuthorize.net\nWise"
 		},
 		{
+			"description": "For Wise, enter the Profile ID for the Company making transfers.",
 			"fieldname": "sending_ref_id",
 			"fieldtype": "Data",
 			"label": "Sending Merchant ID"
@@ -248,7 +249,7 @@
 		}
 	],
 	"links": [],
-	"modified": "2025-04-16 20:17:13.576642",
+	"modified": "2025-04-21 13:32:56.695946",
 	"modified_by": "Administrator",
 	"module": "Electronic Payments",
 	"name": "Electronic Payment Settings",

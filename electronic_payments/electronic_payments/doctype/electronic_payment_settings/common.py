@@ -1,15 +1,19 @@
+# Copyright (c) 2025, AgriTheory and contributors
+# For license information, please see license.txt
+
+import datetime
+
 import frappe
-from frappe.utils.data import cstr, today, flt, getdate, get_datetime
-from frappe.utils.background_jobs import (
-	get_queue,
-	execute_job,
-	create_job_id,
-	RQ_JOB_FAILURE_TTL,
-	RQ_RESULTS_TTL,
-)
 from erpnext.accounts.party import get_party_account
 from erpnext.selling.doctype.customer.customer import get_credit_limit
-import datetime
+from frappe.utils.background_jobs import (
+	RQ_JOB_FAILURE_TTL,
+	RQ_RESULTS_TTL,
+	create_job_id,
+	execute_job,
+	get_queue,
+)
+from frappe.utils.data import cstr, flt, get_datetime, getdate, today
 
 
 def exceeds_credit_limit(doc, data):
@@ -435,11 +439,11 @@ def queue_method_as_admin(method, **kwargs):
 
 
 def get_party_details(doc):
-	if hasattr(doc, "customer"):
+	if "Sales" in doc.doctype and hasattr(doc, "customer"):
 		return frappe._dict(
 			{"doctype": "Customer", "name": doc.customer, "description": doc.customer_name}
 		)
-	elif hasattr(doc, "supplier"):
+	elif "Purchase" in doc.doctype and hasattr(doc, "supplier"):
 		return frappe._dict(
 			{"doctype": "Supplier", "name": doc.supplier, "description": doc.supplier_name}
 		)
