@@ -1,3 +1,6 @@
+// Copyright (c) 2025, AgriTheory and contributors
+// For license information, please see license.txt
+
 frappe.provide('electronic_payments')
 
 electronic_payments.electronic_payments = frm => {
@@ -29,6 +32,11 @@ electronic_payments.electronic_payments = frm => {
 					fieldtype: 'Select',
 					options: ['Charge now', 'Save payment data for only this transaction', 'Retain payment data for this party'],
 				},
+				{ fieldname: 'address_firstline', label: 'Address', fieldtype: 'Data', hidden: 1 },
+				{ fieldname: 'city', label: 'City', fieldtype: 'Data', hidden: 1 },
+				{ fieldname: 'state', label: 'State', fieldtype: 'Data', hidden: 1 },
+				{ fieldname: 'postcode', label: 'Post/Zip Code', fieldtype: 'Data', hidden: 1 },
+				{ fieldname: 'country', label: '2-Digit Country Code', fieldtype: 'Data', default: 'US', hidden: 1, length: 2 },
 				{ fieldname: 'col_1', fieldtype: 'Column Break' },
 				{
 					fieldname: 'card_number',
@@ -91,6 +99,11 @@ electronic_payments.electronic_payments = frm => {
 					d.fields_dict.check_number.df.hidden = 0
 					d.fields_dict.account_number.df.read_only = 0
 					d.fields_dict.account_number.set_value('')
+					d.fields_dict.address_firstline.df.hidden = 0
+					d.fields_dict.city.df.hidden = 0
+					d.fields_dict.state.df.hidden = 0
+					d.fields_dict.postcode.df.hidden = 0
+					d.fields_dict.country.df.hidden = 0
 				} else if (d.fields_dict.mode_of_payment.value.slice(0, 5) == 'Saved') {
 					let ref_last4 = d.fields_dict.mode_of_payment.value.slice(d.fields_dict.mode_of_payment.value.length - 4)
 					let selected = mop_options[1].filter(item => item.reference.slice(item.reference.length - 4) == ref_last4)
@@ -114,6 +127,11 @@ electronic_payments.electronic_payments = frm => {
 						d.fields_dict.card_cvc.df.hidden = 1
 						d.fields_dict.cardholder_name.df.hidden = 1
 						d.fields_dict.card_expiration_date.df.hidden = 1
+						d.fields_dict.address_firstline.df.hidden = 1
+						d.fields_dict.city.df.hidden = 1
+						d.fields_dict.state.df.hidden = 1
+						d.fields_dict.postcode.df.hidden = 1
+						d.fields_dict.country.df.hidden = 1
 					} else {
 						d.fields_dict.card_number.df.hidden = 0
 						d.fields_dict.account_number.df.hidden = 1
@@ -128,6 +146,11 @@ electronic_payments.electronic_payments = frm => {
 						d.fields_dict.card_cvc.df.hidden = 1
 						d.fields_dict.cardholder_name.df.hidden = 1
 						d.fields_dict.card_expiration_date.df.hidden = 1
+						d.fields_dict.address_firstline.df.hidden = 1
+						d.fields_dict.city.df.hidden = 1
+						d.fields_dict.state.df.hidden = 1
+						d.fields_dict.postcode.df.hidden = 1
+						d.fields_dict.country.df.hidden = 1
 					}
 				}
 				d.refresh()
