@@ -65,16 +65,55 @@
                             <input id="ppm_account_holders_name" type="text" class="form-control" name="account_holders_name">
                         </div>
                     </div>
+
                     <div class="form-group row">
+                        <div class="col-sm-6">
+                            <label for="address_firstline" class="control-label text-muted small">{{ _("Address") }}</label>
+                            <input id="ppm_address_firstline" type="text" class="form-control" name="address_firstline">
+                        </div>
                         <div class="col-sm-6">
                             <label for="routing_number" class="control-label text-muted small">{{ _("Routing Number") }}</label>
                             <input id="ppm_routing_number" type="text" class="form-control" name="routing_number">
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-6">
+                            <label for="city" class="control-label text-muted small">{{ _("City") }}</label>
+                            <input id="ppm_city" type="text" class="form-control" name="city">
                         </div>
                         <div class="col-sm-6">
                             <label for="account_number" class="control-label text-muted small">{{ _("Checking Account Number") }}</label>
                             <input id="ppm_account_number" type="text" class="form-control" name="account_number">
                         </div>
                     </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-6">
+                            <label for="state" class="control-label text-muted small">{{ _("State") }}</label>
+                            <input id="ppm_state" type="text" class="form-control" name="state">
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="account_currency" class="control-label text-muted small">{{ _("Account Currency (3 Digit ISO Code)") }}</label>
+                            <input id="ppm_account_currency" type="text" class="form-control" name="account_currency">
+                        </div>
+
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-6">
+                            <label for="postcode" class="control-label text-muted small">{{ _("Post/Zip Code") }}</label>
+                            <input id="ppm_postcode" type="text" class="form-control" name="postcode">
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-6">
+                            <label for="country" class="control-label text-muted small">{{ _("Country (2 Digit ISO Code)") }}</label>
+                            <input id="ppm_country" type="text" class="form-control" name="country">
+                        </div>
+                    </div>
+
                 </div>
 				<button type="button" class="btn btn-primary px-4 float-right" id="submit-button">{{ _("Save") }}</button>
             </form>
