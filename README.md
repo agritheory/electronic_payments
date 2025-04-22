@@ -74,6 +74,7 @@ Electronic Payments comes packaged with a script to optionally install a [demo C
 **Wise**
 - [Create a Wise sandbox account](https://sandbox.transferwise.tech/home) - it's recommended to use an example email and phone number. If you opt to skip the full onboarding process, it will automatically populate the account with money
 - Generate an API key from Account -> Integration and Tools -> API Tokens page
+- Wise API calls require the sending account's profile ID. You need an API call to find the sandbox's business's profile ID. The first time finding it can be done by leaving the Sending Provider info blank in Settings, then manually entering your Wise credentials. Leave the Merchant ID field blank and click "Save" - the validate function will show the profile ID options associated with your sandbox credentials. Copy the business one into the Merchant ID field and save in your environment variables.
 
 2. Save your preferred provider's test API keys as shell environment variables. If you're testing multiple providers, you can have keys saved for each of them. The next step explains how to specify which provider(s) to use in an automatically-generated Electronic Payments Settings doc.
 ```shell
@@ -85,7 +86,8 @@ export AUTHORIZE_TRANSACTION_KEY='your_sandbox_transaction_key'
 export STRIPE_API_KEY='sk_test_...'
 
 # Wise
-export WISE_API_KEY="your_sandbox_api_key'
+export WISE_API_KEY='your_sandbox_api_key'
+export WISE_ACCOUNT_ID='your_sandbox_business_account_profile_id'
 ```
 
 3. Run the script to install the demo data. If you have API keys set as environment variables, the script will look for them to automatically create an Electronic Payments Settings document (necessary to test payment functionality). It will first check for any present, if it finds multiple keys, then it will create using alphabetical ordering and the following logic:

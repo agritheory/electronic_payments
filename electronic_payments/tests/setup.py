@@ -928,6 +928,7 @@ def create_electronic_payment_settings(settings):
 			"provider": "Wise",
 			"endpoint": "https://api.sandbox.transferwise.tech",
 			"api_key": os.environ.get("WISE_API_KEY"),
+			"merchant_id": os.environ.get("WISE_ACCOUNT_ID"),
 		},
 	}
 	pa_code = settings.get("provider")
@@ -948,6 +949,7 @@ def create_electronic_payment_settings(settings):
 	eps.company = settings.company
 	eps.create_ppm = 1
 	eps.provider = provider_mapping[pa_code]["provider"]
+	eps.ref_id = provider_mapping[pa_code].get("merchant_id")
 	eps.endpoint = provider_mapping[pa_code].get("endpoint")
 	eps.api_key = provider_mapping[pa_code]["api_key"]
 	eps.transaction_key = provider_mapping[pa_code].get("transaction_key")
@@ -960,6 +962,11 @@ def create_electronic_payment_settings(settings):
 
 	if not ps_code:
 		eps.enable_sending = 0
+	elif ps_code == "w" and not os.environ.get("WISE_ACCOUNT_ID"):
+		eps.enable_sending = 0
+		print(
+			"No Wise account ID found - this is required to create a Settings document. Settings will not enable sending payments - enter your API credentials manually, click save, then collect the ID from the displayed options."
+		)
 	elif ps_code and not provider_mapping[ps_code]["check"]:
 		eps.enable_sending = 0
 		print(
@@ -968,6 +975,7 @@ def create_electronic_payment_settings(settings):
 	else:
 		eps.enable_sending = 1
 		eps.sending_provider = provider_mapping[ps_code]["provider"]
+		eps.sending_ref_id = provider_mapping[ps_code].get("merchant_id")
 		eps.sending_endpoint = provider_mapping[ps_code].get("endpoint")
 		eps.sending_api_key = provider_mapping[ps_code]["api_key"]
 		eps.sending_transaction_key = provider_mapping[ps_code].get("transaction_key")
