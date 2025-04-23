@@ -27,21 +27,30 @@ def new_portal_payment_method(payment_method):
 	data = frappe._dict(json.loads(payment_method))
 
 	settings = get_electronic_payment_settings()
+	provider_field = "provider" if party_data["party_type"] == "Customer" else "sending_provider"
+	provider = settings.get(provider_field)
 
 	if not settings:
 		return {"error_message": _("You cannot add a new Payment Method.")}
 
-	doc = frappe._dict({"company": settings.company, party_data["party_type"].lower(): data.party})
+	doc = frappe._dict(
+		{
+			"company": settings.company,
+			party_data["party_type"].lower(): data.party,
+			"currency": data.get("account_currency", "USD").upper(),
+		}
+	)
 	client = settings.client(doc)
 	data.mode_of_payment = data.payment_type
 	data.save_data = "Retain payment data for this party"
 
 	try:
-		response = client.create_party_profile(doc)
-		if response.get("error"):
-			return {"error_message": response["error"]}
+		if provider != "Wise":
+			response = client.create_party_profile(doc)
+			if response.get("error"):
+				return {"error_message": response["error"]}
 
-		data["party_profile_id"] = response.get("transaction_id")
+			data["party_profile_id"] = response.get("transaction_id")
 		response = client.create_party_payment_profile(doc, data)
 
 		if response.get("error"):

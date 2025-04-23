@@ -35,7 +35,7 @@ def get_context(context):
 		doc = frappe._dict({party_data["party_type"].lower(): party})
 		client = settings.client(doc)
 		response = client.get_customer_payment_profile(settings.company, electronic_payment_profile.name)
-		if response["message"] == "Success":
+		if response.get("message") and response["message"] == "Success":
 			portal_payment_method.update(response["data"])
 
 		context.portal_payment_method = portal_payment_method
