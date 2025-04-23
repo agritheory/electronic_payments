@@ -439,11 +439,11 @@ def queue_method_as_admin(method, **kwargs):
 
 
 def get_party_details(doc):
-	if "Sales" in doc.doctype and hasattr(doc, "customer"):
+	if hasattr(doc, "customer") and doc.get("customer"):
 		return frappe._dict(
 			{"doctype": "Customer", "name": doc.customer, "description": doc.customer_name}
 		)
-	elif "Purchase" in doc.doctype and hasattr(doc, "supplier"):
+	elif hasattr(doc, "supplier") and doc.get("supplier"):
 		return frappe._dict(
 			{"doctype": "Supplier", "name": doc.supplier, "description": doc.supplier_name}
 		)
