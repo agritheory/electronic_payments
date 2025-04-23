@@ -23,6 +23,7 @@
 		"use_clearing_account",
 		"accepting_clearing_account",
 		"mode_of_payment",
+		"sending_payments_tab",
 		"section_break_avdt",
 		"enable_sending",
 		"sending_config_section",
@@ -210,7 +211,7 @@
 			"options": "\nAuthorize.net\nWise"
 		},
 		{
-			"description": "For Wise, enter the Profile ID for the Company making transfers.",
+			"description": "Required for Wise, enter the Wise Profile ID for the Company making transfers. If not known, enter API credentials and click Save to display the account options.",
 			"fieldname": "sending_ref_id",
 			"fieldtype": "Data",
 			"label": "Sending Merchant ID"
@@ -246,10 +247,15 @@
 		{
 			"fieldname": "section_break_avdt",
 			"fieldtype": "Section Break"
+		},
+		{
+			"fieldname": "sending_payments_tab",
+			"fieldtype": "Tab Break",
+			"label": "Sending Payments"
 		}
 	],
 	"links": [],
-	"modified": "2025-04-21 13:32:56.695946",
+	"modified": "2025-04-23 17:19:30.183459",
 	"modified_by": "Administrator",
 	"module": "Electronic Payments",
 	"name": "Electronic Payment Settings",
