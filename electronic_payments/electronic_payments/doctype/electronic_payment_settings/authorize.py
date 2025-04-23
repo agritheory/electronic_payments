@@ -714,19 +714,19 @@ class AuthorizeNet:
 		"""
 		# Structure of payment information from request
 		"payment": {
-		        "creditCard": {
-		                "cardNumber": "XXXX1111",
-		                "expirationDate": "XXXX",
-		                "cardType": "Visa"
-		        }
+		    "creditCard": {
+		        "cardNumber": "XXXX1111",
+		        "expirationDate": "XXXX",
+		        "cardType": "Visa"
+		    }
 		}
 		"payment": {
-		        "bankAccount": {
-		                "accountType": "checking",
-		                "routingNumber": "121042882",
-		                "accountNumber": "123456789",
-		                "nameOnAccount": "John Doe"
-		        }
+		    "bankAccount": {
+		        "accountType": "checking",
+		        "routingNumber": "121042882",
+		        "accountNumber": "123456789",
+		        "nameOnAccount": "John Doe"
+		    }
 		}
 		"""
 		merchantAuth = self.merchant_auth(company)
