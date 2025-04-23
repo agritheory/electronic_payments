@@ -30,7 +30,9 @@
                     <th style="width: 120px">{{ _("Reference") }}</th>
                     <th style="width: 50px">{{ _("Default") }}</th>
                     <th style="width: 50px">{{ _("Service Charge") }}</th>
+                    {% if provider != "Wise" %}
                     <th style="width: 50px"></th>
+                    {% endif %}
                     <th style="width: 50px"></th>
                 </tr>
             </thead>
@@ -41,6 +43,7 @@
                     <td>{{ ppm.electronic_payment_profile_object.reference }}</td>
                     <td>{% if ppm.default %}{{ _("Yes") }}{% else %}{{ _("No") }}{% endif %}</td>
                     <td>{% if ppm.service_charge %}{{ _("Yes") }}{% else %}{{ _("No") }}{% endif %}</td>
+                    {% if provider != "Wise" %}
                     <td>
                         <a href="/payment_methods/payment_method?name={{ ppm.name }}" class="card-link">
                             <svg class="icon icon-sm">
@@ -49,6 +52,7 @@
                             {{ _("Edit") }}
                         </a>
                     </td>
+                    {% endif %}
                     <td>
                         <a href="javascript:;" class="card-link remove-ppm" data-name="{{ ppm.name }}" data-mop="{{ ppm.mode_of_payment}}" data-label="{{ ppm.label }}">
                             <svg class="icon icon-sm">

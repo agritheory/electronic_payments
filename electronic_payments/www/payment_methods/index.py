@@ -12,6 +12,7 @@ no_cache = 1
 def get_context(context):
 	context.add_breadcrumbs = 1
 	context.portal_payment_methods = get_portal_payment_methods()
+	context.provider = get_provider()
 
 
 def get_portal_payment_methods():
@@ -92,3 +93,14 @@ def get_party():
 		frappe.throw(_("Not permitted"), frappe.PermissionError)
 
 	return {"party": party, "party_type": party_type}
+
+
+def get_provider():
+	settings = get_electronic_payment_settings()
+	party_data = get_party()
+	provider_field = (
+		"sending_provider"
+		if party_data["party_type"] == "Supplier" and settings.enable_sending
+		else "provider"
+	)
+	return settings.get(provider_field)

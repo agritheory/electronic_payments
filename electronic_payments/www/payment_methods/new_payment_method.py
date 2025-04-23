@@ -9,6 +9,7 @@ from frappe import _
 from electronic_payments.www.payment_methods.index import (
 	get_electronic_payment_settings,
 	get_party,
+	get_provider,
 )
 
 no_cache = 1
@@ -27,8 +28,7 @@ def new_portal_payment_method(payment_method):
 	data = frappe._dict(json.loads(payment_method))
 
 	settings = get_electronic_payment_settings()
-	provider_field = "provider" if party_data["party_type"] == "Customer" else "sending_provider"
-	provider = settings.get(provider_field)
+	provider = get_provider()
 
 	if not settings:
 		return {"error_message": _("You cannot add a new Payment Method.")}
