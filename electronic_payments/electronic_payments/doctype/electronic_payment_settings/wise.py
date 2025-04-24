@@ -79,6 +79,7 @@ class Wise:
 		"""
 		Currently unsupported - replace with code to generate a Wise payment request link
 		"""
+		return {"error": _("Not supported")}
 
 	def get_profiles(self, company):
 		try:
