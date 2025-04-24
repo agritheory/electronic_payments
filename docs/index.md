@@ -1,6 +1,11 @@
+<!-- Copyright (c) 2025, AgriTheory and contributors
+For license information, please see license.txt-->
+
 # Electronic Payments Documentation
 
-The Electronic Payments application extends ERPNext[^1] with the capability to send and receive electronic payments via several vendors directly in the system. The current supported vendors (also called providers) are [Authorize.net](www.authorize.net) and, with some limitations (detailed in the Provider Limitations section), [Stripe](stripe.com). The current providers each have their own terms and conditions they require to use their services, including authorization requirements for certain payment methods. Before installing and using the Electronic Payments app, it is your responsibility to comply with your provider's terms, conditions, and requirements for using their services.
+The Electronic Payments application extends ERPNext[^1] with the capability to send and receive electronic payments via several vendors directly in the system. The current supported vendors (also called providers) are [Authorize.net](www.authorize.net) (accepting and sending payments), [Stripe](stripe.com) (accepting payments, with some limitations detailed in the Provider Limitations section), and [Wise](wise.com) (sending payments). You can configure the app to use different providers to accept vs send payments.
+
+The current providers each have their own terms and conditions they require to use their services, including authorization requirements for certain payment methods. Before installing and using the Electronic Payments app, it is your responsibility to comply with your provider's terms, conditions, and requirements for using their services.
 
 ## Installation, Configuration, Settings, and Permissions
 
@@ -15,7 +20,9 @@ There are a few prerequisite steps to get the Electronic Payments application up
 
 Once the app is installed and configured, you can begin utilizing its features.
 
-Electronic Payments is set up to allow portal users to log in and add credit card and ACH payment methods associated with their account. Credit card payment methods are available to add for customers (not suppliers) using either Authorize.net or Stripe. ACH payment methods are only available with Authorize.net, must be a checking account, and may be added for suppliers (the account they'll receive a payment into) or customers. The payment amount currency for a transaction will use the ERPNext instance's global default, however, [Authorize.net's eCheck user guide documentation](https://www.authorize.net/content/dam/documents/en/echeck-user-guide.pdf) specifies that eCheck services process transactions only in US dollars. It's your responsibility to ensure the Electronic Payments application only processes appropriate transactions.
+Electronic Payments is set up to allow portal users to log in and add credit card and ACH payment methods associated with their account. Credit card payment methods are available to add for customers (not suppliers) using either Authorize.net or Stripe. ACH payment methods are available with Authorize.net and Wise, must be a checking account, and may be added for suppliers (the account they'll receive a payment into) or customers.
+
+The payment amount currency for a transaction will use the ERPNext instance's global default, however, [Authorize.net's eCheck user guide documentation](https://www.authorize.net/content/dam/documents/en/echeck-user-guide.pdf) specifies that eCheck services process transactions only in US dollars. It's your responsibility to ensure the Electronic Payments application only processes appropriate transactions. Wise has the capability to make transfers in a variety of currencies, however the application currently only supports transfers to US accounts.
 
 Note that the payment method details are never saved on your system at any point. The app immediately passes the data to the provider API and, if the API successfully creates a payment method, it only saves the provider's token and last few account or card digits to identify that payment method.
 
@@ -25,7 +32,7 @@ Note that the payment method details are never saved on your system at any point
 
 ![Screen shot of the dialog box to add payment method details - the shown fields will differ between a credit card and ACH account.](./assets/ep_adding_payment_method_dialog.png)
 
-The portal also allows the customer or supplier to remove or edit a saved payment method. When making changes to an existing method, they must re-enter all information, since it's not stored in ERPNext and providers don't allow requests to retrieve payment method details.
+The portal also allows the customer or supplier to remove and in some cases edit a saved payment method. When making changes to an existing method, they must re-enter all information, since it's not stored in ERPNext and providers don't allow requests to retrieve payment method details. Wise does not support editing account information once it's in their system - the supplier will need to remove and re-add their account information if they need to make changes.
 
 ![Screen shot showing the same Manage Payment Methods page but the table now shows a credit card available for use. There are now Edit and Remove options.](./assets/ep_edit_remove_in_table.png)
 
@@ -33,7 +40,7 @@ There's an important consideration regarding the Electronic Payment Settings and
 
 In the desk view, stored payment methods are visible on the Electronic Payments tab in that party's page.
 
-![Screen shot showing a new tab on a Customer page for Electronic Payments. There's a table with one payment saved, which has a mode of payment of Credit Card, a label of Card-9711, the Default box checked, and the Subject to Credit Limit and Service Charge boxes unchecked.](./assets/ep_customer_portal_pmt_methods.png)
+![Screen shot showing a new tab on a Customer page for Electronic Payments. There's a table with one payment saved, which has a mode of payment of Credit Card, a label of Card-0027, the Default box checked, and the Subject to Credit Limit and Service Charge boxes unchecked.](./assets/ep_customer_portal_pmt_methods.png)
 
 Some payment method details may be edited from this view - if the party is subject to a credit limit, or if there are service charges that should be added when the party uses that payment method, those are configurable in the table.
 
@@ -43,17 +50,17 @@ When the customer is logged into the portal and has one or more payment methods 
 
 If the provider accepts the payment and returns a success message, the app creates a Journal Entry or Payment Entry (depending how the Electronic Payment Settings are configured) and updates the payment schedule.
 
-![Screen shot of the portal view of an invoice showing two payment terms, one is already paid and the other has a button to make a payment for that term's amount.](./assets/ep_portal_payment_terms.png)
+![Screen shot of the portal view of an invoice showing rows with two payment terms, where the user may select which one to pay - there is a button to make a payment for that term's amount. If a payment term is already settled, it will show as "Paid" and not have the "Pay" button.](./assets/ep_portal_payment_terms.png)
 
-The app also allows a desk user to make an advance payment on a Sales Order or a payment on a Sales Invoice on a customer's behalf. If sending payments is enabled in Electronic Payment Settings, and a supplier has authorized the use of a checking account to receive ACH payments, the desk user may also make a payment against a Purchase Order or Purchase Invoice. The document's page will show an Electronic Payment button which launches a dialog box to put the payment through.
+The app also allows a desk user to make an advance payment on a Sales Order or a payment on a Sales Invoice on a customer's behalf. If sending payments is enabled in Electronic Payment Settings, and a supplier has authorized the use of a checking account to receive ACH payments, the desk user may also make an advance payment against a Purchase Order or a payment against a Purchase Invoice. The document's page will show an Electronic Payment button which launches a dialog box to put the payment through.
 
 ![Screen shot showing the Electronic Payment button at the top of a Sales Invoice page in the desk view.](./assets/ep_desk_ep_button.png)
 
-![Screen shot showing the dialog box to make a payment using a saved payment method. The Mode of Payment is Saved Payment Method: Card 0002 and the Card Number is **** **** **** 0002.](./assets/ep_desk_dialog.png)
+![Screen shot showing the dialog box to make a payment using a saved payment method. The Mode of Payment is Saved Payment Method: Card 0027 and the Card Number is **** **** **** 0027.](./assets/ep_desk_dialog.png)
 
 ## Provider Limitations
 
-There are some limitations with using Stripe as a provider. First, only credit card payment methods (not ACH ones) are configurable. Stripe uses its own mandate workflow (to verify that the customer allows making a charge to their bank account) that is currently not supported by the app. Second, given that sending payments to suppliers is only possible via an ACH payment method, that feature isn't available for Stripe.
+There are some limitations with using Stripe as a provider. First, only credit card payment methods (not ACH ones) are configurable. Stripe uses its own mandate workflow (to verify that the customer allows making a charge to their bank account) that is currently not supported by the app. Second, given that sending payments to suppliers is only possible via an ACH payment method, Stripe does not show as a provider option for sending payments.
 
 ## Sending Payments in Test Mode with Authorize.net
 
@@ -61,6 +68,6 @@ The Authorize.net sandbox is useful tool to test the functionality and feature s
 
 ## Code Contributions and Adding a Provider
 
-The Electronic Payments app maintainers welcome contributions to expand provider options beyond Stripe and Authorize.net. To be considered, a provider should have a comparable feature set to those of Authorize.net, including receiving credit card payments and sending and receiving ACH payments. Feature requests and pull requests can be made on the [app's GitHub repository](https://github.com/agritheory/electronic_payments).
+The Electronic Payments app maintainers welcome contributions to expand provider options beyond Authorize.net, Stripe, and Wise. To be considered, a provider should have a comparable feature set to those of Authorize.net, including receiving credit card payments and sending and receiving ACH payments. Feature requests and pull requests can be made on the [app's GitHub repository](https://github.com/agritheory/electronic_payments).
 
 [^1]: [ERPNext](https://erpnext.com/) is an open-sourced Enterprise Resource Planning (ERP) software that provides a wide range of business management functionality. Its core features include support for accounting, inventory, manufacturing, customer relationship management (CRM), distribution, and retail.
