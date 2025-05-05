@@ -101,13 +101,16 @@ def create_payment_entry(doc, data, transaction_id):
 	fee_account = (
 		settings.sending_fee_account if "Purchase" in doc.doctype else settings.accepting_fee_account
 	)
-	fees = data.get("additional_charges") or 0
+	fees = data.get("additional_charges", 0)
 	payment_amount = get_payment_amount(doc, data)
 	discount_amount = get_discount_amount(doc, data)
 	payment_term = (
 		frappe.get_value("Payment Schedule", data.payment_term, "payment_term")
 		if data.get("payment_term")
 		else ""
+	)
+	settings_mop = (
+		settings.mode_of_payment if party_type == "Customer" else settings.sending_mode_of_payment
 	)
 
 	pe = frappe.new_doc("Payment Entry")
@@ -116,7 +119,7 @@ def create_payment_entry(doc, data, transaction_id):
 		if data.get("ppm_name")
 		else None
 	)
-	pe.mode_of_payment = ppm_mop or settings.mode_of_payment
+	pe.mode_of_payment = ppm_mop or settings_mop
 	pe.payment_type = payment_type
 	pe.posting_date = today()
 	pe.party_type = party_type
@@ -229,6 +232,9 @@ def create_journal_entry(doc, data, transaction_id):
 	contra_account_key = "credit" if account_key == "debit" else "debit"
 	contra_account_currency_key = contra_account_key + "_in_account_currency"
 	is_advance = doc.doctype in ["Sales Order", "Purchase Order"]
+	settings_mop = (
+		settings.mode_of_payment if party_type == "Customer" else settings.sending_mode_of_payment
+	)
 
 	fee_account = (
 		settings.sending_fee_account if "Purchase" in doc.doctype else settings.accepting_fee_account
@@ -244,7 +250,7 @@ def create_journal_entry(doc, data, transaction_id):
 		if data.get("ppm_name")
 		else None
 	)
-	je.mode_of_payment = ppm_mop or settings.mode_of_payment
+	je.mode_of_payment = ppm_mop or settings_mop
 
 	je.append(
 		"accounts",
@@ -258,7 +264,7 @@ def create_journal_entry(doc, data, transaction_id):
 			"reference_name": doc.name,
 			"electronic_payments_payment_term": data.get("payment_term") or "",
 			"is_advance": "Yes" if is_advance else "No",
-			"user_remarks": str(transaction_id),
+			"user_remark": str(transaction_id),
 			# need a general purpose function to move all accounting dimensions
 			"cost_center": doc.cost_center,
 			"project": doc.project,
@@ -272,7 +278,7 @@ def create_journal_entry(doc, data, transaction_id):
 			"party": party,
 			contra_account_key: payment_amount - discount_amount + fees,
 			contra_account_currency_key: payment_amount - discount_amount + fees,
-			"user_remarks": str(transaction_id),
+			"user_remark": str(transaction_id),
 			# need a general purpose function to move all accounting dimensions
 			"cost_center": doc.cost_center,
 			"project": doc.project,
@@ -285,7 +291,7 @@ def create_journal_entry(doc, data, transaction_id):
 				"account": fee_account,
 				account_key: fees,
 				account_currency_key: fees,
-				"user_remarks": str(transaction_id),
+				"user_remark": str(transaction_id),
 				"cost_center": doc.cost_center,
 				"project": doc.project,
 			},

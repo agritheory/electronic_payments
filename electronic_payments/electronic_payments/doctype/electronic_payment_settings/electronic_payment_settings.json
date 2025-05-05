@@ -29,10 +29,14 @@
 		"sending_config_section",
 		"sending_provider",
 		"sending_ref_id",
+		"fund_wise_with_direct_debit",
+		"wise_linked_bank_account_id",
 		"column_break_cssi",
 		"sending_endpoint",
 		"sending_api_key",
 		"sending_transaction_key",
+		"wise_bank_account_type",
+		"wise_bank_account_currency",
 		"sending_payments_accounts_section",
 		"withdrawal_account",
 		"sending_payment_discount_account",
@@ -211,7 +215,7 @@
 			"options": "\nAuthorize.net\nWise"
 		},
 		{
-			"description": "Required for Wise, enter the Wise Profile ID for the Company making transfers. If not known, enter API credentials and click Save to display the account options.",
+			"description": "Required for Wise. Enter the Wise Profile ID for the Company making transfers. If not known, enter API credentials and click Save. The error message will display the profile options and their IDs, if any.",
 			"fieldname": "sending_ref_id",
 			"fieldtype": "Data",
 			"label": "Sending Merchant ID"
@@ -252,10 +256,43 @@
 			"fieldname": "sending_payments_tab",
 			"fieldtype": "Tab Break",
 			"label": "Sending Payments"
+		},
+		{
+			"default": "0",
+			"depends_on": "eval:doc.sending_provider === \"Wise\"",
+			"description": "Automatically fund transfers with a Direct Debit bank account linked to the company profile configured in Wise. If unchecked, transfers must be funded manually via the Wise website.",
+			"fieldname": "fund_wise_with_direct_debit",
+			"fieldtype": "Check",
+			"label": "Fund Wise Transfers with Direct Debit Account"
+		},
+		{
+			"depends_on": "fund_wise_with_direct_debit",
+			"description": "The Direct Debit bank account's Account ID in Wise. If not known, enter API credentials and click Save. The error message will display the account options and their IDs, if any.",
+			"fieldname": "wise_linked_bank_account_id",
+			"fieldtype": "Data",
+			"label": "Wise Linked Bank Account ID"
+		},
+		{
+			"default": "Checking",
+			"depends_on": "fund_wise_with_direct_debit",
+			"fieldname": "wise_bank_account_type",
+			"fieldtype": "Select",
+			"label": "Wise Bank Account Type",
+			"mandatory_depends_on": "fund_wise_with_direct_debit",
+			"options": "Checking\nSavings"
+		},
+		{
+			"default": "USD",
+			"depends_on": "fund_wise_with_direct_debit",
+			"fieldname": "wise_bank_account_currency",
+			"fieldtype": "Select",
+			"label": "Wise Bank Account Currency",
+			"mandatory_depends_on": "fund_wise_with_direct_debit",
+			"options": "USD"
 		}
 	],
 	"links": [],
-	"modified": "2025-04-23 17:19:30.183459",
+	"modified": "2025-05-02 16:34:31.701156",
 	"modified_by": "Administrator",
 	"module": "Electronic Payments",
 	"name": "Electronic Payment Settings",

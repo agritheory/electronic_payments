@@ -27,7 +27,7 @@ class Wise:
 	def get_base_url_and_header(self, company):
 		settings = frappe.get_doc("Electronic Payment Settings", {"company": company})
 		if not settings:
-			frappe.msgprint(_(f"No Electronic Payment Settings found for {company}-Wise"))
+			frappe.msgprint(_(f"No Electronic Payment Settings found for {company}"))
 		else:
 			api_key_field = "api_key" if settings.provider == "Wise" else "sending_api_key"
 			endpoint_field = "endpoint" if settings.provider == "Wise" else "sending_endpoint"
@@ -41,37 +41,54 @@ class Wise:
 	def process_transaction(self, doc, data):
 		mop = data.mode_of_payment.replace("New ", "")
 		party = get_party_details(doc)
+		settings = frappe.get_doc("Electronic Payment Settings", {"company": doc.company})
+		use_batch = settings.sending_provider == "Wise" and settings.wise_linked_bank_account_id
 
-		if mop.startswith("Saved"):
-			if data.get("subject_to_credit_limit") and exceeds_credit_limit(doc, data):
-				return {"error": "Credit Limit exceeded for selected Mode of Payment"}
-			if party.doctype == "Customer":
-				return {"error": _("Not Supported.")}
-			else:
-				quote_response = self.create_quote(doc, data)
-				if quote_response.get("message") == "Success":
-					data.update({"quote_id": quote_response["quote_id"]})
-					response = self.create_transfer_to_party_profile(doc, data)
-				else:  # error requesting quote
-					return quote_response
-		elif mop == "Card" and data.get("save_data") == "Charge now":
+		if party.doctype == "Customer" or (mop == "Card" and data.get("save_data") == "Charge now"):
 			return {"error": _("Not Supported.")}
-		else:  # charge new Card/ACH, save payment data (temporarily if txn only - payment profile deleted once charge is successful)
+
+		if (
+			mop.startswith("Saved")
+			and data.get("subject_to_credit_limit")
+			and exceeds_credit_limit(doc, data)
+		):
+			return {"error": "Credit Limit exceeded for selected Mode of Payment"}
+
+		if not mop.startswith("Saved"):
+			# new ACH, save payment data (temporarily if txn only - payment profile deleted once charge is successful)
 			pmt_profile_response = self.create_party_payment_profile(doc, data)
 			if pmt_profile_response.get("message") == "Success":
 				pp_doc = pmt_profile_response.get("payment_profile_doc")
 				data.update({"payment_profile_id": pp_doc.payment_profile_id})
-				if party.doctype == "Customer":
-					return {"error": _("Not Supported.")}
-				else:
-					quote_response = self.create_quote(doc, data)
-					if quote_response.get("message") == "Success":
-						data.update({"quote_id": quote_response["quote_id"]})
-						response = self.create_transfer_to_party_profile(doc, data)
-					else:  # error requesting quote
-						return quote_response
 			else:  # error creating the customer payment profile
 				return pmt_profile_response
+
+		quote_response = self.create_quote(doc, data)
+		if quote_response.get("message") == "Success":
+			# TODO: serialize and save payment options from quote response?
+			data.update(
+				{"quote_id": quote_response["quote_id"], "target_amount": quote_response["target_amount"]}
+			)
+			if not use_batch:
+				response = self.create_transfer_to_party_profile(doc, data)
+			else:
+				batch_response = self.create_batch_group(doc, data)
+				if batch_response.get("message") == "Success":
+					data.update({"batch_id": batch_response["transaction_id"]})
+					batch_txfr_response = self.create_batch_group_transfer(doc, data)
+					if batch_txfr_response.get("message") == "Success":
+						comp_response = self.complete_batch_group(doc, data)
+						if comp_response.get("message") == "Success":
+							data.update({"total_amount": comp_response["total_amount"]})
+							response = self.fund_batch_group_with_direct_debit(doc, data)
+						else:  # error completing the batch group
+							return comp_response
+					else:  # error creating batch group transfer
+						return batch_txfr_response
+				else:  # error creating a batch group
+					return batch_response
+		else:  # error requesting quote
+			return quote_response
 
 		return response
 
@@ -93,13 +110,12 @@ class Wise:
 			r = response.json()
 			if r:
 				profile_data = []
-				print(r)
 				for profile in r:
 					p_type = profile["type"].lower()
 					name = profile["businessName"] if p_type == "business" else profile["fullName"]
 					profile_data.append(f"{p_type.title()} Account for {name} has ID: {profile['id']}")
 
-				return {"message": "Success", "profiles": profile_data}
+				return {"message": "Success", "data": profile_data}
 
 		except HTTPError as e_http:
 			err_msg = " ".join([err.get("message") for err in response.json().get("errors", [])])
@@ -113,133 +129,6 @@ class Wise:
 			frappe.log_error(
 				message=f"{e}\n\n{frappe.get_traceback()}",
 				title="Error requesting a list of profiles associated with this Wise account.",
-			)
-			return {"error": f"{e}"}
-
-	def create_personal_profile(self, doc, data=None):
-		party = get_party_details(doc)
-		existing_party_id = frappe.get_value("User", data.get("email"), "electronic_payment_profile")
-		if existing_party_id:
-			return {"message": "Success", "transaction_id": existing_party_id}
-		try:
-			base_url, headers = self.get_base_url_and_header(doc.company)
-			phone = data.get("phone")  # must be in international phone number format ("+3725064992")
-			response = requests.post(
-				urljoin(base_url, "/v2/profiles/business-profile"),
-				headers=headers,
-				timeout=10,
-				data=json.dumps(
-					{
-						"firstName": data.get("first_name"),
-						"lastName": data.get("last_name"),
-						"preferredName": data.get("first_name"),
-						"firstNameInKana": None,
-						"lastNameInKana": None,
-						"address": {
-							"addressFirstLine": data.get("address_firstline"),
-							"city": data.get("city"),
-							"countryIso3Code": data.get("iso3code").lower(),
-							"postCode": data.get("postcode"),
-							"stateCode": data.get("state"),
-						},
-						"nationality": data.get("nationality"),
-						"dateOfBirth": data.get("dob"),
-						"externalCustomerId": party.name,
-						"contactDetails": {
-							"email": data.get("email"),
-							"phoneNumber": phone,
-						},
-						"occupations": [{"code": data.get("occupation"), "format": "FREE_FORM"}],
-					}
-				),
-			)
-			response.raise_for_status()
-			r = response.json()
-			if r.get("id"):
-				party_profile_id = str(r.get("id"))
-				frappe.db.set_value(party.doctype, party.name, "electronic_payment_profile", party_profile_id)
-				return {"message": "Success", "transaction_id": party_profile_id}
-
-		except HTTPError as e_http:
-			err_msg = " ".join([err.get("message") for err in response.json().get("errors", [])])
-			frappe.log_error(
-				message=f"{response.json()}\n\n{e_http}\n\n{frappe.get_traceback()}",
-				title=f"Error creating personal profile for {data.get('first_name')} {data.get('last_name')}",
-			)
-			return {"error": f"{err_msg}"}
-
-		except requests.exceptions.RequestException as e:
-			frappe.log_error(
-				message=f"{e}\n\n{frappe.get_traceback()}",
-				title=f"Error creating personal profile for {data.get('first_name')} {data.get('last_name')}",
-			)
-			return {"error": f"{e}"}
-
-	def create_party_profile(self, doc, data=None):
-		party = get_party_details(doc)
-		existing_party_id = frappe.get_value(party.doctype, party.name, "electronic_payment_profile")
-		if existing_party_id:
-			return {"message": "Success", "transaction_id": existing_party_id}
-		try:
-			base_url, headers = self.get_base_url_and_header(doc.company)
-			response = requests.post(
-				urljoin(base_url, "/v2/profiles/business-profile"),
-				headers=headers,
-				timeout=10,
-				data=json.dumps(
-					{
-						"businessName": party.name,
-						"businessNameInKatakana": None,
-						"businessFreeFormDescription": data.get("description"),
-						"registrationNumber": data.get("registration_no"),
-						"acn": None,  # codespell:ignore acn
-						"abn": None,
-						"arbn": None,
-						"companyType": data.get("company_type"),
-						"companyRole": data.get("company_role"),
-						"address": {
-							"addressFirstLine": data.get("address_firstline"),
-							"city": data.get("city"),
-							"countryIso2Code": data.get("iso2code", "").lower(),
-							"countryIso3Code": data.get("iso3code", "").lower(),
-							"postCode": data.get("postcode"),
-						},
-						"externalCustomerId": party.name,
-						"actorEmail": data.get("email"),
-						"firstLevelCategory": data.get("category_1"),
-						"secondLevelCategory": data.get("category_2"),
-						"operationalAddresses": [
-							{
-								"addressFirstLine": data.get("address_firstline"),
-								"city": data.get("city"),
-								"countryIso2Code": data.get("iso2code", "").lower(),
-								"countryIso3Code": data.get("iso3code", "").lower(),
-								"postCode": data.get("postcode"),
-							}
-						],
-						"webpage": data.get("webpage"),
-					}
-				),
-			)
-			response.raise_for_status()
-			r = response.json()
-			if r.get("id"):
-				party_profile_id = str(r.get("id"))
-				frappe.db.set_value(party.doctype, party.name, "electronic_payment_profile", party_profile_id)
-				return {"message": "Success", "transaction_id": party_profile_id}
-
-		except HTTPError as e_http:
-			err_msg = " ".join([err.get("message") for err in response.json().get("errors", [])])
-			frappe.log_error(
-				message=f"{response.json()}\n\n{e_http}\n\n{frappe.get_traceback()}",
-				title=f"Error creating a business profile for {party.name}",
-			)
-			return {"error": f"{err_msg}"}
-
-		except requests.exceptions.RequestException as e:
-			frappe.log_error(
-				message=f"{e}\n\n{frappe.get_traceback()}",
-				title=f"Request error creating a business profile for {party.name}",
 			)
 			return {"error": f"{e}"}
 
@@ -265,12 +154,12 @@ class Wise:
 				timeout=10,
 				data=json.dumps(
 					{
-						"sourceCurrency": frappe.get_value("Company", doc.company, "default_currency"),
+						"sourceCurrency": frappe.defaults.get_global_default("currency"),
 						"targetCurrency": doc.currency,
 						"sourceAmount": None,
 						"targetAmount": total_to_charge,
-						"payOut": "BANK_TRANSFER",  # default - if SWIFT txn, must be "BALANCE"
-						"preferredPayIn": "BANK_TRANSFER",
+						"payOut": "BANK_TRANSFER",
+						"preferredPayIn": "BANK_TRANSFER",  # TODO: give user choice? BALANCE if funding via multi-currency balance
 						"targetAccount": data.get("payment_profile_id"),
 						"pricingConfiguration": {},  # required when configured in client ID
 					}
@@ -279,7 +168,12 @@ class Wise:
 			response.raise_for_status()
 			r = response.json()
 			if r.get("id"):
-				return {"message": "Success", "quote_id": r["id"], "quotes": r.get("paymentOptions")}
+				return {
+					"message": "Success",
+					"quote_id": r["id"],
+					"target_amount": total_to_charge,
+					"quotes": r.get("paymentOptions"),
+				}
 			else:
 				return {"error": "No quote payment options found."}
 
@@ -438,6 +332,253 @@ class Wise:
 	def charge_party_profile(self, doc, data):
 		return {"error": _("Not supported")}
 
+	def create_batch_group(self, doc, data):
+		settings = frappe.get_doc("Electronic Payment Settings", {"company": doc.company})
+		merch_id_field = "ref_id" if settings.provider == "Wise" else "sending_ref_id"
+		profile_id = settings.get(merch_id_field)
+		pmt_term = f"|{data.get('payment_term')}" if data.get("payment_term") else ""
+		batch_name = f"{doc.name}{pmt_term}"
+		try:
+			base_url, headers = self.get_base_url_and_header(doc.company)
+			response = requests.post(
+				urljoin(base_url, f"/v3/profiles/{profile_id}/batch-groups"),
+				headers=headers,
+				timeout=10,
+				data=json.dumps(
+					{
+						"sourceCurrency": frappe.defaults.get_global_default("currency"),
+						"name": batch_name,
+					}
+				),
+			)
+			response.raise_for_status()
+			r = response.json()
+			if r.get("id"):
+				return {"message": "Success", "transaction_id": r["id"]}
+
+		except HTTPError as e_http:
+			err_msg = " ".join([err.get("message") for err in response.json().get("errors", [])])
+			frappe.log_error(
+				message=f"{response.json()}\n\n{e_http}\n\n{frappe.get_traceback()}",
+				title=f"Error creating a batch group to create a transfer for {doc.name}.",
+			)
+			return {"error": f"{err_msg}"}
+
+		except requests.exceptions.RequestException as e:
+			frappe.log_error(
+				message=f"{e}\n\n{frappe.get_traceback()}",
+				title=f"Request error creating a batch group to create a transfer for {doc.name}.",
+			)
+			return {"error": f"{e}"}
+
+	def create_batch_group_transfer(self, doc, data):
+		settings = frappe.get_doc("Electronic Payment Settings", {"company": doc.company})
+		merch_id_field = "ref_id" if settings.provider == "Wise" else "sending_ref_id"
+		profile_id = settings.get(merch_id_field)
+		payment_profile_id = data.get("payment_profile_id")
+		batch_id = data.get("batch_id")
+		quote_id = data.get("quote_id")
+		try:
+			base_url, headers = self.get_base_url_and_header(doc.company)
+			customer_txn_id_uuid = str(uuid.uuid4())  # TODO: save to doc if transfer fails?
+			response = requests.post(
+				urljoin(base_url, f"/v3/profiles/{profile_id}/batch-groups/{batch_id}/transfers"),
+				headers=headers,
+				timeout=10,
+				data=json.dumps(
+					{
+						"sourceAccount": "",  # TODO: (refund recipient account ID) field in settings?
+						"targetAccount": payment_profile_id,
+						"quoteUuid": quote_id,
+						"customerTransactionId": customer_txn_id_uuid,
+						"details": {
+							"reference": doc.name[-10:],
+							"transferPurpose": "verification.transfers.purpose.pay.bills",
+						},
+					}
+				),
+			)
+			response.raise_for_status()
+			r = response.json()
+			if r.get("id"):
+				return {"message": "Success", "transaction_id": r["id"]}
+
+		except HTTPError as e_http:
+			err_msg = " ".join([err.get("message") for err in response.json().get("errors", [])])
+			frappe.log_error(
+				message=f"{response.json()}\n\n{e_http}\n\n{frappe.get_traceback()}",
+				title=f"Error creating a batch group transfer for {doc.name}.",
+			)
+			return {"error": f"{err_msg}"}
+
+		except requests.exceptions.RequestException as e:
+			frappe.log_error(
+				message=f"{e}\n\n{frappe.get_traceback()}",
+				title=f"Request error creating a batch group transfer for {doc.name}.",
+			)
+			return {"error": f"{e}"}
+
+	def complete_batch_group(self, doc, data):
+		settings = frappe.get_doc("Electronic Payment Settings", {"company": doc.company})
+		merch_id_field = "ref_id" if settings.provider == "Wise" else "sending_ref_id"
+		profile_id = settings.get(merch_id_field)
+		batch_id = data.get("batch_id")
+		try:
+			base_url, headers = self.get_base_url_and_header(doc.company)
+			# Get batch version number
+			response = requests.get(urljoin(base_url, f"v3/profiles/{profile_id}/batch-groups/{batch_id}"))
+			response.raise_for_status()
+			r = response.json()
+			if r.get("version"):
+				batch_version = r["version"]
+			else:
+				return {"error": "Failed to get batch version number trying to complete batch."}
+
+			try:
+				comp_response = requests.patch(
+					urljoin(base_url, f"/v3/profiles/{profile_id}/batch-groups/{batch_id}"),
+					headers=headers,
+					timeout=10,
+					data=json.dumps(
+						{
+							"status": "COMPLETED",
+							"version": batch_version,
+						}
+					),
+				)
+				comp_response.raise_for_status()
+				cr = comp_response.json()
+				if cr.get("id"):
+					return {
+						"message": "Success",
+						"transaction_id": cr["id"],
+						"total_amount": cr["payInDetails"][0]["amount"],
+					}
+
+			except HTTPError as e_http:
+				err_msg = " ".join([err.get("message") for err in comp_response.json().get("errors", [])])
+				frappe.log_error(
+					message=f"{comp_response.json()}\n\n{e_http}\n\n{frappe.get_traceback()}",
+					title=f"Error completing batch group for transfer to {doc.name}.",
+				)
+				return {"error": f"{err_msg}"}
+
+			except requests.exceptions.RequestException as e:
+				frappe.log_error(
+					message=f"{e}\n\n{frappe.get_traceback()}",
+					title=f"Request error completing batch group for transfer to {doc.name}.",
+				)
+				return {"error": f"{e}"}
+
+		except HTTPError as e_http:
+			err_msg = " ".join([err.get("message") for err in response.json().get("errors", [])])
+			frappe.log_error(
+				message=f"{response.json()}\n\n{e_http}\n\n{frappe.get_traceback()}",
+				title=f"Error collecting batch group version for transfer to {doc.name}.",
+			)
+			return {"error": f"{err_msg}"}
+
+		except requests.exceptions.RequestException as e:
+			frappe.log_error(
+				message=f"{e}\n\n{frappe.get_traceback()}",
+				title=f"Request error collecting batch group version for transfer to {doc.name}.",
+			)
+			return {"error": f"{e}"}
+
+	def fund_batch_group_with_direct_debit(self, doc, data):
+		party = get_party_details(doc)
+		payment_profile_id = data.get("payment_profile_id")
+		settings = frappe.get_doc("Electronic Payment Settings", {"company": doc.company})
+		merch_id_field = "ref_id" if settings.provider == "Wise" else "sending_ref_id"
+		profile_id = settings.get(merch_id_field)
+		batch_id = data.get("batch_id")
+		account_id = settings.wise_linked_bank_account_id
+		fees = flt(
+			data["total_amount"] - data["target_amount"],
+			frappe.get_precision(doc.doctype, "grand_total"),
+		)
+		data.update({"additional_charges": fees})
+
+		try:
+			base_url, headers = self.get_base_url_and_header(doc.company)
+			response = requests.post(
+				urljoin(base_url, f"/v1/profiles/{profile_id}/batch-groups/{batch_id}/payment-initiations"),
+				headers=headers,
+				timeout=10,
+				data=json.dumps(
+					{
+						"type": "DIRECT_DEBIT",
+						"accountId": account_id,
+					}
+				),
+			)
+			response.raise_for_status()
+			r = response.json()
+			if r:
+				transaction_id = str(batch_id)
+				if not frappe.get_value(
+					"Electronic Payment Profile",
+					{"party": party.name, "payment_profile_id": payment_profile_id},
+					"retain",
+				):
+					frappe.get_doc(
+						"Electronic Payment Profile",
+						{"party": party.name, "payment_profile_id": payment_profile_id},
+					).delete()
+
+					try:
+						del_response = requests.delete(
+							urljoin(base_url, f"/v2/accounts/{payment_profile_id}"),
+							headers=headers,
+							timeout=10,
+						)
+						del_response.raise_for_status()
+
+					# If deletion on API-side fails, log error but continue processing
+					except HTTPError as e_http:
+						err_msg = " ".join([err.get("message") for err in del_response.json().get("errors", [])])
+						frappe.log_error(
+							message=f"{del_response.json()}\n\n{e_http}\n\n{frappe.get_traceback()}",
+							title=f"Error deleting payment profile used for {doc.name}",
+						)
+
+					except requests.exceptions.RequestException as e:
+						frappe.log_error(
+							message=f"{e}\n\n{frappe.get_traceback()}",
+							title=f"Request error deleting payment profile used for {doc.name}",
+						)
+
+				queue_method_as_admin(
+					process_electronic_payment,
+					doc=doc,
+					data=data,
+					transaction_id=str(transaction_id),
+				)
+				return {
+					"message": "Success",
+					"transaction_id": str(transaction_id),
+				}
+
+		except HTTPError as e_http:
+			try:
+				resp_error = response.json()
+				err_msg = " ".join([err.get("message") for err in response.json().get("errors", [])])
+			except requests.exceptions.JSONDecodeError as e_json:
+				resp_error = e_http
+				err_msg = e_http
+			frappe.log_error(
+				message=f"{resp_error}\n\n{e_http}\n\n{frappe.get_traceback()}",
+				title="Error funding batch group transfer with a direct debit account.",
+			)
+			return {"error": f"{err_msg}"}
+
+		except requests.exceptions.RequestException as e:
+			frappe.log_error(
+				message=f"{e}\n\n{frappe.get_traceback()}",
+				title="Error funding batch group transfer with a direct debit account.",
+			)
+			return {"error": f"{e}"}
+
 	def create_transfer_to_party_profile(self, doc, data):
 		party = get_party_details(doc)
 		payment_profile_id = data.get("payment_profile_id")
@@ -483,27 +624,20 @@ class Wise:
 						)
 						del_response.raise_for_status()
 
+					# If deletion on API-side fails, log error but continue processing
 					except HTTPError as e_http:
 						err_msg = " ".join([err.get("message") for err in del_response.json().get("errors", [])])
 						frappe.log_error(
 							message=f"{del_response.json()}\n\n{e_http}\n\n{frappe.get_traceback()}",
 							title=f"Error deleting payment profile used for {doc.name}",
 						)
-						return {"error": f"{err_msg}"}
 
 					except requests.exceptions.RequestException as e:
 						frappe.log_error(
 							message=f"{e}\n\n{frappe.get_traceback()}",
 							title=f"Request error deleting payment profile used for {doc.name}",
 						)
-						return {"error": f"{e}"}
 
-				frappe.db.set_value(
-					doc.doctype,
-					doc.name,
-					"electronic_payment_reference",
-					str(transaction_id),
-				)
 				queue_method_as_admin(
 					process_electronic_payment,
 					doc=doc,
@@ -692,6 +826,106 @@ class Wise:
 		# Not used in Wise
 		frappe.set_value("Customer", customer, "electronic_payment_profile", "")
 		return {"message": "Success"}
+
+	def create_direct_debit_account(self, company, data):
+		"""
+		:param company: the company to collect Electronic Payment Settings for
+		:param data: dict, should contain keys for "account_currency" (should be "USD"),
+		"routing_number", "account_number", and "account_type" (either "Checking" or "Savings")
+		"""
+		settings = frappe.get_doc("Electronic Payment Settings", {"company": company})
+		profile_id = settings.sending_ref_id
+		try:
+			base_url, headers = self.get_base_url_and_header(company)
+			response = requests.post(
+				urljoin(base_url, f"/v1/profiles/{profile_id}/direct-debit-accounts"),
+				headers=headers,
+				timeout=10,
+				data=json.dumps(
+					{
+						"currency": data.get("account_currency"),
+						"type": "ACH",
+						"details": {
+							"routingNumber": str(data.get("routing_number")),
+							"accountNumber": str(data.get("account_number")),
+							"accountType": data.get("account_type").upper(),
+						},
+					}
+				),
+			)
+			response.raise_for_status()
+			r = response.json()
+			if r.get("id"):
+				return {"message": "Success", "transaction_id": r["id"]}
+
+		except HTTPError as e_http:
+			try:
+				resp_error = response.json()
+				err_msg = " ".join([err.get("message") for err in response.json().get("errors", [])])
+			except requests.exceptions.JSONDecodeError as e_json:
+				resp_error = e_http
+				err_msg = e_http
+
+			frappe.log_error(
+				message=f"{resp_error}\n\n{e_http}\n\n{frappe.get_traceback()}",
+				title=f"Error creating a direct debit account associated with profile ID {profile_id}.",
+			)
+			return {"error": f"{err_msg}"}
+
+		except requests.exceptions.RequestException as e:
+			frappe.log_error(
+				message=f"{e}\n\n{frappe.get_traceback()}",
+				title=f"Request error creating a direct debit account associated with profile ID {profile_id}.",
+			)
+			return {"error": f"{e}"}
+
+	def get_direct_debit_accounts(self, company):
+		settings = frappe.get_doc("Electronic Payment Settings", {"company": company})
+		profile_id = settings.sending_ref_id
+		account_type = settings.wise_bank_account_type.upper()
+		account_currency = settings.wise_bank_account_currency
+		try:
+			base_url, headers = self.get_base_url_and_header(company)
+			response = requests.get(
+				urljoin(
+					base_url,
+					f"/v1/profiles/{profile_id}/direct-debit-accounts?type={account_type}&currency={account_currency}",
+				),
+				headers=headers,
+				timeout=10,
+			)
+			response.raise_for_status()
+			r = response.json()
+			if r:
+				account_data = []
+				print(r)
+				for account in r:
+					a_type = account["type"]
+					last_4 = account.get("details", {}).get("accountNumber", "")[-4:]
+					account_data.append(f"{a_type} Account ending in {last_4} has ID: {account['id']}")
+
+				return {"message": "Success", "data": account_data}
+
+		except HTTPError as e_http:
+			try:
+				resp_error = response.json()
+				err_msg = " ".join([err.get("message") for err in response.json().get("errors", [])])
+			except requests.exceptions.JSONDecodeError as e_json:
+				resp_error = e_http
+				err_msg = e_http
+
+			frappe.log_error(
+				message=f"{resp_error}\n\n{e_http}\n\n{frappe.get_traceback()}",
+				title=f"Error requesting a list of direct debit accounts associated with profile ID {profile_id}.",
+			)
+			return {"error": f"{err_msg}"}
+
+		except requests.exceptions.RequestException as e:
+			frappe.log_error(
+				message=f"{e}\n\n{frappe.get_traceback()}",
+				title=f"Error requesting a list of direct debit accounts associated with profile ID {profile_id}.",
+			)
+			return {"error": f"{e}"}
 
 
 def fetch_wise_transactions(settings):

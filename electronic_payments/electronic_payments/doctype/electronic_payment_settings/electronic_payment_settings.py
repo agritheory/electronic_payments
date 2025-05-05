@@ -29,6 +29,7 @@ class ElectronicPaymentSettings(Document):
 		self.create_electronic_payment_mop()
 		self.copy_api_config_if_same_providers()
 		self.validate_wise_merchant_id()
+		self.validate_wise_direct_debit_account_id()
 
 	def create_electronic_payment_mop(self):
 		if self.provider:
@@ -77,13 +78,29 @@ class ElectronicPaymentSettings(Document):
 			client = Wise()
 			profiles_resp = client.get_profiles(self.company)
 			if profiles_resp.get("message") == "Success":
-				if not profiles_resp["profiles"]:
+				if not profiles_resp["data"]:
 					message = "Please fill in the Merchant ID field for Wise. There were no profiles found associated with this Wise account, you can create them in the Wise platform."
 				else:
-					m1 = "</li><li>".join(profiles_resp["profiles"])
+					m1 = "</li><li>".join(profiles_resp["data"])
 					message = f"Please fill in the Merchant ID field for Wise. The following profiles were found for this account:<br><ul><li>{m1}</li></ul>"
 			else:
 				message = f"Please fill in the Merchant ID field for Wise. {profiles_resp['error']}"
+			frappe.throw(msg=message, title="Missing Required Field")
+
+	def validate_wise_direct_debit_account_id(self):
+		if not self.enable_sending or not self.sending_provider == "Wise":
+			return
+		if self.fund_wise_with_direct_debit and not self.wise_linked_bank_account_id:
+			client = Wise()
+			accounts_resp = client.get_direct_debit_accounts(self.company)
+			if accounts_resp.get("message") == "Success":
+				if not accounts_resp["data"]:
+					message = "Please fill in the Wise Linked Bank Account ID field. There were no Direct Debit Accounts found associated with this Wise profile, you can create one in the Wise platform."
+				else:
+					m1 = "</li><li>".join(accounts_resp["data"])
+					message = f"Please fill in the Wise Linked Bank Account ID field. The following Direct Debit Accounts were found for this profile:<br><ul><li>{m1}</li></ul>"
+			else:
+				message = f"Please fill in the Wise Linked Bank Account ID field. {accounts_resp['error']}"
 			frappe.throw(msg=message, title="Missing Required Field")
 
 	def client(self, doc):
