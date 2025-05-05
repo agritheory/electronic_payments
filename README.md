@@ -72,8 +72,8 @@ Electronic Payments comes packaged with a script to optionally install a [demo C
 - Use Stripe's [Testing Guide](https://docs.stripe.com/testing) for test card and account numbers
 
 **Wise**
-- [Create a Wise sandbox account](https://sandbox.transferwise.tech/home) - it's recommended to use an example email and phone number. If you opt to skip the full onboarding process, it will automatically populate the account with money
-- Generate an API key from Account -> Integration and Tools -> API Tokens page
+- [Create a Wise sandbox account](https://sandbox.transferwise.tech/home) - it's recommended to use an example email and phone number. If you opt to skip the full onboarding process, it will automatically create a user and business profiles with multi-currency accounts populated with money. This is convenient, but the auto-generated profiles trigger additional SCA security (required for profiles registered in UK and/or EEA) when trying to access sensitive endpoints (such as funding a transfer). If this is the case, you'll see 403 Forbidden errors trying to make calls to them. Refer to the Wise API reference for the exact endpoints affected, or manually create a fictitious business and personal profile that is only US-based to avoid them
+- Generate an API key with full permissions from Account -> Integration and Tools -> API Tokens page
 - Wise API calls require the sending account's profile ID. You need an API call to find the sandbox's business's profile ID. The first time finding it can be done by leaving the Sending Provider info blank in Settings, then manually entering your Wise credentials. Leave the Merchant ID field blank and click "Save" - the validate function will show the profile ID options associated with your sandbox credentials. Copy the business one into the Merchant ID field and save in your environment variables.
 
 2. Save your preferred provider's test API keys as shell environment variables. If you're testing multiple providers, you can have keys saved for each of them. The next step explains how to specify which provider(s) to use in an automatically-generated Electronic Payments Settings doc.

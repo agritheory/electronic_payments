@@ -43,13 +43,14 @@ When the provider settles transactions and transfers cash into the deposit accou
 
 The balance moves off of the Accounts Payable account associated with the party. The paid amount (balance net any discounts plus provider fees, if configured) is credited against the clearing account. Any fees the company pays are debited against the fee account and any discounts (per terms in the order or invoice's payment schedule) are credited against the payment discount account. The clearing account, fee account, and payment discount account are specified in the Electronic Payment Settings document.
 
-The following table illustrates the debits and credits in a Journal Entry for sending an electronic payment on a Purchase Invoice to a Supplier. There is a debit to Accounts Payable for the invoice total, a credit to the clearing account (invoice total less a valid 2% discount for paying early), and a credit to the payment discount account. In this example, there were no provider fees configured on the payment method so they are not included in this transaction.
+The following table illustrates the debits and credits in a Journal Entry for sending an electronic payment on a Purchase Invoice to a Supplier. There is a debit to Accounts Payable for the invoice total, a credit to the clearing account (invoice total less a valid 2% discount of $4.00 for paying early), and a credit to the payment discount account. The payment option the company selected to fund the transfer has a $3.00 fee associated with it, so there's a debit to the fee account.
 
 | Account | Party | Party Type | Debit | Credit |
 | :--------| :----: | :----: | -----: | -----: | 
 | 2110 - Accounts Payable - CFC | Exceptional Grid | Supplier | $200.00 |  |
-| 2130 - Electronic Payments Payable - CFC  | Exceptional Grid | Supplier |  | $196.00 |
+| 2130 - Electronic Payments Payable - CFC  | Exceptional Grid | Supplier |  | $199.00 |
 | 5221 - Miscellaneous Expenses - CFC |  |  |  | $4.00 |
+| 5223 - Electronic Payments Provider Fees - CFC |  |  | $3.00 |  |
 
 When the provider settles transactions and transfers cash out of the withdrawal account (specified in the Electronic Payment Settings document), the user can reconcile them against the clearing account.
 
@@ -74,8 +75,11 @@ The References table logs the Order or Invoice with the balance amount. Any fees
 
 The References table logs the Order or Invoice with the balance amount. Any provider fees paid by the company show in the Advance Taxes and Charges table and are associated with the fee account. If the reference document had a valid discount in its payment schedule, the discount amount shows in the Payment Deduction of Loss table and is associated with the payment discount account. The withdrawal account is used to clear the payment. A record of the transaction (via the provider's transaction ID) is stored in the Reference No. field. The withdrawal account, fee account, and payment discount account are specified in the Electronic Payment Settings document.
 
+In the example below, the company pays a Supplier's Purchase Invoice totaling $200 early, therefore qualifying for a 2% discount of $4.00. The payment option the company selected to fund the transfer has a $3.00 fee associated with it.
+
 | Account | Party | Party Type | Debit | Credit |
 | :--------| :----: | :----: | -----: | -----: | 
 | 2110 - Accounts Payable - CFC | Exceptional Grid | Supplier | $200.00 |  |
-| 1201 - Primary Checking - CFC |  |  |  | $196.00 |
+| 1201 - Primary Checking - CFC |  |  |  | $199.00 |
 | 5221 - Miscellaneous Expenses - CFC |  |  |  | $4.00 |
+| 5223 - Electronic Payments Provider Fees - CFC |  |  | $3.00 |  |
