@@ -14,6 +14,10 @@ from electronic_payments.electronic_payments.doctype.electronic_payment_settings
 	AuthorizeNet,
 	fetch_authorize_transactions,
 )
+from electronic_payments.electronic_payments.doctype.electronic_payment_settings.mercury import (
+	Mercury,
+	fetch_mercury_transactions,
+)
 from electronic_payments.electronic_payments.doctype.electronic_payment_settings.stripe import (
 	Stripe,
 	fetch_stripe_transactions,
@@ -30,6 +34,7 @@ class ElectronicPaymentSettings(Document):
 		self.copy_api_config_if_same_providers()
 		self.validate_wise_merchant_id()
 		self.validate_wise_direct_debit_account_id()
+		self.validate_mercury_account_id()
 
 	def create_electronic_payment_mop(self):
 		if self.provider:
@@ -103,6 +108,20 @@ class ElectronicPaymentSettings(Document):
 				message = f"Please fill in the Wise Linked Bank Account ID field. {accounts_resp['error']}"
 			frappe.throw(msg=message, title="Missing Required Field")
 
+	def validate_mercury_account_id(self):
+		if self.enable_sending and self.sending_provider == "Mercury" and not self.sending_ref_id:
+			client = Mercury()
+			accounts_resp = client.get_accounts(self.company)
+			if accounts_resp.get("message") == "Success":
+				if not accounts_resp["data"]:
+					message = "Please fill in the Merchant ID field for Mercury. There were no accounts found associated with this Mercury profile."
+				else:
+					m1 = "</li><li>".join(accounts_resp["data"])
+					message = f"Please fill in the Merchant ID field for Mercury. The following accounts were found for this profile:<br><ul><li>{m1}</li></ul>"
+			else:
+				message = f"Please fill in the Merchant ID field for Mercury. {accounts_resp['error']}"
+			frappe.throw(msg=message, title="Missing Required Field")
+
 	def client(self, doc):
 		"""
 		Returns the class instance for the appropriate provider, depending on the doc's party.
@@ -125,6 +144,8 @@ class ElectronicPaymentSettings(Document):
 			return Stripe()
 		if self.get(provider_field) == "Wise":
 			return Wise()
+		if self.get(provider_field) == "Mercury":
+			return Mercury()
 
 
 @frappe.whitelist()
@@ -189,6 +210,9 @@ def fetch_transactions():
 		if settings.sending_provider == "Wise":
 			s_response = fetch_wise_transactions(settings)
 			s_provider = "Wise"
+		elif settings.sending_provider == "Mercury":
+			s_response = fetch_mercury_transactions(settings)
+			s_provider = "Mercury"
 		elif settings.sending_provider == "Authorize.net" and not settings.provider == "Authorize.net":
 			s_response = fetch_authorize_transactions(settings)
 			s_provider = "Authorize.net"
@@ -206,7 +230,7 @@ def fetch_transactions():
 def process_transactions(settings, transactions, provider):
 	"""
 	Reconciliation function to loop over transactions and create draft
-	        Journal Entry depending on type of transaction.
+	Journal Entry depending on type of transaction.
 
 	:param settings: Electronic Payments Settings doc
 	:param transactions: list of frappe._dict objects with prover's transactional data
@@ -215,10 +239,10 @@ def process_transactions(settings, transactions, provider):
 	Requirements:
 	- Try to link to original order/invoice, tracks transactions that aren't matched
 	- Accommodate different workflow for Payment Entry or Journal Entry with Clearing Account options
-	    - Payment Entry (SO/SI): charge had credit to A/R, debit to Deposit Account. This JE needs to credit Deposit Account, debit fee expense account by fee amount
-	    - Payment Entry (PI): debit to A/P, credit to Withdrawal Account. This JE needs to credit Withdrawal Account, debit fee expense account by fee amount
-	    - Journal Entry (SO/SI): charge had credit to A/R, debit to EP A/R account. This JE needs to credit EP A/R account (total), debit Deposit Account (total less fees) and fee account (fees)
-	    - Journal Entry (PI): charge had debit to A/P, credit to EP A/P account. This JE needs to debit EP A/P account (total), credit Withdrawal Account (total less fees) and fee account (fees)
+	                - Payment Entry (SO/SI): charge had credit to A/R, debit to Deposit Account. This JE needs to credit Deposit Account, debit fee expense account by fee amount
+	                - Payment Entry (PI): debit to A/P, credit to Withdrawal Account. This JE needs to credit Withdrawal Account, debit fee expense account by fee amount
+	                - Journal Entry (SO/SI): charge had credit to A/R, debit to EP A/R account. This JE needs to credit EP A/R account (total), debit Deposit Account (total less fees) and fee account (fees)
+	                - Journal Entry (PI): charge had debit to A/P, credit to EP A/P account. This JE needs to debit EP A/P account (total), credit Withdrawal Account (total less fees) and fee account (fees)
 	- JE's handle charges, refunds, voids, and any other transaction type
 	- JE remains in draft form for user to review, then cancel/amend/submit
 	"""

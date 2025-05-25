@@ -915,8 +915,9 @@ def create_electronic_payment_settings(settings):
 	)
 	stripe_present = os.environ.get("STRIPE_API_KEY")
 	wise_present = os.environ.get("WISE_API_KEY")
+	mercury_present = os.environ.get("MERCURY_API_KEY")
 
-	if not (authorize_present or stripe_present):
+	if not (authorize_present or stripe_present or mercury_present):
 		print(
 			"No API Keys found for a provider that accepts payments (Authorize.net or Stripe). Please manually create Electronic Payment Settings."
 		)
@@ -941,6 +942,13 @@ def create_electronic_payment_settings(settings):
 			"endpoint": "https://api.sandbox.transferwise.tech",
 			"api_key": os.environ.get("WISE_API_KEY"),
 			"merchant_id": os.environ.get("WISE_ACCOUNT_ID"),
+		},
+		"m": {
+			"check": mercury_present,
+			"provider": "Mercury",
+			"endpoint": "https://backend.mercury.com/api/v1",
+			"api_key": os.environ.get("MERCURY_API_KEY"),
+			"merchant_id": os.environ.get("MERCURY_ACCOUNT_ID"),
 		},
 	}
 	pa_code = settings.get("provider")

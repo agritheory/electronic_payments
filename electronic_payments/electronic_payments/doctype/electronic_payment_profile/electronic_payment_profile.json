@@ -67,7 +67,7 @@
 			"fieldname": "payment_gateway",
 			"fieldtype": "Select",
 			"label": "Payment Gateway",
-			"options": "Authorize\nStripe\nWise"
+			"options": "Authorize\nStripe\nWise\nMercury"
 		}
 	],
 	"in_create": 1,

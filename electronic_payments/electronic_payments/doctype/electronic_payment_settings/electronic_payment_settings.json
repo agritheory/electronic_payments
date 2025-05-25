@@ -91,7 +91,7 @@
 			"fieldname": "provider",
 			"fieldtype": "Select",
 			"label": "Provider",
-			"options": "\nAuthorize.net\nStripe",
+			"options": "\nAuthorize.net\nStripe\nMercury",
 			"reqd": 1
 		},
 		{
@@ -212,7 +212,7 @@
 			"fieldtype": "Select",
 			"label": "Sending Provider",
 			"mandatory_depends_on": "enable_sending",
-			"options": "\nAuthorize.net\nWise"
+			"options": "\nAuthorize.net\nWise\nMercury"
 		},
 		{
 			"description": "Required for Wise. Enter the Wise Profile ID for the Company making transfers. If not known, enter API credentials and click Save. The error message will display the profile options and their IDs, if any.",
