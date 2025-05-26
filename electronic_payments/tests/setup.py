@@ -4,7 +4,6 @@
 import datetime
 import os
 import random
-import types
 
 import frappe
 from erpnext.accounts.doctype.account.account import update_account_number
@@ -20,7 +19,7 @@ from electronic_payments.tests.fixtures import (
 )
 
 
-def before_test():
+def before_test(a_provider=None, s_provider=None):
 	frappe.clear_cache()
 	today = frappe.utils.getdate()
 	setup_complete(
@@ -45,14 +44,14 @@ def before_test():
 	# enable_all_roles_and_domains()
 	set_defaults_for_tests()
 	frappe.db.commit()
-	create_test_data()
+	create_test_data(a_provider=a_provider, s_provider=s_provider)
 	for modu in frappe.get_all("Module Onboarding"):
 		frappe.db.set_value("Module Onboarding", modu, "is_complete", 1)
 	frappe.set_value("Website Settings", "Website Settings", "home_page", "login")
 	frappe.db.commit()
 
 
-def create_test_data():
+def create_test_data(a_provider=None, s_provider=None):
 	today = frappe.utils.getdate()
 	setup_accounts()
 	settings = frappe._dict(
@@ -76,6 +75,25 @@ def create_test_data():
 			),
 		}
 	)
+	if (
+		a_provider
+		and isinstance(a_provider, str)
+		and len(a_provider) == 1
+		and a_provider.lower() in "as"
+	):
+		settings.provider = a_provider.lower()
+		if not s_provider and a_provider.lower() == "a":
+			settings.sending_provider = a_provider.lower()
+
+	if (
+		settings.get("provider")
+		and s_provider
+		and isinstance(s_provider, str)
+		and len(s_provider) == 1
+		and s_provider.lower() in "am"
+	):
+		settings.sending_provider = s_provider.lower()
+
 	create_bank_and_bank_account(settings)
 	create_electronic_payment_settings(settings)
 	create_payment_terms_templates(settings)
@@ -376,6 +394,29 @@ def create_suppliers(settings):
 		addr.append("links", {"link_doctype": "Supplier", "link_name": supplier[0]})
 		addr.save()
 
+		user = frappe.new_doc("User")
+		user.first_name = supplier[6].split(" ")[0]
+		user.last_name = supplier[6].split(" ")[1]
+		user.username = supplier[7]
+		user.time_zone = "America/New_York"
+		user.email = supplier[7]
+		user.user_type = "System User"
+		user.send_welcome_email = 0
+		user.append("roles", {"role": "Supplier"})
+		user.save()
+
+		contact = frappe.new_doc("Contact")
+		contact.first_name = user.first_name
+		contact.last_name = user.last_name
+		contact.user = user.name
+		contact.address = addr.name
+		contact.append("email_ids", {"email_id": user.name, "is_primary": 1})
+		contact.append("links", {"link_doctype": "Supplier", "link_name": biz.name})
+		contact.save()
+
+		biz.append("portal_users", {"user": user.name})
+		biz.save()
+
 	addr = frappe.new_doc("Address")
 	addr.address_type = "Billing"
 	addr.address_title = "HIJ Telecom - Burlingame"
@@ -498,7 +539,7 @@ def create_items(settings):
 
 
 def create_invoices(settings):
-	# first month - already paid
+	# first month
 	for supplier in suppliers:
 		pi = frappe.new_doc("Purchase Invoice")
 		pi.company = settings.company
@@ -515,7 +556,7 @@ def create_invoices(settings):
 		)
 		pi.save()
 		pi.submit()
-	# two electric meters / test invoice aggregation
+	# second electric bill
 	pi = frappe.new_doc("Purchase Invoice")
 	pi.company = settings.company
 	pi.set_posting_time = 1
@@ -532,7 +573,7 @@ def create_invoices(settings):
 	pi.save()
 	pi.submit()
 
-	# two phone bills / test address splitting
+	# second phone bill
 	pi = frappe.new_doc("Purchase Invoice")
 	pi.company = settings.company
 	pi.set_posting_time = 1
@@ -550,7 +591,7 @@ def create_invoices(settings):
 	pi.save()
 	pi.submit()
 
-	# second month - unpaid
+	# second month
 	next_day = settings.day + datetime.timedelta(days=31)
 
 	for supplier in suppliers:
@@ -569,67 +610,6 @@ def create_invoices(settings):
 		)
 		pi.save()
 		pi.submit()
-	# two electric meters / test invoice aggregation
-	pi = frappe.new_doc("Purchase Invoice")
-	pi.company = settings.company
-	pi.set_posting_time = 1
-	pi.posting_date = next_day
-	pi.supplier = suppliers[0][0]
-	pi.append(
-		"items",
-		{
-			"item_code": suppliers[0][1],
-			"rate": 75.00,
-			"qty": 1,
-		},
-	)
-	pi.save()
-	pi.submit()
-
-	# two phone bills / test address splitting
-	pi = frappe.new_doc("Purchase Invoice")
-	pi.company = settings.company
-	pi.set_posting_time = 1
-	pi.posting_date = settings.day
-	pi.supplier = suppliers[4][0]
-	pi.append(
-		"items",
-		{
-			"item_code": suppliers[4][1],
-			"rate": 122.50,
-			"qty": 1,
-		},
-	)
-	pi.supplier_address = "HIJ Telecom - Burlingame-Billing"
-	pi.save()
-	pi.submit()
-
-	# test on-hold invoice
-	pi = frappe.new_doc("Purchase Invoice")
-	pi.company = settings.company
-	pi.set_posting_time = 1
-	pi.posting_date = settings.day
-	pi.supplier = suppliers[1][0]
-	pi.append(
-		"items",
-		{
-			"item_code": suppliers[1][1],
-			"rate": 4000.00,
-			"qty": 1,
-		},
-	)
-	pi.on_hold = 1
-	pi.release_date = settings.day + datetime.timedelta(days=60)
-	pi.hold_comment = "Testing for on hold invoices"
-	pi.validate_release_date = types.MethodType(
-		validate_release_date, pi
-	)  # allow date to be backdated for testing
-	pi.save()
-	pi.submit()
-
-
-def validate_release_date(self):
-	pass
 
 
 def config_expense_claim(settings):
@@ -930,48 +910,94 @@ def create_sales_invoices(settings):
 
 
 def create_electronic_payment_settings(settings):
-	if not frappe.db.exists("Account", "1320 - Electronic Payments Receivable - CFC"):
-		epr = frappe.new_doc("Account")
-		epr.account_number = "1320"
-		epr.account_name = "Electronic Payments Receivable"
-		epr.company = settings.company
-		epr.root_type = "Asset"
-		epr.report_type = "Balance Sheet"
-		epr.parent_account = "1300 - Accounts Receivable - CFC"
-		epr.save()
+	authorize_present = os.environ.get("AUTHORIZE_API_KEY") and os.environ.get(
+		"AUTHORIZE_TRANSACTION_KEY"
+	)
+	mercury_present = os.environ.get("MERCURY_API_KEY")
+	stripe_present = os.environ.get("STRIPE_API_KEY")
 
-	if os.environ.get("AUTHORIZE_API_KEY") and os.environ.get("AUTHORIZE_TRANSACTION_KEY"):
-		eps = frappe.new_doc("Electronic Payment Settings")
-		eps.company = settings.company
-		eps.provider = "Authorize.net"
-		eps.endpoint = "https://apitest.authorize.net/xml/v1/request.api"
-		eps.api_key = os.environ.get("AUTHORIZE_API_KEY")
-		eps.transaction_key = os.environ.get("AUTHORIZE_TRANSACTION_KEY")
-		eps.create_ppm = 1
-		eps.deposit_account = "1201 - Primary Checking - CFC"
-		eps.accepting_fee_account = "5223 - Electronic Payments Provider Fees - CFC"
-		eps.accepting_clearing_account = "1320 - Electronic Payments Receivable - CFC"
-		eps.accepting_payment_discount_account = frappe.get_value(
-			"Account", {"name": ["like", "%Sales - CFC%"]}, "name"
+	if not (authorize_present or stripe_present):
+		print(
+			"No API Keys found for a provider that accepts payments (Authorize.net or Stripe). Please manually create Electronic Payment Settings."
 		)
-		eps.save()
-	if (
-		os.environ.get("STRIPE_API_KEY")
-		and not os.environ.get("AUTHORIZE_API_KEY")
-		and not os.environ.get("AUTHORIZE_TRANSACTION_KEY")
-	):
-		eps = frappe.new_doc("Electronic Payment Settings")
-		eps.company = settings.company
-		eps.provider = "Stripe"
-		eps.api_key = os.environ.get("STRIPE_API_KEY")
-		eps.create_ppm = 1
-		eps.deposit_account = "1201 - Primary Checking - CFC"
-		eps.accepting_fee_account = "5223 - Electronic Payments Provider Fees - CFC"
-		eps.accepting_clearing_account = "1320 - Electronic Payments Receivable - CFC"
-		eps.accepting_payment_discount_account = frappe.get_value(
-			"Account", {"name": ["like", "%Sales - CFC%"]}, "name"
+		return
+
+	provider_mapping = {
+		"a": {
+			"check": authorize_present,
+			"provider": "Authorize.net",
+			"endpoint": "https://apitest.authorize.net/xml/v1/request.api",
+			"api_key": os.environ.get("AUTHORIZE_API_KEY"),
+			"transaction_key": os.environ.get("AUTHORIZE_TRANSACTION_KEY"),
+		},
+		"m": {
+			"check": mercury_present,
+			"provider": "Mercury",
+			"endpoint": "https://api-sandbox.mercury.com",
+			"api_key": os.environ.get("MERCURY_API_KEY"),
+			"merchant_id": os.environ.get("MERCURY_ACCOUNT_ID"),
+		},
+		"s": {
+			"check": stripe_present,
+			"provider": "Stripe",
+			"api_key": os.environ.get("STRIPE_API_KEY"),
+		},
+	}
+	pa_code = settings.get("provider")
+	ps_code = settings.get("sending_provider")
+
+	# Find accepting payments provider if not given in args
+	if not pa_code and authorize_present:
+		pa_code = "a"
+		ps_code = ps_code or "a"
+	elif not pa_code and stripe_present:
+		pa_code = "s"
+
+	# Find sending payments provider if not given in args
+	if not ps_code and mercury_present:
+		ps_code = "m"
+
+	eps = frappe.new_doc("Electronic Payment Settings")
+	eps.company = settings.company
+	eps.create_ppm = 1
+	eps.provider = provider_mapping[pa_code]["provider"]
+	eps.ref_id = provider_mapping[pa_code].get("merchant_id")
+	eps.endpoint = provider_mapping[pa_code].get("endpoint")
+	eps.api_key = provider_mapping[pa_code]["api_key"]
+	eps.transaction_key = provider_mapping[pa_code].get("transaction_key")
+	eps.deposit_account = "1201 - Primary Checking - CFC"
+	eps.accepting_fee_account = "5223 - Electronic Payments Provider Fees - CFC"
+	eps.accepting_clearing_account = "1320 - Electronic Payments Receivable - CFC"
+	eps.accepting_payment_discount_account = frappe.get_value(
+		"Account", {"name": ["like", "%Sales - CFC%"]}, "name"
+	)
+
+	if not ps_code:
+		eps.enable_sending = 0
+	elif ps_code == "m" and not os.environ.get("MERCURY_ACCOUNT_ID"):
+		eps.enable_sending = 0
+		print(
+			"No Mercury account ID found - this is required to create a Settings document. Settings will not enable sending payments - enter your API credentials manually, click save, then collect the ID from the displayed options."
 		)
-		eps.save()
+	elif ps_code and not provider_mapping[ps_code]["check"]:
+		eps.enable_sending = 0
+		print(
+			f"No API Keys found for given sending provider: {provider_mapping[ps_code]['provider']}. Settings will not enable sending payments - this may be changed manually in the Electronic Payments Settings doc."
+		)
+	else:
+		eps.enable_sending = 1
+		eps.sending_provider = provider_mapping[ps_code]["provider"]
+		eps.sending_ref_id = provider_mapping[ps_code].get("merchant_id")
+		eps.sending_endpoint = provider_mapping[ps_code].get("endpoint")
+		eps.sending_api_key = provider_mapping[ps_code]["api_key"]
+		eps.sending_transaction_key = provider_mapping[ps_code].get("transaction_key")
+		eps.withdrawal_account = eps.deposit_account
+		eps.sending_fee_account = eps.accepting_fee_account
+		eps.sending_clearing_account = "2130 - Electronic Payments Payable - CFC"
+		eps.sending_payment_discount_account = frappe.get_value(
+			"Account", {"name": ["like", "%Miscellaneous Expenses - CFC%"]}, "name"
+		)
+	eps.save()
 
 
 def curate_portal_and_ecommerce_settings(settings=None):
