@@ -1,44 +1,113 @@
-import frappe
-from frappe.query_builder import Order
+# Copyright (c) 2025, AgriTheory and contributors
+# For license information, please see license.txt
+
 import json
+
+import frappe
+
+# from frappe.utils.data import today
+from frappe.model.document import Document
+from frappe.query_builder import Order
+from frappe.utils.password import get_decrypted_password
 
 from electronic_payments.electronic_payments.doctype.electronic_payment_settings.authorize import (
 	AuthorizeNet,
 	fetch_authorize_transactions,
+)
+from electronic_payments.electronic_payments.doctype.electronic_payment_settings.mercury import (
+	Mercury,
+	fetch_mercury_transactions,
 )
 from electronic_payments.electronic_payments.doctype.electronic_payment_settings.stripe import (
 	Stripe,
 	fetch_stripe_transactions,
 )
 
-# from frappe.utils.data import today
-from frappe.model.document import Document
-
 
 class ElectronicPaymentSettings(Document):
 	def validate(self):
-		# create mode of payment if one is not selected
-		mop_name = self.provider + " API"
-		if not frappe.db.exists("Mode of Payment", mop_name):
-			mop = frappe.new_doc("Mode of Payment")
-			mop.mode_of_payment = mop_name
-			mop.enabled = 1
-			mop.type = "General"  # TODO: confirm selection
-			# mop.append(  # TODO: need this?
-			# 	"accounts",
-			# 	{
-			# 		"company": self.company,
-			# 		"default_account": frappe.get_value("Company", self.company, "default_bank_account")  # TODO: use deposit or withdrawal account field instead?
-			# 	},
-			# )
-			mop.save()
-		self.mode_of_payment = mop_name
+		self.create_electronic_payment_mop()
+		self.copy_api_config_if_same_providers()
+		self.validate_mercury_merchant_id()
 
-	def client(self):
-		if self.provider == "Authorize.net":
+	def create_electronic_payment_mop(self):
+		if self.provider:
+			mop_name = self.provider + " API"
+			if not frappe.db.exists("Mode of Payment", mop_name):
+				mop = frappe.new_doc("Mode of Payment")
+				mop.mode_of_payment = mop_name
+				mop.enabled = 1
+				mop.type = "General"
+				mop.save()
+			self.mode_of_payment = mop_name
+
+		if self.enable_sending and self.provider == self.sending_provider:
+			self.sending_mode_of_payment = mop_name
+		elif self.enable_sending and self.sending_provider:
+			sending_mop_name = self.sending_provider + " API"
+			if not frappe.db.exists("Mode of Payment", sending_mop_name):
+				mop = frappe.new_doc("Mode of Payment")
+				mop.mode_of_payment = sending_mop_name
+				mop.enabled = 1
+				mop.type = "General"
+				mop.save()
+			self.sending_mode_of_payment = sending_mop_name
+
+	def copy_api_config_if_same_providers(self):
+		"""
+		If sending payments is enabled and accepting and sending providers match, copies API
+		configuration fields (if empty)
+		"""
+		if self.enable_sending and self.provider == self.sending_provider:
+			if self.ref_id and not self.sending_ref_id:
+				self.sending_ref_id = self.sending_ref_id
+			if self.endpoint and not self.sending_endpoint:
+				self.sending_endpoint = self.endpoint
+			if self.api_key and not self.sending_api_key:
+				api_key = get_decrypted_password(self.doctype, self.name, "api_key", raise_exception=False)
+				self.sending_api_key = api_key
+			if self.transaction_key and not self.sending_transaction_key:
+				t_key = get_decrypted_password(
+					self.doctype, self.name, "transaction_key", raise_exception=False
+				)
+				self.sending_transaction_key = t_key
+
+	def validate_mercury_merchant_id(self):
+		if self.enable_sending and self.sending_provider == "Mercury" and not self.sending_ref_id:
+			client = Mercury()
+			accounts_resp = client.get_accounts(self.company)
+			if accounts_resp.get("message") == "Success":
+				if not accounts_resp.get("data"):
+					message = "Please fill in the Merchant ID field for Mercury with the Account ID of the account making transfers. There were no accounts found associated with the provided Mercury credentials, you can create them in the Mercury platform."
+				else:
+					m1 = "</li><li>".join(accounts_resp["data"])
+					message = f"Please fill in the Merchant ID field for Mercury with the Account ID of the account making transfers. The following account options were found:<br><ul><li>{m1}</li></ul>"
+			else:
+				message = f"Please fill in the Merchant ID field for Mercury with the Account ID of the account making transfers. {accounts_resp['error']}"
+			frappe.throw(msg=message, title="Missing Required Field")
+
+	def client(self, doc):
+		"""
+		Returns the class instance for the appropriate provider, depending on the doc's party.
+
+		If `supplier` field found and sending payments is enabled, returns the sending provider,
+		otherwise returns the provider to accept payments.
+
+		:param doc: may be an actual system document or dict with a party type key like "customer"
+		or "supplier".
+		:return: class instance for relevant provider.
+		"""
+		if hasattr(doc, "supplier") and doc.get("supplier") and self.enable_sending:
+			provider_field = "sending_provider"
+		else:  # accepting payment workflow
+			provider_field = "provider"
+
+		if self.get(provider_field) == "Authorize.net":
 			return AuthorizeNet()
-		if self.provider == "Stripe":
+		if self.get(provider_field) == "Stripe":
 			return Stripe()
+		if self.get(provider_field) == "Mercury":
+			return Mercury()
 
 
 @frappe.whitelist()
@@ -48,7 +117,7 @@ def process(doc, data):
 	settings = frappe.get_doc("Electronic Payment Settings", {"company": doc.company})
 	if not settings:
 		frappe.msgprint(frappe._(f"No Electronic Payment Settings found for {doc.company}"))
-	client = settings.client()
+	client = settings.client(doc)
 	response = client.process_transaction(doc, data)
 	return response
 
@@ -81,29 +150,50 @@ def get_payment_profiles(doc):
 
 @frappe.whitelist()
 def fetch_transactions():
+	errors = []
 	for settings in frappe.get_all("Electronic Payments Settings"):
 		settings = frappe.get_doc("Electronic Payments Settings", settings)
 
+		# Collect and process accepting payment transactions
 		if settings.provider == "Authorize.net":
 			response = fetch_authorize_transactions(settings)
+			provider = "Authorize.net"
 		elif settings.provider == "Stripe":
 			response = fetch_stripe_transactions(settings)
+			provider = "Stripe"
 
 		if response.get("message") == "Success":
 			transactions = response.get("transactions")
-			process_transactions(settings, transactions)
+			process_transactions(settings, transactions, provider)
 		else:  # TODO: handle error in way to notify users
-			return response
+			errors.append(response["error"])
+
+		# Collect and process sending payment transactions
+		if settings.sending_provider == "Mercury":
+			s_response = fetch_mercury_transactions(settings)
+			s_provider = "Mercury"
+		elif settings.sending_provider == "Authorize.net" and not settings.provider == "Authorize.net":
+			s_response = fetch_authorize_transactions(settings)
+			s_provider = "Authorize.net"
+
+		if s_response.get("message") == "Success":
+			s_transactions = s_response.get("transactions")
+			process_transactions(settings, s_transactions, s_provider)
+		else:  # TODO: handle error in way to notify users
+			errors.append(response["error"])
+
+	if errors:
+		return ", ".join(errors)
 
 
-def process_transactions(settings, transactions):
+def process_transactions(settings, transactions, provider):
 	"""
 	Reconciliation function to loop over transactions and create draft
 	        Journal Entry depending on type of transaction.
 
-	:param settings:
-	:param transactions: list of frappe._dict object with transactional
-	        data per transaction from provider
+	:param settings: Electronic Payments Settings doc
+	:param transactions: list of frappe._dict objects with prover's transactional data
+	:param provider: string indicating which provider to know data structure format
 
 	Requirements:
 	- Try to link to original order/invoice, tracks transactions that aren't matched

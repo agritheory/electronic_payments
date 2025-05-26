@@ -1,22 +1,25 @@
-import json
+# Copyright (c) 2025, AgriTheory and contributors
+# For license information, please see license.txt
+
 import datetime
-from dateutil.relativedelta import relativedelta
+import json
 
 import frappe
-from frappe import _
-from frappe.utils.password import get_decrypted_password
-from frappe.utils.data import flt
-from frappe.utils import cint
-
 import stripe
+from dateutil.relativedelta import relativedelta
+from frappe import _
+from frappe.utils import cint
+from frappe.utils.data import flt
+from frappe.utils.password import get_decrypted_password
+
 from electronic_payments.electronic_payments.doctype.electronic_payment_settings.common import (
-	exceeds_credit_limit,
-	get_payment_amount,
-	get_discount_amount,
 	calculate_payment_method_fees,
+	exceeds_credit_limit,
+	get_discount_amount,
+	get_party_details,
+	get_payment_amount,
 	process_electronic_payment,
 	queue_method_as_admin,
-	get_party_details,
 )
 
 """
@@ -61,8 +64,9 @@ class Stripe:
 		if not settings:
 			frappe.msgprint(_(f"No Electronic Payment Settings found for {company}-Stripe"))
 		else:
+			api_key_field = "api_key" if settings.provider == "Stripe" else "sending_api_key"
 			stripe.api_key = get_decrypted_password(
-				settings.doctype, settings.name, "api_key", raise_exception=False
+				settings.doctype, settings.name, api_key_field, raise_exception=False
 			)
 
 	def process_transaction(self, doc, data):
@@ -265,7 +269,7 @@ class Stripe:
 				frappe.log_error(message=frappe.get_traceback(), title=f"{e}")
 				return {"error": f"{e}"}
 
-	def create_party_profile(self, doc):
+	def create_party_profile(self, doc, data=None):
 		party = get_party_details(doc)
 		self.get_password(doc.company)
 		try:
@@ -385,6 +389,7 @@ class Stripe:
 
 	def create_party_payment_profile(self, doc, data):
 		self.get_password(doc.company)
+		settings = frappe.get_doc("Electronic Payment Settings", {"company": doc.company})
 		party = get_party_details(doc)
 
 		if not data.get("party_profile_id"):
@@ -420,13 +425,10 @@ class Stripe:
 				payment_profile.retain = 1 if data.save_data == "Retain payment data for this party" else 0
 				payment_profile.save(ignore_permissions=True)
 
-				if payment_profile.retain and frappe.get_value(
-					"Electronic Payment Settings", {"company": doc.company}, "create_ppm"
-				):
+				if payment_profile.retain and settings.create_ppm:
+					mop_field = "mode_of_payment" if settings.provider == "Stripe" else "sending_mode_of_payment"
 					ppm = frappe.new_doc("Portal Payment Method")
-					ppm.mode_of_payment = frappe.get_value(
-						"Electronic Payment Settings", {"company": doc.company}, "mode_of_payment"
-					)
+					ppm.mode_of_payment = settings.get(mop_field)
 					ppm.label = f"{mop}-{last4}"
 					ppm.default = cint(data.get("default", 0))
 					ppm.electronic_payment_profile = payment_profile.name
@@ -558,7 +560,8 @@ class Stripe:
 		)
 		pmm_name = frappe.get_value("Portal Payment Method", {"electronic_payment_profile": epp_name})
 
-		frappe.delete_doc("Portal Payment Method", pmm_name, ignore_permissions=True)
+		if pmm_name:
+			frappe.delete_doc("Portal Payment Method", pmm_name, ignore_permissions=True)
 		frappe.delete_doc("Electronic Payment Profile", epp_name, ignore_permissions=True)
 
 		# Delete from API
