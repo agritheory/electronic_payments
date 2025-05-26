@@ -58,23 +58,136 @@
                         </div>
                     </div>
                 </div>
+
+                
                 <div id="ach">
                     <div class="form-group row">
                         <div class="col-sm-6">
                             <label for="account_holders_name" class="control-label text-muted small">{{ _("Account Holder's Name") }}</label>
                             <input id="ppm_account_holders_name" type="text" class="form-control" name="account_holders_name">
                         </div>
+                        <div class="col-sm-6">
+                            <label for="email" class="control-label text-muted small">{{ _("Email") }}</label>
+                            <input id="ppm_email" type="text" class="form-control" name="email">
+                        </div>
                     </div>
+
                     <div class="form-group row">
+                        <div class="col-sm-6">
+                            <label for="address_firstline" class="control-label text-muted small">{{ _("Address") }}</label>
+                            <input id="ppm_address_firstline" type="text" class="form-control" name="address_firstline">
+                        </div>
                         <div class="col-sm-6">
                             <label for="routing_number" class="control-label text-muted small">{{ _("Routing Number") }}</label>
                             <input id="ppm_routing_number" type="text" class="form-control" name="routing_number">
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-6">
+                            <label for="address_secondline" class="control-label text-muted small">{{ _("Address Line 2") }}</label>
+                            <input id="ppm_address_secondline" type="text" class="form-control" name="address_secondline">
                         </div>
                         <div class="col-sm-6">
                             <label for="account_number" class="control-label text-muted small">{{ _("Checking Account Number") }}</label>
                             <input id="ppm_account_number" type="text" class="form-control" name="account_number">
                         </div>
                     </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-6">
+                            <label for="city" class="control-label text-muted small">{{ _("City") }}</label>
+                            <input id="ppm_city" type="text" class="form-control" name="city">
+                        </div>
+
+                        <div class="col-sm-6">
+                            <label for="account_currency" class="control-label text-muted small">{{ _("Account Currency") }}</label>
+                            <select id="ppm_account_currency" class="form-control" name="account_currency" data-label="account_currency" data-fieldtype="Select">
+                                <option value="USD" selected>{{ _("USD") }}</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-6">
+                            <label for="state" class="control-label text-muted small">{{ _("State") }}</label>
+                            <select id="ppm_state" class="form-control" name="state" data-label="state" data-fieldtype="Select">
+                                <option value="AL">{{ _("Alabama (AL)") }}</option>
+                                <option value="AK">{{ _("Alaska (AK)") }}</option>
+                                <option value="AZ">{{ _("Arizona (AZ)") }}</option>
+                                <option value="AR">{{ _("Arkansas (AR)") }}</option>
+                                <option value="CA">{{ _("California (CA)") }}</option>
+                                <option value="CO">{{ _("Colorado (CO)") }}</option>
+                                <option value="CT">{{ _("Connecticut (CT)") }}</option>
+                                <option value="DE">{{ _("Delaware (DE)") }}</option>
+                                <option value="DC">{{ _("District of Columbia (DC)") }}</option>
+                                <option value="FL">{{ _("Florida (FL)") }}</option>
+                                <option value="GA">{{ _("Georgia (GA)") }}</option>
+                                <option value="GU">{{ _("Guam (GU)") }}</option>
+                                <option value="HI">{{ _("Hawaii (HI)") }}</option>
+                                <option value="ID">{{ _("Idaho (ID)") }}</option>
+                                <option value="IL">{{ _("Illinois (IL)") }}</option>
+                                <option value="IN">{{ _("Indiana (IN)") }}</option>
+                                <option value="IA">{{ _("Iowa (IA)") }}</option>
+                                <option value="KS">{{ _("Kansas (KS)") }}</option>
+                                <option value="KY">{{ _("Kentucky (KY)") }}</option>
+                                <option value="LA">{{ _("Louisiana (LA)") }}</option>
+                                <option value="ME">{{ _("Maine (ME)") }}</option>
+                                <option value="MH">{{ _("Marshall Islands (MH)") }}</option>
+                                <option value="MD">{{ _("Maryland (MD)") }}</option>
+                                <option value="MA">{{ _("Massachusetts (MA)") }}</option>
+                                <option value="MI">{{ _("Michigan (MI)") }}</option>
+                                <option value="MN">{{ _("Minnesota (MN)") }}</option>
+                                <option value="MS">{{ _("Mississippi (MS)") }}</option>
+                                <option value="MO">{{ _("Missouri (MO)") }}</option>
+                                <option value="MT">{{ _("Montana (MT)") }}</option>
+                                <option value="NE">{{ _("Nebraska (NE)") }}</option>
+                                <option value="NV">{{ _("Nevada (NV)") }}</option>
+                                <option value="NH">{{ _("New Hampshire (NH)") }}</option>
+                                <option value="NJ">{{ _("New Jersey (NJ)") }}</option>                                
+                                <option value="NM">{{ _("New Mexico (NM)") }}</option>
+                                <option value="NY">{{ _("New York (NY)") }}</option>
+                                <option value="NC">{{ _("North Carolina (NC)") }}</option>
+                                <option value="ND">{{ _("North Dakota (ND)") }}</option>
+                                <option value="MP">{{ _("Northern Marianna Island (MP)") }}</option>
+                                <option value="OH">{{ _("Ohio (OH)") }}</option>
+                                <option value="OK">{{ _("Oklahoma (OK)") }}</option>
+                                <option value="OR">{{ _("Oregon (OR)") }}</option>
+                                <option value="PA">{{ _("Pennsylvania (PA)") }}</option>
+                                <option value="PR">{{ _("Puerto Rico (PR)") }}</option>
+                                <option value="RI">{{ _("Rhode Island (RI)") }}</option>
+                                <option value="SC">{{ _("South Carolina (SC)") }}</option>
+                                <option value="SD">{{ _("South Dakota (SD)") }}</option>
+                                <option value="TN">{{ _("Tennessee (TN)") }}</option>
+                                <option value="TX">{{ _("Texas (TX)") }}</option>
+                                <option value="UT">{{ _("Utah (UT)") }}</option>
+                                <option value="VT">{{ _("Vermont (VT)") }}</option>
+                                <option value="VI">{{ _("Virgin Islands (VI)") }}</option>
+                                <option value="VA">{{ _("Virginia (VA)") }}</option>
+                                <option value="WA">{{ _("Washington (WA)") }}</option>
+                                <option value="WV">{{ _("West Virginia (WV)") }}</option>
+                                <option value="WI">{{ _("Wisconsin (WI)") }}</option>
+                                <option value="WY">{{ _("Wyoming (WY)") }}</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-6">
+                            <label for="postcode" class="control-label text-muted small">{{ _("Post/Zip Code") }}</label>
+                            <input id="ppm_postcode" type="text" class="form-control" name="postcode">
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-6">
+                            <label for="country" class="control-label text-muted small">{{ _("Country") }}</label>
+                            <select id="ppm_country" class="form-control" name="country" data-label="country" data-fieldtype="Select">
+                                <option value="US" selected>{{ _("US") }}</option>
+                            </select>
+                        </div>
+                    </div>
+
                 </div>
 				<button type="button" class="btn btn-primary px-4 float-right" id="submit-button">{{ _("Save") }}</button>
             </form>

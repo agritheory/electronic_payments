@@ -1,3 +1,6 @@
+// Copyright (c) 2025, AgriTheory and contributors
+// For license information, please see license.txt
+
 frappe.ready(async () => {
 	function fields_display() {
 		const payment_type = document.getElementById('ppm_payment_type')
@@ -22,8 +25,16 @@ frappe.ready(async () => {
 			document.getElementById('ppm_card_expiration_date').required = true
 
 			document.getElementById('ppm_account_holders_name').required = false
+			document.getElementById('ppm_email').required = false
 			document.getElementById('ppm_routing_number').required = false
 			document.getElementById('ppm_account_number').required = false
+			document.getElementById('ppm_account_currency').required = false
+			document.getElementById('ppm_address_firstline').required = false
+			document.getElementById('ppm_address_secondline').required = false
+			document.getElementById('ppm_city').required = false
+			document.getElementById('ppm_state').required = false
+			document.getElementById('ppm_postcode').required = false
+			document.getElementById('ppm_country').required = false
 		} else {
 			document.getElementById('ppm_card_number').required = false
 			document.getElementById('ppm_card_cvc').required = false
@@ -31,8 +42,16 @@ frappe.ready(async () => {
 			document.getElementById('ppm_card_expiration_date').required = false
 
 			document.getElementById('ppm_account_holders_name').required = true
+			document.getElementById('ppm_email').required = true
 			document.getElementById('ppm_routing_number').required = true
 			document.getElementById('ppm_account_number').required = true
+			document.getElementById('ppm_account_currency').required = true
+			document.getElementById('ppm_address_firstline').required = true
+			document.getElementById('ppm_address_secondline').required = false
+			document.getElementById('ppm_city').required = true
+			document.getElementById('ppm_state').required = true
+			document.getElementById('ppm_postcode').required = true
+			document.getElementById('ppm_country').required = true
 		}
 	}
 
@@ -89,8 +108,16 @@ frappe.ready(async () => {
 			'cardholder_name',
 			'card_expiration_date',
 			'account_holders_name',
+			'email',
 			'routing_number',
 			'account_number',
+			'address_firstline',
+			'address_secondline',
+			'city',
+			'state',
+			'postcode',
+			'country',
+			'account_currency',
 		]
 		inputs.forEach(id => (ppm[id] = document.getElementById(`ppm_${id}`).value))
 
