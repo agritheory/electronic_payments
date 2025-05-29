@@ -28,6 +28,7 @@ frappe.ready(async () => {
 			document.getElementById('ppm_email').required = false
 			document.getElementById('ppm_routing_number').required = false
 			document.getElementById('ppm_account_number').required = false
+			document.getElementById('ppm_accept_wire').required = false
 			document.getElementById('ppm_account_currency').required = false
 			document.getElementById('ppm_address_firstline').required = false
 			document.getElementById('ppm_address_secondline').required = false
@@ -45,6 +46,7 @@ frappe.ready(async () => {
 			document.getElementById('ppm_email').required = true
 			document.getElementById('ppm_routing_number').required = true
 			document.getElementById('ppm_account_number').required = true
+			document.getElementById('ppm_accept_wire').required = false
 			document.getElementById('ppm_account_currency').required = true
 			document.getElementById('ppm_address_firstline').required = true
 			document.getElementById('ppm_address_secondline').required = false
@@ -110,6 +112,7 @@ frappe.ready(async () => {
 			'email',
 			'routing_number',
 			'account_number',
+			'accept_wire',
 			'address_firstline',
 			'address_secondline',
 			'city',

@@ -96,11 +96,10 @@
                         </div>
 
                         <div class="col-sm-6">
-                            <label for="account_currency" class="control-label text-muted small">{{ _("Account Currency") }}</label>
-                            <select id="ppm_account_currency" class="form-control" name="account_currency" data-label="account_currency" data-fieldtype="Select">
-                                <option value="USD" selected>{{ _("USD") }}</option>
-                            </select>
+                            <label for="accept_wire" class="control-label text-muted small">{{ _("Routing Number can accept wire transfers?") }}</label>
+                            <input id="ppm_accept_wire" type="checkbox" class="form-control" name="accept_wire">
                         </div>
+
                     </div>
 
                     <div class="form-group row">
@@ -164,6 +163,13 @@
                                 <option value="WV">{{ _("West Virginia (WV)") }}</option>
                                 <option value="WI">{{ _("Wisconsin (WI)") }}</option>
                                 <option value="WY">{{ _("Wyoming (WY)") }}</option>
+                            </select>
+                        </div>
+
+                        <div class="col-sm-6">
+                            <label for="account_currency" class="control-label text-muted small">{{ _("Account Currency") }}</label>
+                            <select id="ppm_account_currency" class="form-control" name="account_currency" data-label="account_currency" data-fieldtype="Select">
+                                <option value="USD" selected>{{ _("USD") }}</option>
                             </select>
                         </div>
                     </div>

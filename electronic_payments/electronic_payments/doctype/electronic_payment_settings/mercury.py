@@ -96,7 +96,7 @@ class Mercury:
 				return {"message": "Success", "data": accounts_data}
 
 		except HTTPError as e_http:
-			err_msg = " ".join([f"{k} - {v}" for k, v in response.json().get("errors", {}).items()])
+			err_msg = response.json().get("errors", {}).get("message", e_http)
 			frappe.log_error(
 				message=f"{response.json()}\n\n{e_http}\n\n{frappe.get_traceback()}",
 				title="Error requesting a list of accounts associated with this Mercury account.",
@@ -160,7 +160,7 @@ class Mercury:
 				return {"message": "Success", "payment_profile_doc": payment_profile}
 
 		except HTTPError as e_http:
-			err_msg = " ".join([f"{k} - {v}" for k, v in response.json().get("errors", {}).items()])
+			err_msg = response.json().get("errors", {}).get("message", e_http)
 			frappe.log_error(
 				message=f"{response.json()}\n\n{e_http}\n\n{frappe.get_traceback()}",
 				title="Error trying to edit Recipient Account.",
@@ -218,7 +218,7 @@ class Mercury:
 				}
 
 		except HTTPError as e_http:
-			err_msg = " ".join([f"{k} - {v}" for k, v in response.json().get("errors", {}).items()])
+			err_msg = response.json().get("errors", {}).get("message", e_http)
 			frappe.log_error(
 				message=f"{response.json()}\n\n{e_http}\n\n{frappe.get_traceback()}",
 				title=f"Error collecting payment profile for {party}",
@@ -238,31 +238,42 @@ class Mercury:
 		mop_field = "mode_of_payment" if settings.provider == "Mercury" else "sending_mode_of_payment"
 		mop = data.mode_of_payment.replace("New ", "")
 
-		try:
-			if mop != "ACH":
-				return {"error": _("Mode of Payment not supported")}
+		if mop != "ACH":
+			return {"error": _("Mode of Payment not supported")}
 
+		try:
 			account_number = str(data.get("account_number"))
 			last4 = account_number[-4:]
+			address = {
+				"address1": data.get("address_firstline"),
+				"address2": data.get("address_secondline", ""),
+				"city": data.get("city"),
+				"region": data.get("state"),
+				"postalCode": data.get("postcode"),
+				"country": data.get("country", "US").upper(),
+			}
 			recipient_data = {
 				"name": data.get("account_holders_name"),
+				"nickname": f"{party.name}-*{last4}",
 				"emails": [data.get("email")],
 				"paymentMethod": "electronic",
 				"electronicRoutingInfo": {
 					"accountNumber": account_number,
 					"routingNumber": str(data.get("routing_number")),
 					"electronicAccountType": "businessChecking",
-					"address": {
-						"address1": data.get("address_firstline"),
-						"address2": data.get("address_secondline", ""),
-						"city": data.get("city"),
-						"region": data.get("state"),
-						"postalCode": data.get("postcode"),
-						"country": data.get("country", "US").upper(),
-					},
+					"address": address,
 				},
-				"nickname": f"{party.name}-ACH-*{last4}",
 			}
+			if data.get("accept_wire"):
+				recipient_data.update(
+					{
+						"domesticWireRoutingInfo": {
+							"accountNumber": account_number,
+							"routingNumber": str(data.get("routing_number")),
+							"address": address,
+						}
+					}
+				)
 			base_url, headers = self.get_base_url_and_header(doc.company)
 			response = requests.post(
 				urljoin(base_url, "/api/v1/recipients"),
@@ -302,17 +313,71 @@ class Mercury:
 				return {"message": "Success", "payment_profile_doc": payment_profile}
 
 		except HTTPError as e_http:
-			err_msg = " ".join([f"{k} - {v}" for k, v in response.json().get("errors", {}).items()])
+			err_msg = response.json().get("errors", {}).get("message", e_http)
 			frappe.log_error(
 				message=f"{response.json()}\n\n{e_http}\n\n{frappe.get_traceback()}",
-				title="Error trying to create a Recipient Account.",
+				title=f"Error trying to create a Recipient Account for {party.name}.",
 			)
 			return {"error": f"{err_msg}"}
 
 		except requests.exceptions.RequestException as e:
 			frappe.log_error(
 				message=f"{e}\n\n{frappe.get_traceback()}",
-				title="Request error while trying to create a Recipient Account.",
+				title=f"Request error while trying to create a Recipient Account for {party.name}.",
+			)
+			return {"error": f"{e}"}
+
+	def create_wire_payment_profile(self, doc, data):
+		"""
+		Mercury currently doesn't support Wire transfers via the API. This method applies the ACH
+		data to automatically create a Domestic Wire recipient in the UI to make transfers there
+		"""
+		party = get_party_details(doc)
+		try:
+			account_number = str(data.get("account_number"))
+			last4 = account_number[-4:]
+			recipient_data = {
+				"name": data.get("account_holders_name"),
+				"nickname": f"{party.name}-Wire-*{last4}",
+				"emails": [data.get("email")],
+				"paymentMethod": "domesticWire",
+				"domesticWireRoutingInfo": {
+					"accountNumber": account_number,
+					"routingNumber": str(data.get("routing_number")),
+					"address": {
+						"address1": data.get("address_firstline"),
+						"address2": data.get("address_secondline", ""),
+						"city": data.get("city"),
+						"region": data.get("state"),
+						"postalCode": data.get("postcode"),
+						"country": data.get("country", "US").upper(),
+					},
+				},
+			}
+			base_url, headers = self.get_base_url_and_header(doc.company)
+			response = requests.post(
+				urljoin(base_url, "/api/v1/recipients"),
+				headers=headers,
+				timeout=10,
+				data=json.dumps(recipient_data),
+			)
+			response.raise_for_status()
+			r = response.json()
+			if r.get("id"):
+				return {"message": "Success"}
+
+		except HTTPError as e_http:
+			err_msg = response.json().get("errors", {}).get("message", e_http)
+			frappe.log_error(
+				message=f"{response.json()}\n\n{e_http}\n\n{frappe.get_traceback()}",
+				title=f"Error trying to create a Wire Recipient Account for {party.name}.",
+			)
+			return {"error": f"{err_msg}"}
+
+		except requests.exceptions.RequestException as e:
+			frappe.log_error(
+				message=f"{e}\n\n{frappe.get_traceback()}",
+				title=f"Request error while trying to create the Wire Recipient Account for {party.name}.",
 			)
 			return {"error": f"{e}"}
 
@@ -382,7 +447,7 @@ class Mercury:
 				}
 
 		except HTTPError as e_http:
-			err_msg = " ".join([f"{k} - {v}" for k, v in response.json().get("errors", {}).items()])
+			err_msg = response.json().get("errors", {}).get("message", e_http)
 			frappe.log_error(
 				message=f"{response.json()}\n\n{e_http}\n\n{frappe.get_traceback()}",
 				title=f"Error creating Transfer for {doc.name}.",
@@ -457,7 +522,7 @@ class Mercury:
 				return {"message": "Success", "payment_details": payment_dict}
 
 		except HTTPError as e_http:
-			err_msg = " ".join([f"{k} - {v}" for k, v in response.json().get("errors", {}).items()])
+			err_msg = response.json().get("errors", {}).get("message", e_http)
 			frappe.log_error(
 				message=f"{response.json()}\n\n{e_http}\n\n{frappe.get_traceback()}",
 				title=f"Error collecting transfer details for {transaction_id}",

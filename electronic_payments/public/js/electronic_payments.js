@@ -64,6 +64,7 @@ electronic_payments.electronic_payments = frm => {
 				},
 				{ fieldname: 'routing_number', fieldtype: 'Data', label: 'Routing Number', hidden: 1 },
 				{ fieldname: 'account_number', fieldtype: 'Data', label: 'Checking Account Number', hidden: 1 },
+				{ fieldname: 'accept_wire', fieldtype: 'Check', label: 'Routing Number can accept wire transfers?', hidden: 1 },
 				{ fieldname: 'check_number', fieldtype: 'Int', label: 'Check Number', description: 'Optional', hidden: 1 },
 				{ fieldname: 'customer_profile_id', fieldtype: 'Data', default: customer_profile_id, hidden: 1 },
 				{ fieldname: 'payment_profile_id', fieldtype: 'Data', default: payment_profile_id, hidden: 1 },
@@ -83,6 +84,7 @@ electronic_payments.electronic_payments = frm => {
 					d.fields_dict.dl_number.df.hidden = 1
 					d.fields_dict.routing_number.df.hidden = 1
 					d.fields_dict.account_number.df.hidden = 1
+					d.fields_dict.accept_wire.df.hidden = 1
 					d.fields_dict.check_number.df.hidden = 1
 					d.fields_dict.card_number.df.read_only = 0
 					d.fields_dict.card_number.set_value('')
@@ -101,6 +103,7 @@ electronic_payments.electronic_payments = frm => {
 					d.fields_dict.check_number.df.hidden = 0
 					d.fields_dict.account_number.df.read_only = 0
 					d.fields_dict.account_number.set_value('')
+					d.fields_dict.accept_wire.df.hidden = 0
 					d.fields_dict.email.df.hidden = 0
 					d.fields_dict.address_firstline.df.hidden = 0
 					d.fields_dict.address_secondline.df.hidden = 0
@@ -126,6 +129,7 @@ electronic_payments.electronic_payments = frm => {
 						d.fields_dict.dl_state.df.hidden = 1
 						d.fields_dict.dl_number.df.hidden = 1
 						d.fields_dict.routing_number.df.hidden = 1
+						d.fields_dict.accept_wire.df.hidden = 1
 						d.fields_dict.check_number.df.hidden = 1
 						d.fields_dict.card_number.df.hidden = 1
 						d.fields_dict.card_cvc.df.hidden = 1
@@ -148,6 +152,7 @@ electronic_payments.electronic_payments = frm => {
 						d.fields_dict.dl_state.df.hidden = 1
 						d.fields_dict.dl_number.df.hidden = 1
 						d.fields_dict.routing_number.df.hidden = 1
+						d.fields_dict.accept_wire.df.hidden = 1
 						d.fields_dict.check_number.df.hidden = 1
 						d.fields_dict.card_cvc.df.hidden = 1
 						d.fields_dict.cardholder_name.df.hidden = 1
