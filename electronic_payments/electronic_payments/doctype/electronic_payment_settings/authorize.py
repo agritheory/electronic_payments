@@ -95,8 +95,8 @@ class AuthorizeNet:
 		payment = apicontractsv1.paymentType()
 		payment.creditCard = creditCard
 
-		payment_amount = get_payment_amount(doc, data)
-		discount_amount = get_discount_amount(doc, data)
+		payment_amount = data.get("amount") or get_payment_amount(doc, data)
+		discount_amount = 0 if data.get("amount") else get_discount_amount(doc, data)
 		if data.get("ppm_name") and not data.get("additional_charges"):
 			data.update({"additional_charges": calculate_payment_method_fees(doc, data)})
 		total_to_charge = flt(
@@ -389,8 +389,8 @@ class AuthorizeNet:
 			party_profile_id = data.get("party_profile_id")
 
 		payment_profile_id = data.get("payment_profile_id")
-		payment_amount = get_payment_amount(doc, data)
-		discount_amount = get_discount_amount(doc, data)
+		payment_amount = data.get("amount") or get_payment_amount(doc, data)
+		discount_amount = 0 if data.get("amount") else get_discount_amount(doc, data)
 		if data.get("ppm_name") and not data.get("additional_charges"):
 			data.update({"additional_charges": calculate_payment_method_fees(doc, data)})
 		total_to_charge = flt(
@@ -498,8 +498,8 @@ class AuthorizeNet:
 
 		payment_profile_id = data.get("payment_profile_id")
 
-		payment_amount = get_payment_amount(doc, data)
-		discount_amount = get_discount_amount(doc, data)
+		payment_amount = data.get("amount") or get_payment_amount(doc, data)
+		discount_amount = 0 if data.get("amount") else get_discount_amount(doc, data)
 		if data.get("ppm_name") and not data.get("additional_charges"):
 			data.update({"additional_charges": calculate_payment_method_fees(doc, data)})
 		total_to_charge = flt(

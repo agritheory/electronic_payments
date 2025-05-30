@@ -9,6 +9,9 @@ electronic_payments.electronic_payments = frm => {
 		let customer_profile_id = undefined
 		let ppm_name = undefined
 		let subject_to_credit_limit = 0
+		let outstanding_amount = frm.doc.doctype.includes('Invoice')
+			? frm.doc.outstanding_amount
+			: frm.doc.grand_total - frm.doc.advance_paid
 		let d = new frappe.ui.Dialog({
 			title: __('Electronic Payments'),
 			size: 'extra-large',
@@ -32,6 +35,7 @@ electronic_payments.electronic_payments = frm => {
 					fieldtype: 'Select',
 					options: ['Charge now', 'Save payment data for only this transaction', 'Retain payment data for this party'],
 				},
+				{ fieldname: 'amount', label: 'Payment Amount', fieldtype: 'Currency', default: outstanding_amount },
 				{ fieldname: 'address_firstline', label: 'Address', fieldtype: 'Data', hidden: 1 },
 				{ fieldname: 'address_secondline', label: 'Address Line 2', fieldtype: 'Data', hidden: 1 },
 				{ fieldname: 'city', label: 'City', fieldtype: 'Data', hidden: 1 },
