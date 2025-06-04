@@ -1,3 +1,6 @@
+# Copyright (c) 2025, AgriTheory and contributors
+# For license information, please see license.txt
+
 suppliers = [
 	(
 		"Exceptional Grid",
@@ -12,6 +15,8 @@ suppliers = [
 			"country": "United States",
 			"pincode": "34791",
 		},
+		"Marlene Xiong",
+		"marlene@exceptionalgrid.com",
 	),
 	(
 		"Liu & Loewen Accountants LLP",
@@ -26,6 +31,8 @@ suppliers = [
 			"country": "United States",
 			"pincode": "90953",
 		},
+		"Ida Loewen",
+		"ml@lla.co",
 	),
 	(
 		"Mare Digitalis",
@@ -40,6 +47,8 @@ suppliers = [
 			"country": "United States",
 			"pincode": "51485",
 		},
+		"Harold Dren",
+		"dren@mare.us",
 	),
 	(
 		"AgriTheory",
@@ -54,6 +63,8 @@ suppliers = [
 			"country": "United States",
 			"pincode": "55932",
 		},
+		"Nikka Anthony",
+		"nikka@at.dev",
 	),
 	(
 		"HIJ Telecom, Inc",
@@ -68,6 +79,8 @@ suppliers = [
 			"country": "United States",
 			"pincode": "28026",
 		},
+		"Portio Diaz",
+		"portio@hij.com",
 	),
 	(
 		"Sphere Cellular",
@@ -82,6 +95,8 @@ suppliers = [
 			"country": "United States",
 			"pincode": "94286",
 		},
+		"Robert Bruno",
+		"rbruno@spherecellular.co",
 	),
 	(
 		"Cooperative Ag Finance",
@@ -96,6 +111,8 @@ suppliers = [
 			"country": "United States",
 			"pincode": "28989",
 		},
+		"Codi Carter",
+		"cc@cooperativeag.com",
 	),
 ]
 
@@ -113,6 +130,8 @@ tax_authority = [
 			"country": "United States",
 			"pincode": "07165",
 		},
+		"Evelyn Campbell",
+		"evelyn_campbell@localtax.gov",
 	),
 ]
 
@@ -310,7 +329,7 @@ customers = [
 			"pincode": "02184",
 		},
 		"Brenton Kennedy",
-		"brenton@pheonix.fruit",
+		"brenton@phoenix.fruit",
 	),
 	(
 		"Hydra Produce Co",
