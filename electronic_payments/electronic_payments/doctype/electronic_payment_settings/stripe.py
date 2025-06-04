@@ -219,8 +219,8 @@ class Stripe:
 				currency = frappe.defaults.get_global_default("currency").lower()
 				card_number = data.get("card_number")
 				card_number = card_number.replace(" ", "")
-				payment_amount = get_payment_amount(doc, data)
-				discount_amount = get_discount_amount(doc, data)
+				payment_amount = data.get("amount") or get_payment_amount(doc, data)
+				discount_amount = 0 if data.get("amount") else get_discount_amount(doc, data)
 				if data.get("ppm_name") and not data.get("additional_charges"):
 					data.update({"additional_charges": calculate_payment_method_fees(doc, data)})
 				total_to_charge = flt(
@@ -464,8 +464,8 @@ class Stripe:
 
 		try:
 			currency = frappe.defaults.get_global_default("currency").lower()
-			payment_amount = get_payment_amount(doc, data)
-			discount_amount = get_discount_amount(doc, data)
+			payment_amount = data.get("amount") or get_payment_amount(doc, data)
+			discount_amount = 0 if data.get("amount") else get_discount_amount(doc, data)
 			if data.get("ppm_name") and not data.get("additional_charges"):
 				data.update({"additional_charges": calculate_payment_method_fees(doc, data)})
 			total_to_charge = flt(
