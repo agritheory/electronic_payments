@@ -20,7 +20,8 @@ def exceeds_credit_limit(doc, data):
 	credit_limit = get_credit_limit(doc.customer, doc.company)
 	payment_amount = get_payment_amount(doc, data)
 	discount_amount = get_discount_amount(doc, data)
-	return credit_limit > 0 and payment_amount - discount_amount > credit_limit
+	net_payment_amount = data.get("amount") or payment_amount - discount_amount
+	return credit_limit > 0 and net_payment_amount > credit_limit
 
 
 def get_payment_amount(doc, data):
@@ -73,7 +74,9 @@ def calculate_payment_method_fees(doc, data):
 	if not data.get("ppm_name"):
 		return 0.0
 	ppm = frappe.get_doc("Portal Payment Method", data.get("ppm_name"))
-	payment_amount = get_payment_amount(doc, data) - get_discount_amount(doc, data)
+	payment_amount = data.get("amount") or get_payment_amount(doc, data) - get_discount_amount(
+		doc, data
+	)
 	return ppm.calculate_payment_method_fees(doc, amount=payment_amount)
 
 
@@ -102,8 +105,8 @@ def create_payment_entry(doc, data, transaction_id):
 		settings.sending_fee_account if "Purchase" in doc.doctype else settings.accepting_fee_account
 	)
 	fees = data.get("additional_charges", 0)
-	payment_amount = get_payment_amount(doc, data)
-	discount_amount = get_discount_amount(doc, data)
+	payment_amount = data.get("amount") or get_payment_amount(doc, data)
+	discount_amount = 0 if data.get("amount") else get_discount_amount(doc, data)
 	payment_term = (
 		frappe.get_value("Payment Schedule", data.payment_term, "payment_term")
 		if data.get("payment_term")
@@ -240,8 +243,8 @@ def create_journal_entry(doc, data, transaction_id):
 		settings.sending_fee_account if "Purchase" in doc.doctype else settings.accepting_fee_account
 	)
 	fees = data.get("additional_charges") or 0
-	payment_amount = get_payment_amount(doc, data)
-	discount_amount = get_discount_amount(doc, data)
+	payment_amount = data.get("amount") or get_payment_amount(doc, data)
+	discount_amount = 0 if data.get("amount") else get_discount_amount(doc, data)
 
 	je = frappe.new_doc("Journal Entry")
 	je.posting_date = today()
