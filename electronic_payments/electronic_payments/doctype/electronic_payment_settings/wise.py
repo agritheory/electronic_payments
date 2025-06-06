@@ -137,8 +137,8 @@ class Wise:
 		merch_id_field = "ref_id" if settings.provider == "Wise" else "sending_ref_id"
 		profile_id = settings.get(merch_id_field)
 
-		payment_amount = get_payment_amount(doc, data)
-		discount_amount = get_discount_amount(doc, data)
+		payment_amount = data.get("amount") or get_payment_amount(doc, data)
+		discount_amount = 0 if data.get("amount") else get_discount_amount(doc, data)
 		if data.get("ppm_name") and not data.get("additional_charges"):
 			data.update({"additional_charges": calculate_payment_method_fees(doc, data)})
 		total_to_charge = flt(
