@@ -25,10 +25,13 @@ frappe.ready(async () => {
 			document.getElementById('ppm_card_expiration_date').required = true
 
 			document.getElementById('ppm_account_holders_name').required = false
+			document.getElementById('ppm_email').required = false
 			document.getElementById('ppm_routing_number').required = false
 			document.getElementById('ppm_account_number').required = false
+			document.getElementById('ppm_accept_wire').required = false
 			document.getElementById('ppm_account_currency').required = false
 			document.getElementById('ppm_address_firstline').required = false
+			document.getElementById('ppm_address_secondline').required = false
 			document.getElementById('ppm_city').required = false
 			document.getElementById('ppm_state').required = false
 			document.getElementById('ppm_postcode').required = false
@@ -40,10 +43,13 @@ frappe.ready(async () => {
 			document.getElementById('ppm_card_expiration_date').required = false
 
 			document.getElementById('ppm_account_holders_name').required = true
+			document.getElementById('ppm_email').required = true
 			document.getElementById('ppm_routing_number').required = true
 			document.getElementById('ppm_account_number').required = true
+			document.getElementById('ppm_accept_wire').required = false
 			document.getElementById('ppm_account_currency').required = true
 			document.getElementById('ppm_address_firstline').required = true
+			document.getElementById('ppm_address_secondline').required = false
 			document.getElementById('ppm_city').required = true
 			document.getElementById('ppm_state').required = true
 			document.getElementById('ppm_postcode').required = true
@@ -104,9 +110,12 @@ frappe.ready(async () => {
 			'cardholder_name',
 			'card_expiration_date',
 			'account_holders_name',
+			'email',
 			'routing_number',
 			'account_number',
+			'accept_wire',
 			'address_firstline',
+			'address_secondline',
 			'city',
 			'state',
 			'postcode',

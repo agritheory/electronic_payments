@@ -9,6 +9,9 @@ electronic_payments.electronic_payments = frm => {
 		let customer_profile_id = undefined
 		let ppm_name = undefined
 		let subject_to_credit_limit = 0
+		let outstanding_amount = frm.doc.doctype.includes('Invoice')
+			? frm.doc.outstanding_amount
+			: frm.doc.grand_total - frm.doc.advance_paid
 		let d = new frappe.ui.Dialog({
 			title: __('Electronic Payments'),
 			size: 'extra-large',
@@ -32,7 +35,9 @@ electronic_payments.electronic_payments = frm => {
 					fieldtype: 'Select',
 					options: ['Charge now', 'Save payment data for only this transaction', 'Retain payment data for this party'],
 				},
+				{ fieldname: 'amount', label: 'Payment Amount', fieldtype: 'Currency', default: outstanding_amount },
 				{ fieldname: 'address_firstline', label: 'Address', fieldtype: 'Data', hidden: 1 },
+				{ fieldname: 'address_secondline', label: 'Address Line 2', fieldtype: 'Data', hidden: 1 },
 				{ fieldname: 'city', label: 'City', fieldtype: 'Data', hidden: 1 },
 				{ fieldname: 'state', label: 'State', fieldtype: 'Data', hidden: 1 },
 				{ fieldname: 'postcode', label: 'Post/Zip Code', fieldtype: 'Data', hidden: 1 },
@@ -49,6 +54,7 @@ electronic_payments.electronic_payments = frm => {
 				},
 				{ fieldname: 'card_cvc', fieldtype: 'Int', label: 'CVC', hidden: 1 },
 				{ fieldname: 'account_holders_name', fieldtype: 'Data', label: "Account Holder's Name", hidden: 1 },
+				{ fieldname: 'email', label: 'Email', fieldtype: 'Data', hidden: 1 },
 				{ fieldname: 'dl_state', fieldtype: 'Data', label: 'Drivers License State', hidden: 1 },
 				{ fieldname: 'dl_number', fieldtype: 'Data', label: 'Drivers License Number', hidden: 1 },
 				{ fieldname: 'col_2', fieldtype: 'Column Break', hidden: 1 },
@@ -62,6 +68,7 @@ electronic_payments.electronic_payments = frm => {
 				},
 				{ fieldname: 'routing_number', fieldtype: 'Data', label: 'Routing Number', hidden: 1 },
 				{ fieldname: 'account_number', fieldtype: 'Data', label: 'Checking Account Number', hidden: 1 },
+				{ fieldname: 'accept_wire', fieldtype: 'Check', label: 'Routing Number can accept wire transfers?', hidden: 1 },
 				{ fieldname: 'check_number', fieldtype: 'Int', label: 'Check Number', description: 'Optional', hidden: 1 },
 				{ fieldname: 'customer_profile_id', fieldtype: 'Data', default: customer_profile_id, hidden: 1 },
 				{ fieldname: 'payment_profile_id', fieldtype: 'Data', default: payment_profile_id, hidden: 1 },
@@ -81,6 +88,7 @@ electronic_payments.electronic_payments = frm => {
 					d.fields_dict.dl_number.df.hidden = 1
 					d.fields_dict.routing_number.df.hidden = 1
 					d.fields_dict.account_number.df.hidden = 1
+					d.fields_dict.accept_wire.df.hidden = 1
 					d.fields_dict.check_number.df.hidden = 1
 					d.fields_dict.card_number.df.read_only = 0
 					d.fields_dict.card_number.set_value('')
@@ -99,7 +107,10 @@ electronic_payments.electronic_payments = frm => {
 					d.fields_dict.check_number.df.hidden = 0
 					d.fields_dict.account_number.df.read_only = 0
 					d.fields_dict.account_number.set_value('')
+					d.fields_dict.accept_wire.df.hidden = 0
+					d.fields_dict.email.df.hidden = 0
 					d.fields_dict.address_firstline.df.hidden = 0
+					d.fields_dict.address_secondline.df.hidden = 0
 					d.fields_dict.city.df.hidden = 0
 					d.fields_dict.state.df.hidden = 0
 					d.fields_dict.postcode.df.hidden = 0
@@ -122,12 +133,15 @@ electronic_payments.electronic_payments = frm => {
 						d.fields_dict.dl_state.df.hidden = 1
 						d.fields_dict.dl_number.df.hidden = 1
 						d.fields_dict.routing_number.df.hidden = 1
+						d.fields_dict.accept_wire.df.hidden = 1
 						d.fields_dict.check_number.df.hidden = 1
 						d.fields_dict.card_number.df.hidden = 1
 						d.fields_dict.card_cvc.df.hidden = 1
 						d.fields_dict.cardholder_name.df.hidden = 1
 						d.fields_dict.card_expiration_date.df.hidden = 1
+						d.fields_dict.email.df.hidden = 1
 						d.fields_dict.address_firstline.df.hidden = 1
+						d.fields_dict.address_secondline.df.hidden = 1
 						d.fields_dict.city.df.hidden = 1
 						d.fields_dict.state.df.hidden = 1
 						d.fields_dict.postcode.df.hidden = 1
@@ -142,11 +156,14 @@ electronic_payments.electronic_payments = frm => {
 						d.fields_dict.dl_state.df.hidden = 1
 						d.fields_dict.dl_number.df.hidden = 1
 						d.fields_dict.routing_number.df.hidden = 1
+						d.fields_dict.accept_wire.df.hidden = 1
 						d.fields_dict.check_number.df.hidden = 1
 						d.fields_dict.card_cvc.df.hidden = 1
 						d.fields_dict.cardholder_name.df.hidden = 1
 						d.fields_dict.card_expiration_date.df.hidden = 1
+						d.fields_dict.email.df.hidden = 1
 						d.fields_dict.address_firstline.df.hidden = 1
+						d.fields_dict.address_secondline.df.hidden = 1
 						d.fields_dict.city.df.hidden = 1
 						d.fields_dict.state.df.hidden = 1
 						d.fields_dict.postcode.df.hidden = 1

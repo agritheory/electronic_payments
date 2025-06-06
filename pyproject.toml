@@ -22,11 +22,11 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 requires-poetry = ">=2.0"
-version =  "15.0.2"
+version =  "15.2.0"
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.14"
-authorizenet = { git = "https://github.com/agritheory/authorizenet.git@main",  python = ">3.10,<3.14"}
+authorizenet = "^1.1.5"
 stripe = "^2.56.0"
 
 [tool.poetry.group.dev.dependencies]

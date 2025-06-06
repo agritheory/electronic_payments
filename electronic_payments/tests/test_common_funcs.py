@@ -1,17 +1,20 @@
+# Copyright (c) 2025, AgriTheory and contributors
+# For license information, please see license.txt
+
 import datetime
-import pytest
 from random import randint
 
 import frappe
 import frappe.defaults
+import pytest
 from frappe.utils import flt
 
 from electronic_payments.electronic_payments.doctype.electronic_payment_settings.common import (
+	calculate_payment_method_fees,
 	exceeds_credit_limit,
-	get_payment_amount,
 	get_discount_amount,
 	get_party_details,
-	calculate_payment_method_fees,
+	get_payment_amount,
 	process_electronic_payment,
 )
 
@@ -32,6 +35,7 @@ def create_electronic_payment_settings(
 	eps.provider = provider
 	eps.api_key = "123456789"
 	eps.transaction_key = "" if provider == "Stripe" else "987654321"
+	eps.endpoint = "www.example.com"
 	eps.create_ppm = 1
 	eps.use_clearing_account = clearing_acct
 	eps.deposit_account = "1201 - Primary Checking - CFC"
@@ -40,13 +44,19 @@ def create_electronic_payment_settings(
 	eps.accepting_payment_discount_account = frappe.get_value(
 		"Account", {"name": ["like", "%Sales - CFC%"]}, "name"
 	)
-	eps.enable_sending = 1
-	eps.withdrawal_account = "1201 - Primary Checking - CFC"
-	eps.sending_fee_account = eps.accepting_fee_account
-	eps.sending_clearing_account = "2130 - Electronic Payments Payable - CFC"
-	eps.sending_payment_discount_account = frappe.get_value(
-		"Account", {"name": ["like", "%Miscellaneous Expenses%"]}, "name"
-	)
+	eps.enable_sending = int(provider == "Authorize.net")
+	if eps.enable_sending:
+		eps.sending_provider = provider
+		eps.sending_ref_id = eps.ref_id
+		eps.sending_endpoint = eps.endpoint
+		eps.sending_api_key = eps.api_key
+		eps.sending_transaction_key = eps.transaction_key
+		eps.withdrawal_account = eps.deposit_account
+		eps.sending_fee_account = eps.accepting_fee_account
+		eps.sending_clearing_account = "2130 - Electronic Payments Payable - CFC"
+		eps.sending_payment_discount_account = frappe.get_value(
+			"Account", {"name": ["like", "%Miscellaneous Expenses%"]}, "name"
+		)
 	eps.save()
 	return eps
 
@@ -65,15 +75,18 @@ def create_party_payment_method(party, party_type, service_charge=False):
 	)
 	party_profile = frappe.get_value(party_type, party, "electronic_payment_profile")
 	last4 = randint(1000, 9999)  # Random 4 digit number
+	pmt_type = "Card" if party_type == "Customer" else "ACH"
+	provider_field = "provider" if party_type == "Customer" else "sending_provider"
+	mop_field = "mode_of_payment" if party_type == "Customer" else "sending_mode_of_payment"
 
 	payment_profile = frappe.new_doc("Electronic Payment Profile")
 	payment_profile.party_type = party_type
 	payment_profile.party = party
-	payment_profile.payment_type = "Card"
+	payment_profile.payment_type = pmt_type
 	payment_profile.payment_gateway = (
-		"Authorize" if settings.provider == "Authorize.net" else "Stripe"
+		"Authorize" if settings.get(provider_field) == "Authorize.net" else settings.get(provider_field)
 	)
-	payment_profile.reference = f"**** **** **** {last4}"
+	payment_profile.reference = f"**** **** **** {last4}" if pmt_type == "Card" else f"*{last4}"
 	payment_profile.payment_profile_id = str(randint(100000000, 999999999))  # Random 9-digit number
 	payment_profile.party_profile = (
 		party_profile if party_profile else str(randint(100000000, 999999999))
@@ -85,9 +98,9 @@ def create_party_payment_method(party, party_type, service_charge=False):
 	ppm.mode_of_payment = frappe.get_value(
 		"Electronic Payment Settings",
 		{"company": frappe.defaults.get_defaults().company},
-		"mode_of_payment",
+		mop_field,
 	)
-	ppm.label = f"Card-{last4}"
+	ppm.label = f"{pmt_type}-{last4}"
 	ppm.default = 0
 	ppm.electronic_payment_profile = payment_profile.name
 	ppm.service_charge = int(service_charge)
@@ -262,7 +275,7 @@ def test_receiving_payment_create_payment_entry_basic():
 	assert flt(gl2.credit, precision) == data.additional_charges
 
 	gl3 = frappe.get_doc("GL Entry", {"voucher_no": pe.name, "account": settings.deposit_account})
-	assert flt(gl3.debit, precision) == doc.grand_total + data.additional_charges
+	assert flt(gl3.debit, precision) == flt(doc.grand_total + data.additional_charges, precision)
 
 
 @pytest.mark.order(21)
@@ -561,7 +574,7 @@ def test_receiving_payment_create_journal_entry_basic():
 	gl3 = frappe.get_doc(
 		"GL Entry", {"voucher_no": je.name, "account": settings.accepting_clearing_account}
 	)
-	assert flt(gl3.debit, precision) == doc.grand_total + data.additional_charges
+	assert flt(gl3.debit, precision) == flt(doc.grand_total + data.additional_charges, precision)
 
 
 @pytest.mark.order(24)
@@ -1284,3 +1297,60 @@ def test_sending_payment_create_journal_entry_discount():
 
 	# Revert Accounts Settings change
 	frappe.db.set_single_value("Accounts Settings", "book_tax_discount_loss", 0)
+
+
+@pytest.mark.order(34)
+def test_partial_payment_with_specified_amount():
+	"""
+	The Payment Entry should have the following logic:
+
+	- Paid amount = user-entered payment amount of $250.00
+	- Doc still has outstanding amount of $750.00
+	- References table linked to relevant Purchase Invoice and allocated amount is the amount of
+	the payment amount
+
+	Payment Entry accounting:
+	- Grand total of $1,000.00
+
+	| Account                                        | Debit    |  Credit |
+	| ---------------------------------------------- | --------:| -------:|
+	| 2110 - Accounts Payable - CFC                  |  $250.00 |         |
+	| 1201 - Primary Checking - CFC                  |          | $250.00 |
+	"""
+	settings = create_electronic_payment_settings("Authorize.net", "Use Payment Entry")
+	party = "AgriTheory"
+	party_type = "Supplier"
+
+	# Add dummy Portal Payment Method with no service charge
+	ppm_name = create_party_payment_method(party, party_type, False)
+
+	# Apply a partial payment against a Purchase Invoice
+	doc = frappe.get_doc("Purchase Invoice", {"supplier": party, "outstanding_amount": [">", 250]})
+	assert doc.outstanding_amount == 1000
+
+	# Test payment of one of multiple payment terms, no discounts, no provider fees
+	data = frappe._dict(
+		{
+			"ppm_name": ppm_name,
+			"amount": 250.00,
+		}
+	)
+	data.additional_charges = calculate_payment_method_fees(doc, data)
+	assert data.additional_charges == 0
+	transaction_id = str(randint(100000000, 999999999))
+	process_electronic_payment(doc, data, transaction_id)
+	pe = frappe.get_doc("Payment Entry", {"reference_no": transaction_id})
+	precision = frappe.get_precision(doc.doctype, "grand_total")
+	epsilon = 1 / pow(10, precision + 1)
+
+	assert pe.paid_amount == 250
+	assert frappe.get_value(doc.doctype, doc.name, "outstanding_amount") - 750 < epsilon
+	assert pe.references[0].reference_name == doc.name
+
+	gl1 = frappe.get_doc(
+		"GL Entry", {"voucher_no": pe.name, "account": "2110 - Accounts Payable - CFC"}
+	)
+	assert flt(gl1.debit, precision) == flt(data.amount, precision)
+
+	gl2 = frappe.get_doc("GL Entry", {"voucher_no": pe.name, "account": settings.withdrawal_account})
+	assert flt(gl2.credit, precision) == flt(gl1.debit, precision)

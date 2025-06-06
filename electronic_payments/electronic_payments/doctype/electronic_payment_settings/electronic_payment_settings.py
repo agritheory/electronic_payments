@@ -14,6 +14,10 @@ from electronic_payments.electronic_payments.doctype.electronic_payment_settings
 	AuthorizeNet,
 	fetch_authorize_transactions,
 )
+from electronic_payments.electronic_payments.doctype.electronic_payment_settings.mercury import (
+	Mercury,
+	fetch_mercury_transactions,
+)
 from electronic_payments.electronic_payments.doctype.electronic_payment_settings.stripe import (
 	Stripe,
 	fetch_stripe_transactions,
@@ -28,6 +32,7 @@ class ElectronicPaymentSettings(Document):
 	def validate(self):
 		self.create_electronic_payment_mop()
 		self.copy_api_config_if_same_providers()
+		self.validate_mercury_merchant_id()
 		self.validate_wise_merchant_id()
 		self.validate_wise_direct_debit_account_id()
 
@@ -72,6 +77,20 @@ class ElectronicPaymentSettings(Document):
 					self.doctype, self.name, "transaction_key", raise_exception=False
 				)
 				self.sending_transaction_key = t_key
+
+	def validate_mercury_merchant_id(self):
+		if self.enable_sending and self.sending_provider == "Mercury" and not self.sending_ref_id:
+			client = Mercury()
+			accounts_resp = client.get_accounts(self.company)
+			if accounts_resp.get("message") == "Success":
+				if not accounts_resp.get("data"):
+					message = "Please fill in the Merchant ID field for Mercury with the Account ID of the account making transfers. There were no accounts found associated with the provided Mercury credentials, you can create them in the Mercury platform."
+				else:
+					m1 = "</li><li>".join(accounts_resp["data"])
+					message = f"Please fill in the Merchant ID field for Mercury with the Account ID of the account making transfers. The following account options were found:<br><ul><li>{m1}</li></ul>"
+			else:
+				message = f"Please fill in the Merchant ID field for Mercury with the Account ID of the account making transfers. {accounts_resp['error']}"
+			frappe.throw(msg=message, title="Missing Required Field")
 
 	def validate_wise_merchant_id(self):
 		if self.enable_sending and self.sending_provider == "Wise" and not self.sending_ref_id:
@@ -125,6 +144,8 @@ class ElectronicPaymentSettings(Document):
 			return Stripe()
 		if self.get(provider_field) == "Wise":
 			return Wise()
+		if self.get(provider_field) == "Mercury":
+			return Mercury()
 
 
 @frappe.whitelist()
@@ -189,6 +210,9 @@ def fetch_transactions():
 		if settings.sending_provider == "Wise":
 			s_response = fetch_wise_transactions(settings)
 			s_provider = "Wise"
+		if settings.sending_provider == "Mercury":
+			s_response = fetch_mercury_transactions(settings)
+			s_provider = "Mercury"
 		elif settings.sending_provider == "Authorize.net" and not settings.provider == "Authorize.net":
 			s_response = fetch_authorize_transactions(settings)
 			s_provider = "Authorize.net"

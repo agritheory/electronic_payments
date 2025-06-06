@@ -36,7 +36,20 @@ def get_context(context):
 		client = settings.client(doc)
 		response = client.get_customer_payment_profile(settings.company, electronic_payment_profile.name)
 		if response.get("message") and response["message"] == "Success":
-			portal_payment_method.update(response["data"])
+			data = response["data"]
+			for field in [
+				"email",
+				"address_firstline",
+				"address_secondline",
+				"city",
+				"state",
+				"state_label",
+				"postcode",
+				"country",
+			]:
+				if not data.get(field):
+					data.update({field: ""})
+			portal_payment_method.update(data)
 
 		context.portal_payment_method = portal_payment_method
 

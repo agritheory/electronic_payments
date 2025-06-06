@@ -90,7 +90,7 @@ def create_test_data(a_provider=None, s_provider=None):
 		and s_provider
 		and isinstance(s_provider, str)
 		and len(s_provider) == 1
-		and s_provider.lower() in "aw"
+		and s_provider.lower() in "amw"
 	):
 		settings.sending_provider = s_provider.lower()
 
@@ -913,6 +913,7 @@ def create_electronic_payment_settings(settings):
 	authorize_present = os.environ.get("AUTHORIZE_API_KEY") and os.environ.get(
 		"AUTHORIZE_TRANSACTION_KEY"
 	)
+	mercury_present = os.environ.get("MERCURY_API_KEY")
 	stripe_present = os.environ.get("STRIPE_API_KEY")
 	wise_present = os.environ.get("WISE_API_KEY")
 
@@ -929,6 +930,13 @@ def create_electronic_payment_settings(settings):
 			"endpoint": "https://apitest.authorize.net/xml/v1/request.api",
 			"api_key": os.environ.get("AUTHORIZE_API_KEY"),
 			"transaction_key": os.environ.get("AUTHORIZE_TRANSACTION_KEY"),
+		},
+		"m": {
+			"check": mercury_present,
+			"provider": "Mercury",
+			"endpoint": "https://api-sandbox.mercury.com",
+			"api_key": os.environ.get("MERCURY_API_KEY"),
+			"merchant_id": os.environ.get("MERCURY_ACCOUNT_ID"),
 		},
 		"s": {
 			"check": stripe_present,
@@ -954,6 +962,8 @@ def create_electronic_payment_settings(settings):
 		pa_code = "s"
 
 	# Find sending payments provider if not given in args
+	if not ps_code and mercury_present:
+		ps_code = "m"
 	if not ps_code and wise_present:
 		ps_code = "w"
 
@@ -974,10 +984,15 @@ def create_electronic_payment_settings(settings):
 
 	if not ps_code:
 		eps.enable_sending = 0
+	elif ps_code == "m" and not os.environ.get("MERCURY_ACCOUNT_ID"):
+		eps.enable_sending = 0
+		print(
+			"No Mercury account ID found - this is required to create a Settings document. Settings will not enable sending payments - enter your API credentials manually, click save, then collect the ID from the displayed options."
+		)
 	elif ps_code == "w" and not os.environ.get("WISE_ACCOUNT_ID"):
 		eps.enable_sending = 0
 		print(
-			"No Wise account ID found - this is required to create a Settings document. Settings will not enable sending payments - enter your API credentials manually, click save, then collect the ID from the displayed options."
+			"No Wise profile ID found - this is required to create a Settings document. Settings will not enable sending payments - enter your API credentials manually, click save, then collect the ID from the displayed options."
 		)
 	elif ps_code and not provider_mapping[ps_code]["check"]:
 		eps.enable_sending = 0

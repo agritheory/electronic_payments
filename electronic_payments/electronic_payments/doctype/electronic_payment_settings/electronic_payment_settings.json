@@ -212,10 +212,10 @@
 			"fieldtype": "Select",
 			"label": "Sending Provider",
 			"mandatory_depends_on": "enable_sending",
-			"options": "\nAuthorize.net\nWise"
+			"options": "\nAuthorize.net\nMercury\nWise"
 		},
 		{
-			"description": "Required for Wise. Enter the Wise Profile ID for the Company making transfers. If not known, enter API credentials and click Save. The error message will display the profile options and their IDs, if any.",
+			"description": "Required for Mercury and Wise. For Mercury, enter the Mercury Account ID for the account making transfers. For Wise, enter the Wise Profile ID for the Company making transfers. If not known, enter API credentials and click Save. The error message will display the options and their IDs, if any.",
 			"fieldname": "sending_ref_id",
 			"fieldtype": "Data",
 			"label": "Sending Merchant ID"
@@ -228,7 +228,7 @@
 			"fieldname": "sending_endpoint",
 			"fieldtype": "Data",
 			"label": "Sending Endpoint",
-			"mandatory_depends_on": "eval:doc.enable_sending && (doc.provider !== doc.sending_provider) && (doc.sending_provider === \"Authorize.net\" || doc.sending_provider === \"Wise\")"
+			"mandatory_depends_on": "eval:doc.enable_sending && (doc.provider !== doc.sending_provider) && (doc.sending_provider === \"Authorize.net\" || doc.sending_provider === \"Mercury\" || doc.sending_provider === \"Wise\")"
 		},
 		{
 			"fieldname": "sending_api_key",
@@ -292,7 +292,7 @@
 		}
 	],
 	"links": [],
-	"modified": "2025-05-02 16:34:31.701156",
+	"modified": "2025-05-26 09:08:22.610267",
 	"modified_by": "Administrator",
 	"module": "Electronic Payments",
 	"name": "Electronic Payment Settings",

@@ -259,6 +259,7 @@ class Wise:
 			# Wire Transfers have same required fields
 			account_number = str(data.get("account_number"))
 			last4 = account_number[-4:]
+			address_sl = data.get("address_secondline", "")
 			recipient_data = {
 				"accountHolderName": data.get("account_holders_name"),
 				"currency": doc.get("currency", "USD").upper(),
@@ -267,7 +268,7 @@ class Wise:
 				"ownedByCustomer": False,
 				"details": {
 					"address": {
-						"firstLine": data.get("address_firstline"),
+						"firstLine": data.get("address_firstline", "") + (f" {address_sl}" if address_sl else ""),
 						"city": data.get("city"),
 						"state": data.get("state"),
 						"postCode": data.get("postcode"),

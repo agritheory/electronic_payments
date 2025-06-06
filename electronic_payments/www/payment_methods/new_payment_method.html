@@ -58,11 +58,17 @@
                         </div>
                     </div>
                 </div>
+
+                
                 <div id="ach">
                     <div class="form-group row">
                         <div class="col-sm-6">
                             <label for="account_holders_name" class="control-label text-muted small">{{ _("Account Holder's Name") }}</label>
                             <input id="ppm_account_holders_name" type="text" class="form-control" name="account_holders_name">
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="email" class="control-label text-muted small">{{ _("Email") }}</label>
+                            <input id="ppm_email" type="text" class="form-control" name="email">
                         </div>
                     </div>
 
@@ -79,12 +85,24 @@
 
                     <div class="form-group row">
                         <div class="col-sm-6">
-                            <label for="city" class="control-label text-muted small">{{ _("City") }}</label>
-                            <input id="ppm_city" type="text" class="form-control" name="city">
+                            <label for="address_secondline" class="control-label text-muted small">{{ _("Address Line 2") }}</label>
+                            <input id="ppm_address_secondline" type="text" class="form-control" name="address_secondline">
                         </div>
                         <div class="col-sm-6">
                             <label for="account_number" class="control-label text-muted small">{{ _("Checking Account Number") }}</label>
                             <input id="ppm_account_number" type="text" class="form-control" name="account_number">
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-6">
+                            <label for="city" class="control-label text-muted small">{{ _("City") }}</label>
+                            <input id="ppm_city" type="text" class="form-control" name="city">
+                        </div>
+
+                        <div class="col-sm-6">
+                            <label for="accept_wire" class="control-label text-muted small">{{ _("Routing Number can accept wire transfers?") }}</label>
+                            <input id="ppm_accept_wire" type="checkbox" class="form-control" name="accept_wire">
                         </div>
                     </div>
 
@@ -157,7 +175,6 @@
                                 <option value="USD" selected>{{ _("USD") }}</option>
                             </select>
                         </div>
-
                     </div>
 
                     <div class="form-group row">
