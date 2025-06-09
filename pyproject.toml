@@ -22,7 +22,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 requires-poetry = ">=2.0"
-version =  "15.2.0"
+version =  "15.3.0"
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.14"
