@@ -90,7 +90,7 @@ def create_test_data(a_provider=None, s_provider=None):
 		and s_provider
 		and isinstance(s_provider, str)
 		and len(s_provider) == 1
-		and s_provider.lower() in "am"
+		and s_provider.lower() in "amw"
 	):
 		settings.sending_provider = s_provider.lower()
 
@@ -915,6 +915,7 @@ def create_electronic_payment_settings(settings):
 	)
 	mercury_present = os.environ.get("MERCURY_API_KEY")
 	stripe_present = os.environ.get("STRIPE_API_KEY")
+	wise_present = os.environ.get("WISE_API_KEY")
 
 	if not (authorize_present or stripe_present):
 		print(
@@ -942,6 +943,13 @@ def create_electronic_payment_settings(settings):
 			"provider": "Stripe",
 			"api_key": os.environ.get("STRIPE_API_KEY"),
 		},
+		"w": {
+			"check": wise_present,
+			"provider": "Wise",
+			"endpoint": "https://api.sandbox.transferwise.tech",
+			"api_key": os.environ.get("WISE_API_KEY"),
+			"merchant_id": os.environ.get("WISE_ACCOUNT_ID"),
+		},
 	}
 	pa_code = settings.get("provider")
 	ps_code = settings.get("sending_provider")
@@ -956,6 +964,8 @@ def create_electronic_payment_settings(settings):
 	# Find sending payments provider if not given in args
 	if not ps_code and mercury_present:
 		ps_code = "m"
+	if not ps_code and wise_present:
+		ps_code = "w"
 
 	eps = frappe.new_doc("Electronic Payment Settings")
 	eps.company = settings.company
@@ -978,6 +988,11 @@ def create_electronic_payment_settings(settings):
 		eps.enable_sending = 0
 		print(
 			"No Mercury account ID found - this is required to create a Settings document. Settings will not enable sending payments - enter your API credentials manually, click save, then collect the ID from the displayed options."
+		)
+	elif ps_code == "w" and not os.environ.get("WISE_ACCOUNT_ID"):
+		eps.enable_sending = 0
+		print(
+			"No Wise profile ID found - this is required to create a Settings document. Settings will not enable sending payments - enter your API credentials manually, click save, then collect the ID from the displayed options."
 		)
 	elif ps_code and not provider_mapping[ps_code]["check"]:
 		eps.enable_sending = 0

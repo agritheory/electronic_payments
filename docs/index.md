@@ -3,7 +3,7 @@ For license information, please see license.txt-->
 
 # Electronic Payments Documentation
 
-The Electronic Payments application extends ERPNext[^1] with the capability to send and receive electronic payments via several vendors directly in the system. The current supported vendors (also called providers) are [Authorize.net](www.authorize.net) (accepting and sending payments), [Stripe](stripe.com) (accepting payments, with some limitations detailed in the Provider Limitations section), and [Mercury](mercury.com) (sending payments). You can configure the app to use different providers to accept vs send payments.
+The Electronic Payments application extends ERPNext[^1] with the capability to send and receive electronic payments via several vendors directly in the system. The current supported vendors (also called providers) are [Authorize.net](www.authorize.net) (accepting and sending payments), [Stripe](stripe.com) (accepting payments, with some limitations detailed in the Provider Limitations section), [Mercury](mercury.com) (sending payments), and [Wise](wise.com) (sending payments). You can configure the app to use different providers to accept vs send payments.
 
 The current providers each have their own terms and conditions they require to use their services, including authorization requirements for certain payment methods. Before installing and using the Electronic Payments app, it is your responsibility to comply with your provider's terms, conditions, and requirements for using their services.
 
@@ -20,9 +20,9 @@ There are a few prerequisite steps to get the Electronic Payments application up
 
 Once the app is installed and configured, you can begin utilizing its features.
 
-Electronic Payments is set up to allow portal users to log in and add credit card and ACH payment methods associated with their account. Credit card payment methods are available to add for customers (not suppliers) using either Authorize.net or Stripe. ACH payment methods are available with Authorize.net and Mercury, must be a checking account, and may be added for suppliers (the account they'll receive a payment into) or customers.
+Electronic Payments is set up to allow portal users to log in and add credit card and ACH payment methods associated with their account. Credit card payment methods are available to add for customers (not suppliers) using either Authorize.net or Stripe. ACH payment methods are available with Authorize.net, Mercury, or Wise, must be a checking account, and may be added for suppliers (the account they'll receive a payment into) or customers.
 
-The payment amount currency for a transaction will use the ERPNext instance's global default, however, [Authorize.net's eCheck user guide documentation](https://www.authorize.net/content/dam/documents/en/echeck-user-guide.pdf) specifies that eCheck services process transactions only in US dollars. It's your responsibility to ensure the Electronic Payments application only processes appropriate transactions. Mercury has the capability to make transfers in a variety of currencies, however the application currently only supports transfers to US accounts.
+The payment amount currency for a transaction will use the ERPNext instance's global default, however, [Authorize.net's eCheck user guide documentation](https://www.authorize.net/content/dam/documents/en/echeck-user-guide.pdf) specifies that eCheck services process transactions only in US dollars. It's your responsibility to ensure the Electronic Payments application only processes appropriate transactions. Mercury and Wise have the capability to make transfers in a variety of currencies, however the application currently only supports transfers to US accounts.
 
 Note that the payment method details are never saved on your system at any point. The app immediately passes the data to the provider API and, if the API successfully creates a payment method, it only saves the provider's token and last few account or card digits to identify that payment method.
 
@@ -32,7 +32,7 @@ Note that the payment method details are never saved on your system at any point
 
 ![Screen shot of the dialog box to add payment method details - the shown fields will differ between a credit card and ACH account.](./assets/ep_adding_payment_method_dialog.png)
 
-The portal also allows the customer or supplier to remove and in some cases edit a saved payment method. When making changes to an existing method, they must re-enter all information, since it's not stored in ERPNext.
+The portal also allows the customer or supplier to remove and in some cases edit a saved payment method. When making changes to an existing method, they may be required to re-enter all information, since it's not stored in ERPNext and different providers may not allow requests to retrieve payment method details. Wise does not support editing account information once it's in their system - the supplier will need to remove and re-add their account information if they need to make changes.
 
 ![Screen shot showing the same Manage Payment Methods page but the table now shows a credit card available for use. There are now Edit and Remove options.](./assets/ep_edit_remove_in_table.png)
 
@@ -68,6 +68,6 @@ The Authorize.net sandbox is useful tool to test the functionality and feature s
 
 ## Code Contributions and Adding a Provider
 
-The Electronic Payments app maintainers welcome contributions to expand provider options beyond Authorize.net, Stripe, and Mercury. To be considered, a provider should preferably have a comparable feature set to those of Authorize.net, including receiving credit card payments and sending and receiving ACH payments, but providers that only send or accept payments may also be considered. Feature requests and pull requests can be made on the [app's GitHub repository](https://github.com/agritheory/electronic_payments).
+The Electronic Payments app maintainers welcome contributions to expand provider options beyond Authorize.net, Stripe, Mercury, and Wise. To be considered, a provider should preferably have a comparable feature set to those of Authorize.net, including receiving credit card payments and sending and receiving ACH payments, but providers that only send or accept payments may also be considered. Feature requests and pull requests can be made on the [app's GitHub repository](https://github.com/agritheory/electronic_payments).
 
 [^1]: [ERPNext](https://erpnext.com/) is an open-sourced Enterprise Resource Planning (ERP) software that provides a wide range of business management functionality. Its core features include support for accounting, inventory, manufacturing, customer relationship management (CRM), distribution, and retail.

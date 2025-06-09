@@ -29,10 +29,14 @@
 		"sending_config_section",
 		"sending_provider",
 		"sending_ref_id",
+		"fund_wise_with_direct_debit",
+		"wise_linked_bank_account_id",
 		"column_break_cssi",
 		"sending_endpoint",
 		"sending_api_key",
 		"sending_transaction_key",
+		"wise_bank_account_type",
+		"wise_bank_account_currency",
 		"sending_payments_accounts_section",
 		"withdrawal_account",
 		"sending_payment_discount_account",
@@ -208,10 +212,10 @@
 			"fieldtype": "Select",
 			"label": "Sending Provider",
 			"mandatory_depends_on": "enable_sending",
-			"options": "\nAuthorize.net\nMercury"
+			"options": "\nAuthorize.net\nMercury\nWise"
 		},
 		{
-			"description": "Required for Mercury. Enter the Mercury Account ID for the account making transfers. If not known, enter API credentials and click Save. The error message will display the options and their IDs, if any.",
+			"description": "Required for Mercury and Wise. For Mercury, enter the Mercury Account ID for the account making transfers. For Wise, enter the Wise Profile ID for the Company making transfers. If not known, enter API credentials and click Save. The error message will display the options and their IDs, if any.",
 			"fieldname": "sending_ref_id",
 			"fieldtype": "Data",
 			"label": "Sending Merchant ID"
@@ -224,7 +228,7 @@
 			"fieldname": "sending_endpoint",
 			"fieldtype": "Data",
 			"label": "Sending Endpoint",
-			"mandatory_depends_on": "eval:doc.enable_sending && (doc.provider !== doc.sending_provider) && (doc.sending_provider === \"Authorize.net\" || doc.sending_provider === \"Mercury\")"
+			"mandatory_depends_on": "eval:doc.enable_sending && (doc.provider !== doc.sending_provider) && (doc.sending_provider === \"Authorize.net\" || doc.sending_provider === \"Mercury\" || doc.sending_provider === \"Wise\")"
 		},
 		{
 			"fieldname": "sending_api_key",
@@ -252,6 +256,39 @@
 			"fieldname": "sending_payments_tab",
 			"fieldtype": "Tab Break",
 			"label": "Sending Payments"
+		},
+		{
+			"default": "0",
+			"depends_on": "eval:doc.sending_provider === \"Wise\"",
+			"description": "Automatically fund transfers with a Direct Debit bank account linked to the company profile configured in Wise. If unchecked, transfers must be funded manually via the Wise website.",
+			"fieldname": "fund_wise_with_direct_debit",
+			"fieldtype": "Check",
+			"label": "Fund Wise Transfers with Direct Debit Account"
+		},
+		{
+			"depends_on": "fund_wise_with_direct_debit",
+			"description": "The Direct Debit bank account's Account ID in Wise. If not known, enter API credentials and click Save. The error message will display the account options and their IDs, if any.",
+			"fieldname": "wise_linked_bank_account_id",
+			"fieldtype": "Data",
+			"label": "Wise Linked Bank Account ID"
+		},
+		{
+			"default": "Checking",
+			"depends_on": "fund_wise_with_direct_debit",
+			"fieldname": "wise_bank_account_type",
+			"fieldtype": "Select",
+			"label": "Wise Bank Account Type",
+			"mandatory_depends_on": "fund_wise_with_direct_debit",
+			"options": "Checking\nSavings"
+		},
+		{
+			"default": "USD",
+			"depends_on": "fund_wise_with_direct_debit",
+			"fieldname": "wise_bank_account_currency",
+			"fieldtype": "Select",
+			"label": "Wise Bank Account Currency",
+			"mandatory_depends_on": "fund_wise_with_direct_debit",
+			"options": "USD"
 		}
 	],
 	"links": [],
