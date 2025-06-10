@@ -42,7 +42,7 @@ class Mercury:
 			}
 			return base_url, headers
 
-	def process_transaction(self, doc, data):
+	def process_transaction(self, doc, data, bypass_je_pe_creation=False):
 		mop = data.mode_of_payment.replace("New ", "")
 		party = get_party_details(doc)
 
@@ -65,7 +65,9 @@ class Mercury:
 			else:  # error creating the customer payment profile
 				return pmt_profile_response
 
-		response = self.create_transfer_to_party_profile(doc, data)
+		response = self.create_transfer_to_party_profile(
+			doc, data, bypass_je_pe_creation=bypass_je_pe_creation
+		)
 		return response
 
 	def process_credit_card(self, doc, data):
@@ -235,10 +237,10 @@ class Mercury:
 	def create_party_payment_profile(self, doc, data):
 		party = get_party_details(doc)
 		settings = frappe.get_doc("Electronic Payment Settings", {"company": doc.company})
-		mop_field = "mode_of_payment" if settings.provider == "Mercury" else "sending_mode_of_payment"
 		mop = data.mode_of_payment.replace("New ", "")
+		pmt_types = [mop]
 
-		if mop != "ACH":
+		if mop not in ["ACH", "Wire"]:
 			return {"error": _("Mode of Payment not supported")}
 
 		try:
@@ -274,6 +276,10 @@ class Mercury:
 						}
 					}
 				)
+				if data.save_data == "Retain payment data for this party":
+					# Create a separate Wire profile
+					pmt_types = ["Wire"] + pmt_types
+
 			base_url, headers = self.get_base_url_and_header(doc.company)
 			response = requests.post(
 				urljoin(base_url, "/api/v1/recipients"),
@@ -284,31 +290,33 @@ class Mercury:
 			response.raise_for_status()
 			r = response.json()
 			if r.get("id"):
-				payment_profile = frappe.new_doc("Electronic Payment Profile")
-				payment_profile.party_type = party.doctype
-				payment_profile.party = party.name
-				payment_profile.payment_type = mop
-				payment_profile.payment_gateway = "Mercury"
-				payment_profile.reference = f"*{last4}"
-				payment_profile.payment_profile_id = str(r.get("id"))
-				payment_profile.party_profile = None  # Not used in Mercury
-				payment_profile.retain = 1 if data.save_data == "Retain payment data for this party" else 0
-				payment_profile.save(ignore_permissions=True)
+				for pmt_type in pmt_types:
+					payment_profile = frappe.new_doc("Electronic Payment Profile")
+					payment_profile.party_type = party.doctype
+					payment_profile.party = party.name
+					payment_profile.payment_type = pmt_type
+					payment_profile.payment_gateway = "Mercury"
+					payment_profile.reference = f"*{last4}"
+					payment_profile.payment_profile_id = str(r.get("id"))
+					payment_profile.party_profile = None  # Not used in Mercury
+					payment_profile.retain = 1 if data.save_data == "Retain payment data for this party" else 0
+					payment_profile.save(ignore_permissions=True)
 
-				if payment_profile.retain and settings.create_ppm:
-					ppm = frappe.new_doc("Portal Payment Method")
-					ppm.mode_of_payment = settings.get(mop_field)
-					ppm.label = f"{mop}-{last4}"
-					ppm.default = cint(data.get("default", 0))
-					ppm.electronic_payment_profile = payment_profile.name
-					ppm.service_charge = 0
-					ppm.parent = payment_profile.party
-					ppm.parenttype = payment_profile.party_type
-					ppm.save(ignore_permissions=True)
+					if payment_profile.retain and settings.create_ppm:
+						ppm = frappe.new_doc("Portal Payment Method")
+						ppm.mode_of_payment = f"Mercury {pmt_type}"
+						ppm.label = f"{pmt_type}-{last4}"
+						ppm.default = cint(data.get("default", 0))
+						ppm.electronic_payment_profile = payment_profile.name
+						ppm.service_charge = 0
+						ppm.parent = payment_profile.party
+						ppm.parenttype = payment_profile.party_type
+						ppm.save(ignore_permissions=True)
 
-					party_obj = frappe.get_doc(party.doctype, party.name)
-					party_obj.append("portal_payment_method", ppm)
-					party_obj.save(ignore_permissions=True)
+						party_obj = frappe.get_doc(party.doctype, party.name)
+						party_obj.append("portal_payment_method", ppm)
+						party_obj.save(ignore_permissions=True)
+						data.update({"ppm_name": ppm.name})
 
 				return {"message": "Success", "payment_profile_doc": payment_profile}
 
@@ -327,64 +335,30 @@ class Mercury:
 			)
 			return {"error": f"{e}"}
 
-	def create_wire_payment_profile(self, doc, data):
-		"""
-		Mercury currently doesn't support Wire transfers via the API. This method applies the ACH
-		data to automatically create a Domestic Wire recipient in the UI to make transfers there
-		"""
-		party = get_party_details(doc)
-		try:
-			account_number = str(data.get("account_number"))
-			last4 = account_number[-4:]
-			recipient_data = {
-				"name": data.get("account_holders_name"),
-				"nickname": f"{party.name}-Wire-*{last4}",
-				"emails": [data.get("email")],
-				"paymentMethod": "domesticWire",
-				"domesticWireRoutingInfo": {
-					"accountNumber": account_number,
-					"routingNumber": str(data.get("routing_number")),
-					"address": {
-						"address1": data.get("address_firstline"),
-						"address2": data.get("address_secondline", ""),
-						"city": data.get("city"),
-						"region": data.get("state"),
-						"postalCode": data.get("postcode"),
-						"country": data.get("country", "US").upper(),
-					},
-				},
-			}
-			base_url, headers = self.get_base_url_and_header(doc.company)
-			response = requests.post(
-				urljoin(base_url, "/api/v1/recipients"),
-				headers=headers,
-				timeout=10,
-				data=json.dumps(recipient_data),
-			)
-			response.raise_for_status()
-			r = response.json()
-			if r.get("id"):
-				return {"message": "Success"}
-
-		except HTTPError as e_http:
-			err_msg = response.json().get("errors", {}).get("message", e_http)
-			frappe.log_error(
-				message=f"{response.json()}\n\n{e_http}\n\n{frappe.get_traceback()}",
-				title=f"Error trying to create a Wire Recipient Account for {party.name}.",
-			)
-			return {"error": f"{err_msg}"}
-
-		except requests.exceptions.RequestException as e:
-			frappe.log_error(
-				message=f"{e}\n\n{frappe.get_traceback()}",
-				title=f"Request error while trying to create the Wire Recipient Account for {party.name}.",
-			)
-			return {"error": f"{e}"}
-
 	def charge_party_profile(self, doc, data):
 		return {"error": _("Not supported")}
 
-	def create_transfer_to_party_profile(self, doc, data):
+	def create_transfer_to_party_profile(self, doc, data, bypass_je_pe_creation=False):
+		"""
+		Sends a payment to specified party profile in the data dict.
+
+		:param doc: typically expects a PO or PI doc. If calling from Check Run, can pass a
+		frappe._dict with company, supplier, supplier_name, and currency (and the data dict must
+		specify the amount)
+		:param data: frappe._dict must include payment_profile_id. Can optionally include amount
+		(to override calculated amount), payment_term (to calculate payment total and discounts),
+		and ppm_name (to calculate fees configured for that portal payment method)
+		:param bypass_je_pe_creation: bool; default is False. If True, will not queue method that
+		creates a Journal Entry or Payment Entry following a successful API response - useful when
+		method is called from a Check Run, and a Payment Entry already exists
+		:return: dict; either {"message": "Success", "transaction_id": ...} or {"error": ...}
+
+		Side effects:
+		- if the associated Electronic Payment Profile does not have "retain" checked,
+		it will be deleted after a successful transfer
+		- if bypass_je_pe_creation is False, will create a Journal Entry or Payment Entry tied to
+		the transfer and doc following a successful API response
+		"""
 		party = get_party_details(doc)
 		settings = frappe.get_doc("Electronic Payment Settings", {"company": doc.company})
 		merch_id_field = "ref_id" if settings.provider == "Mercury" else "sending_ref_id"
@@ -435,12 +409,13 @@ class Mercury:
 						title=f"Payment profile used for {doc.name} must be deleted manually at Mercury.com",
 					)
 
-				queue_method_as_admin(
-					process_electronic_payment,
-					doc=doc,
-					data=data,
-					transaction_id=str(transaction_id),
-				)
+				if not bypass_je_pe_creation:
+					queue_method_as_admin(
+						process_electronic_payment,
+						doc=doc,
+						data=data,
+						transaction_id=str(transaction_id),
+					)
 				return {
 					"message": "Success",
 					"transaction_id": str(transaction_id),
@@ -538,15 +513,18 @@ class Mercury:
 
 	def delete_payment_profile(self, company, payment_profile_id):
 		# Delete from ERPNext
-		epp_name, party, reference = frappe.get_value(
-			"Electronic Payment Profile",
-			{"payment_profile_id": payment_profile_id},
-			["name", "party", "reference"],
-		)
-		pmm_name = frappe.get_value("Portal Payment Method", {"electronic_payment_profile": epp_name})
+		# In event a Wire EPP were also created (which would have the same ID), collect all
+		epps = frappe.get_all("Electronic Payment Profile", {"payment_profile_id": payment_profile_id})
+		for ep in epps:
+			epp_name, party, reference = frappe.get_value(
+				"Electronic Payment Profile",
+				ep,
+				["name", "party", "reference"],
+			)
+			pmm_name = frappe.get_value("Portal Payment Method", {"electronic_payment_profile": epp_name})
 
-		frappe.delete_doc("Portal Payment Method", pmm_name, ignore_permissions=True)
-		frappe.delete_doc("Electronic Payment Profile", epp_name, ignore_permissions=True)
+			frappe.delete_doc("Portal Payment Method", pmm_name, ignore_permissions=True)
+			frappe.delete_doc("Electronic Payment Profile", epp_name, ignore_permissions=True)
 
 		# Deleting Recipients not available via API, log error that it must be done manually
 		frappe.log_error(
