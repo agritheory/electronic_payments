@@ -5,9 +5,9 @@ For license information, please see license.txt-->
 
 One Electronic Payment Settings document may be created for each Company in ERPNext. This document stores the provider credentials (including API keys) and selected accounts that are used in the chosen accounting workflow. Certain fields are required depending on the provider, which are noted below. The keys should be the **testing/sandbox** values when testing the functionality of the application, and only updated to live keys when using the application in production.
 
-Authorize.net and Mercury also require an endpoint, which is different for their testing sandbox calls and real production ones.
+Authorize.net, Mercury, and Wise also require an endpoint, which is different for their testing sandbox calls and real production ones.
 
-Authorize.net requires both an API Key and a Transaction Key, whereas Stripe and Mercury require only the API Key.
+Authorize.net requires both an API Key and a Transaction Key, whereas Stripe, Mercury, and Wise require only the API Key.
 
 ![Screen shot showing the fields in the Electronic Payment Settings document. Field names and descriptions are below.](./assets/electronic_payment_settings.png)
 
@@ -44,14 +44,22 @@ The following fields pertain to sending electronic payments and are found on the
 - **Enable Sending Electronic Payments:** (default unchecked) activate the ability for the given company to send electronic payments
 
 **Configuration: Sending Payments**
-- **Sending Provider:** (required) Authorize.net or Mercury - this is the provider to **send** electronic payments and may be different than the one used to accept payments
-- **Merchant ID:** (required for Mercury) the Mercury Account ID for the account in Mercury that is making the payment transfers. This is not easily discoverable in the Mercury UI, for a list of options, leave this blank and fill in the other required fields (particularly the API endpoint and keys). When you click Save, it will call the API and list all the accounts associated with the given credentials
-- **Endpoint:** (required) both Authorize.net and Mercury have two distinct API endpoints - please refer to their respective documentation ([Mercury API reference](), [Authorize.net API reference](https://developer.authorize.net/api/reference/index.html#gettingstarted-section-section-header)) for the most up-to-date values for endpoints.
+- **Sending Provider:** (required) Authorize.net, Mercury, or Wise - this is the provider to **send** electronic payments and may be different than the one used to accept payments
+- **Merchant ID:** (required for Mercury and Wise)
+    - For Mercury, this is the Mercury Account ID for the account in Mercury that is making the payment transfers. This is not easily discoverable in the Mercury UI, for a list of options, leave this blank and fill in the other required fields (particularly the API endpoint and keys). When you click Save, it will call the API and list all the accounts associated with the given credentials. Paste the ID value for the appropriate one
+    - For Wise, this is the Wise Profile ID for the company in Wise that will be associated with payment transfers. This is not easily discoverable in the Wise UI, for a list of options, leave this blank and fill in the other required fields (particularly the API endpoint and keys). When you click Save, it will call the API and list all the profiles associated with the given credentials. Paste the ID value for the appropriate one
+- **Endpoint:** (required) each sending provider has two distinct API endpoints - please refer to their respective documentation ([Authorize.net API reference](https://developer.authorize.net/api/reference/index.html#gettingstarted-section-section-header), [Mercury API reference](https://docs.mercury.com/reference/welcome-to-mercury-api), and [Wise API reference](https://docs.wise.com/api-docs/api-reference/environments)) for the most up-to-date values for endpoints.
     - In testing Authorize.net, use the sandbox API endpoint: `https://apitest.authorize.net/xml/v1/request.api`
     - Production mode for Authorize.net, use the production API endpoint: `https://api.authorize.net/xml/v1/request.api`
     - In testing Mercury, use the sandbox API endpoint: `https://api-sandbox.mercury.com`
     - Production mode for Mercury, use the production API endpoint: `https://api.mercury.com`
-    - Note that for both Authorize.net and Mercury, the sandbox keys only work with the sandbox endpoint, and production keys only work with the production endpoint. The user will see an error if the keys don't match with the appropriate endpoint
+    - In testing Wise, use the appropriate sandbox API endpoint:
+        - `https://api-mtls.sandbox.transferwise.tech` (mTLS enabled)
+        - `https://api.sandbox.transferwise.tech` (TLS only)
+    - Production mode for Wise, use the appropriate production API endpoint:
+        - `https://api-mtls.transferwise.com` (mTLS enabled)
+        - `https://api.wise.com` (TLS only)
+    - Note that for all providers, the sandbox keys only work with the sandbox endpoint, and production keys only work with the production endpoint. The user will see an error if the keys don't match with the appropriate endpoint
 - **API Key:** (required) the company's API key with the given provider
     - In testing: this should be the sandbox key
     - In production: this should be the live production key

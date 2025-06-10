@@ -45,7 +45,7 @@ def new_portal_payment_method(payment_method):
 	data.save_data = "Retain payment data for this party"
 
 	try:
-		if provider != "Mercury":
+		if provider != "Mercury" or provider != "Wise":
 			response = client.create_party_profile(doc)
 			if response.get("error"):
 				return {"error_message": response["error"]}
