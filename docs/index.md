@@ -36,7 +36,7 @@ The portal also allows the customer or supplier to remove and in some cases edit
 
 ![Screen shot showing the same Manage Payment Methods page but the table now shows a credit card available for use. There are now Edit and Remove options.](./assets/ep_edit_remove_in_table.png)
 
-There's an important consideration regarding the Electronic Payment Settings and payment methods being added via the portal. As noted in the [Configuration and Settings page](./configuration.md), Electronic Payment Settings are specified on a per-company basis. When a portal user adds a payment method, there's no way to associate it to a company, so the app uses the **default company** set in ERPNext to find the provider and API keys to use. This will link the payment method to the default company's provider account. For this reason, an Electronic Payments Settings document should always exist for the default company.
+There's an important consideration regarding the Electronic Payment Settings and payment methods being added via the portal. As noted in the [Configuration and Settings page](./configuration.md), Electronic Payment Settings are specified on a per-company basis. When a portal user adds a payment method, there's no built-in way in ERPNext to associate it to a Company. The app provides an Electronic Payment Company field on the Supplier and Customer documents, which should be populated when there are multiple Companies in ERPNext (each with their own provider accounts), and the party does business with the non-default Company. If the field is left blank, the app uses the **default Company** set in ERPNext to find the provider and API keys to use. Otherwise, it will link the payment method to the specified Company's provider account. More details about the field and when to fill it in can be found on the [Configuration and Settings page's Configuring a Company for Customers and Suppliers section](./configuration.md).
 
 In the desk view, stored payment methods are visible on the Electronic Payments tab in that party's page.
 
@@ -60,11 +60,32 @@ The app also allows a desk user to make an advance payment on a Sales Order or a
 
 ## Provider Limitations
 
+**Stripe**
 There are some limitations with using Stripe as a provider. First, only credit card payment methods (not ACH ones) are configurable. Stripe uses its own mandate workflow (to verify that the customer allows making a charge to their bank account) that is currently not supported by the app. Second, given that sending payments to suppliers is only possible via an ACH payment method, Stripe does not show as a provider option for sending payments.
+
+**Mercury**
+Currently, Mercury only allows for ACH transfers via their API. Other transfer types are possible, but they must be executed through the Mercury website.
+
+**Wise**
+The final step in a Wise transfer process is for the user to tell Wise which method they'd like to use to fund the transfer. If done in the Wise website, it will show that user's available funding options depending on what's configured - these may include using funds in their Wise account, using a linked bank account, or sending a bank wire. However, the Wise API offers limited options to specify how the transfer should be funded. Currently, the only option is to fund transfers via direct debit account, if it's set up in Wise. If not, the user can set up the transfers with the Electronic Payments app, but will need to complete the final funding step through their account on the Wise website.
 
 ## Sending Payments in Test Mode with Authorize.net
 
 The Authorize.net sandbox is useful tool to test the functionality and feature set of the Electronic Payments app before going live. However, the sandbox doesn't support eCheck Settlement, therefore you will encounter API errors if trying to test bank account refunds or making an ACH payment to a supplier.
+
+## Integration with the Check Run Application
+
+The app integrates with the open source [Check Run](https://github.com/agritheory/check_run/tree/version-15) application, which is a payables utility for ERPNext. If a Check Run includes transactions with a mode of payment of "[Sending Provider] ACH", it will show a button to process those payments with the sending provider once the Check Run is submitted. When clicked, it triggers a transfer to the respective party for the given amount through the sending provider's API.
+
+On a successful transaction, the transaction ID gets stored in the Payment Entry's Reference No field. In the event of an unsuccessful transaction, the details are saved to the Error Log. The user will see either a success message or any errors at the top of the Check Run once the payments are done processing.
+
+The following configuration is required for the Check Run integration:
+- An Electronic Payments Settings document exists for the company the Check Run is for, and it has sending payments enabled
+- At least one ACH electronic payment method exists for the party receiving the payment
+
+![Screen shot of a processed Check Run with three transactions. One of the transactions is for a Purchase Invoice using a "Mercury ACH" mode of payment. There is a highlighted button to "Send Mercury ACH" - once clicked, it will send the payment information to the Mercury API and trigger a transfer to that party. There's a banner at the top of the Check Run saying "Successfully processed electronic payment provider ACH payments."](./assets/electronic_payments_check_run.png)
+
+The Check Run app includes a new field to set a Supplier's default mode of payment on the Accounting tab. Set this field to "[Sending Provider] ACH" to automatically see that Mode of Payment in the Check Run for the given Supplier.
 
 ## Code Contributions and Adding a Provider
 
