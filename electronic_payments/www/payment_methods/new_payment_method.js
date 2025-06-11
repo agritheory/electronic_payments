@@ -124,7 +124,7 @@ frappe.ready(async () => {
 		]
 		inputs.forEach(id => (ppm[id] = document.getElementById(`ppm_${id}`).value))
 
-		let checkboxs = ['default']
+		let checkboxs = ['default', 'accept_wire']
 		checkboxs.forEach(id => (ppm[id] = document.getElementById(`ppm_${id}`).checked))
 		return ppm
 	}

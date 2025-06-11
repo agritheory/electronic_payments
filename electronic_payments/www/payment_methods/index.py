@@ -20,7 +20,7 @@ def get_portal_payment_methods():
 	party = party_data["party"]
 	portal_payment_methods = []
 	portal_payment_method_names = frappe.get_all(
-		"Portal Payment Method", {"parent": party}, pluck="name"
+		"Portal Payment Method", {"parent": party, "label": ["not like", "Wire%"]}, pluck="name"
 	)
 
 	if not portal_payment_method_names:

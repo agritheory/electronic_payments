@@ -116,28 +116,47 @@ class Mercury:
 		payment_profile = frappe.get_doc(
 			"Electronic Payment Profile", {"name": electronic_payment_profile_name}
 		)
+		profile_id = payment_profile.payment_profile_id
+		epps = frappe.get_all("Electronic Payment Profile", {"payment_profile_id": profile_id})
+		num_profiles = len(epps)
+		update_wire = num_profiles > 1 or data.get("accept_wire")
+		create_wire_epp = num_profiles == 1 and data.get("accept_wire")
+
 		try:
 			account_number = str(data.get("account_number"))
+			routing_number = str(data.get("routing_number"))
 			last4 = account_number[-4:]
+			address = {
+				"address1": data.get("address_firstline"),
+				"address2": data.get("address_secondline", ""),
+				"city": data.get("city"),
+				"region": data.get("state"),
+				"postalCode": data.get("postcode"),
+				"country": data.get("country", "US").upper(),
+			}
 			recipient_data = {
 				"name": data.get("account_holders_name"),
 				"emails": [data.get("email")],
 				"paymentMethod": "electronic",
 				"electronicRoutingInfo": {
 					"accountNumber": account_number,
-					"routingNumber": str(data.get("routing_number")),
+					"routingNumber": routing_number,
 					"electronicAccountType": "businessChecking",
-					"address": {
-						"address1": data.get("address_firstline"),
-						"address2": data.get("address_secondline", ""),
-						"city": data.get("city"),
-						"region": data.get("state"),
-						"postalCode": data.get("postcode"),
-						"country": data.get("country", "US").upper(),
-					},
+					"address": address,
 				},
-				"nickname": f"{payment_profile.party}-ACH-*{last4}",
+				"nickname": f"{payment_profile.party}-*{last4}",
 			}
+			if update_wire:
+				recipient_data.update(
+					{
+						"domesticWireRoutingInfo": {
+							"accountNumber": account_number,
+							"routingNumber": routing_number,
+							"address": address,
+						}
+					}
+				)
+
 			base_url, headers = self.get_base_url_and_header(company)
 			response = requests.post(
 				urljoin(base_url, f"/api/v1/recipient/{payment_profile.payment_profile_id}"),
@@ -148,18 +167,52 @@ class Mercury:
 			response.raise_for_status()
 			r = response.json()
 			if r.get("id"):
-				payment_profile.reference = (
-					f"**** **** **** {last4}" if payment_profile.payment_type == "Card" else f"*{last4}"
-				)
-				payment_profile.save(ignore_permissions=True)
-				ppm = frappe.get_doc(
-					"Portal Payment Method", {"electronic_payment_profile": payment_profile.name}
-				)
-				ppm.label = f"{payment_profile.payment_type}-{last4}"
-				ppm.default = cint(data.get("default", 0))
-				ppm.electronic_payment_profile = payment_profile.name
-				ppm.save(ignore_permissions=True)
-				return {"message": "Success", "payment_profile_doc": payment_profile}
+				for ep in epps:
+					payment_profile = frappe.get_doc("Electronic Payment Profile", ep)
+					payment_profile.reference = (
+						f"**** **** **** {last4}" if payment_profile.payment_type == "Card" else f"*{last4}"
+					)
+					payment_profile.save(ignore_permissions=True)
+					ppm = frappe.get_doc(
+						"Portal Payment Method", {"electronic_payment_profile": payment_profile.name}
+					)
+					ppm.label = f"{payment_profile.payment_type}-{last4}"
+					ppm.default = (
+						cint(data.get("default", 0))
+						if payment_profile.name == electronic_payment_profile_name
+						else 0
+					)
+					ppm.electronic_payment_profile = payment_profile.name
+					ppm.save(ignore_permissions=True)
+				# Get the original profile doc
+				opp = frappe.get_doc("Electronic Payment Profile", {"name": electronic_payment_profile_name})
+				if create_wire_epp:
+					payment_profile = frappe.new_doc("Electronic Payment Profile")
+					payment_profile.party_type = opp.party_type
+					payment_profile.party = opp.party
+					payment_profile.payment_type = "Wire"
+					payment_profile.payment_gateway = opp.payment_gateway
+					payment_profile.reference = opp.reference
+					payment_profile.payment_profile_id = opp.payment_profile_id
+					payment_profile.party_profile = None  # Not used in Mercury
+					payment_profile.retain = 1
+					payment_profile.save(ignore_permissions=True)
+
+					ppm = frappe.new_doc("Portal Payment Method")
+					ppm.mode_of_payment = "Mercury Wire"
+					ppm.label = f"Wire-{last4}"
+					ppm.default = 0
+					ppm.electronic_payment_profile = payment_profile.name
+					ppm.service_charge = 0
+					ppm.parent = payment_profile.party
+					ppm.parenttype = payment_profile.party_type
+					ppm.save(ignore_permissions=True)
+
+					party_obj = frappe.get_doc(payment_profile.party_type, payment_profile.party)
+					party_obj.append("portal_payment_method", ppm)
+					party_obj.save(ignore_permissions=True)
+
+				return {"message": "Success", "payment_profile_doc": opp}
 
 		except HTTPError as e_http:
 			err_msg = response.json().get("errors", {}).get("message", e_http)
