@@ -138,9 +138,12 @@ export WISE_ACCOUNT_ID='your_sandbox_business_account_profile_id'
 
 3. Run the script to install the demo data. If you have API keys set as environment variables, the script will look for them to automatically create an Electronic Payments Settings document (necessary to test payment functionality). It will first check for any present, if it finds multiple keys, then it will create using alphabetical ordering and the following logic:
 
-- If Authorize.net keys are present, then it uses that provider for both accepting and sending payments. If there are no Authorize.net keys, it then checks for Stripe keys
-- If Stripe keys are present, it uses Stripe as the accepting provider. If Mercury keys are also present, it enables sending payments and uses Mercury as the sending provider. If Mercury is not present but Wise is, then it'll enable sending payments with Wise as the sending provider (if neither are found, the script won't enable sending payments)
-- If Stripe keys are not present the script won't create an Electronic Payments Settings doc (this may be done manually in the test site later). This is because Mercury and Wise are not set up to accept payments
+- If Authorize.net keys are present, then it uses that provider for both accepting and sending payments
+- If there are no Authorize.net keys, but Stripe keys are present, it uses Stripe as the accepting provider.
+- If neither are present, the script won't enable accepting payments
+- If there are no Authorize.net keys, but Mercury keys are present, it uses Mercury as the sending provider
+- If there are no Authorize.net or Mercury keys, but Wise keys are present, it uses Wise as the sending provider
+- If no sending providers are found, the script won't enable sending payments
 
 If you have API keys for more than one provider, you can pass `a_provider` and `s_provider` arguments when executing the test script to specify which one to use for accepting and sending payments, respectively. The argument is the lowercase letter of the first initial of the provider's name. If the specified provider's keys aren't present, the script won't create the Electronic Payments Settings document.
 ```shell

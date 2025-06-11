@@ -34,6 +34,8 @@ class ElectronicPaymentSettings(Document):
 	def validate(self):
 		self.create_electronic_payment_mop()
 		self.copy_api_config_if_same_providers()
+
+	def on_update(self):
 		self.validate_mercury_merchant_id()
 		self.validate_wise_merchant_id()
 		self.validate_wise_direct_debit_account_id()
@@ -74,19 +76,36 @@ class ElectronicPaymentSettings(Document):
 		If sending payments is enabled and accepting and sending providers match, copies API
 		configuration fields (if empty)
 		"""
-		if self.enable_sending and self.provider == self.sending_provider:
+		if self.enable_accepting and self.enable_sending and self.provider == self.sending_provider:
 			if self.ref_id and not self.sending_ref_id:
 				self.sending_ref_id = self.sending_ref_id
+			elif self.sending_ref_id and not self.ref_id:
+				self.ref_id = self.sending_ref_id
+
 			if self.endpoint and not self.sending_endpoint:
 				self.sending_endpoint = self.endpoint
+			elif self.sending_endpoint and not self.endpoint:
+				self.endpoint = self.sending_endpoint
+
 			if self.api_key and not self.sending_api_key:
 				api_key = get_decrypted_password(self.doctype, self.name, "api_key", raise_exception=False)
 				self.sending_api_key = api_key
+			elif self.sending_api_key and not self.api_key:
+				api_key = get_decrypted_password(
+					self.doctype, self.name, "sending_api_key", raise_exception=False
+				)
+				self.api_key = api_key
+
 			if self.transaction_key and not self.sending_transaction_key:
 				t_key = get_decrypted_password(
 					self.doctype, self.name, "transaction_key", raise_exception=False
 				)
 				self.sending_transaction_key = t_key
+			elif self.sending_transaction_key and not self.transaction_key:
+				t_key = get_decrypted_password(
+					self.doctype, self.name, "sending_transaction_key", raise_exception=False
+				)
+				self.transaction_key = t_key
 
 	def validate_mercury_merchant_id(self):
 		if self.enable_sending and self.sending_provider == "Mercury" and not self.sending_ref_id:
@@ -100,7 +119,7 @@ class ElectronicPaymentSettings(Document):
 					message = f"Please fill in the Merchant ID field for Mercury with the Account ID of the account making transfers. The following account options were found:<br><ul><li>{m1}</li></ul>"
 			else:
 				message = f"Please fill in the Merchant ID field for Mercury with the Account ID of the account making transfers. {accounts_resp['error']}"
-			frappe.throw(msg=message, title="Missing Required Field")
+			frappe.msgprint(msg=message, title="Missing Required Field")
 
 	def validate_wise_merchant_id(self):
 		if self.enable_sending and self.sending_provider == "Wise" and not self.sending_ref_id:
@@ -114,7 +133,7 @@ class ElectronicPaymentSettings(Document):
 					message = f"Please fill in the Merchant ID field for Wise. The following profiles were found for this account:<br><ul><li>{m1}</li></ul>"
 			else:
 				message = f"Please fill in the Merchant ID field for Wise. {profiles_resp['error']}"
-			frappe.throw(msg=message, title="Missing Required Field")
+			frappe.msgprint(msg=message, title="Missing Required Field")
 
 	def validate_wise_direct_debit_account_id(self):
 		if not self.enable_sending or not self.sending_provider == "Wise":
@@ -130,7 +149,7 @@ class ElectronicPaymentSettings(Document):
 					message = f"Please fill in the Wise Linked Bank Account ID field. The following Direct Debit Accounts were found for this profile:<br><ul><li>{m1}</li></ul>"
 			else:
 				message = f"Please fill in the Wise Linked Bank Account ID field. {accounts_resp['error']}"
-			frappe.throw(msg=message, title="Missing Required Field")
+			frappe.msgprint(msg=message, title="Missing Required Field")
 
 	def client(self, doc):
 		"""

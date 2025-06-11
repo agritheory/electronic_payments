@@ -1,13 +1,15 @@
 {
 	"actions": [],
-	"autoname": "format:{company}-{provider}",
+	"autoname": "format:{company}",
 	"creation": "2022-12-20 13:22:13.760162",
 	"doctype": "DocType",
 	"editable_grid": 1,
 	"engine": "InnoDB",
 	"field_order": [
+		"accepting_payments_tab",
 		"company",
 		"create_ppm",
+		"enable_accepting",
 		"accepting_config_section",
 		"provider",
 		"ref_id",
@@ -58,12 +60,14 @@
 		{
 			"fieldname": "api_key",
 			"fieldtype": "Password",
-			"label": "API Key"
+			"label": "API Key",
+			"mandatory_depends_on": "enable_accepting"
 		},
 		{
 			"fieldname": "transaction_key",
 			"fieldtype": "Password",
-			"label": "Transaction Key"
+			"label": "Transaction Key",
+			"mandatory_depends_on": "eval:doc.enable_accepting && doc.provider === \"Authorize.net\""
 		},
 		{
 			"fieldname": "ref_id",
@@ -71,6 +75,7 @@
 			"label": "Merchant ID"
 		},
 		{
+			"depends_on": "enable_accepting",
 			"fieldname": "section_break_5",
 			"fieldtype": "Section Break",
 			"label": "Accounts: Accepting Payments"
@@ -91,22 +96,22 @@
 			"fieldname": "provider",
 			"fieldtype": "Select",
 			"label": "Provider",
-			"options": "\nAuthorize.net\nStripe",
-			"reqd": 1
+			"mandatory_depends_on": "enable_accepting",
+			"options": "\nAuthorize.net\nStripe"
 		},
 		{
 			"fieldname": "endpoint",
 			"fieldtype": "Data",
 			"label": "Endpoint",
-			"mandatory_depends_on": "eval:doc.provider === \"Authorize.net\""
+			"mandatory_depends_on": "eval:doc.enable_accepting && doc.provider === \"Authorize.net\""
 		},
 		{
 			"fieldname": "deposit_account",
 			"fieldtype": "Link",
 			"in_list_view": 1,
 			"label": "Deposit Account",
-			"options": "Account",
-			"reqd": 1
+			"mandatory_depends_on": "enable_accepting",
+			"options": "Account"
 		},
 		{
 			"fieldname": "use_clearing_account",
@@ -119,14 +124,14 @@
 			"fieldtype": "Link",
 			"in_list_view": 1,
 			"label": "Provider Fee Account",
-			"options": "Account",
-			"reqd": 1
+			"mandatory_depends_on": "enable_accepting",
+			"options": "Account"
 		},
 		{
 			"fieldname": "accepting_clearing_account",
 			"fieldtype": "Link",
 			"label": "Clearing Account",
-			"mandatory_depends_on": "eval:doc.use_clearing_account === \"Use Journal Entry and Clearing Account\"",
+			"mandatory_depends_on": "eval:doc.enable_accepting && doc.use_clearing_account === \"Use Journal Entry and Clearing Account\"",
 			"options": "Account"
 		},
 		{
@@ -179,8 +184,8 @@
 			"fieldname": "accepting_payment_discount_account",
 			"fieldtype": "Link",
 			"label": "Payment Discount Account",
-			"options": "Account",
-			"reqd": 1
+			"mandatory_depends_on": "enable_accepting",
+			"options": "Account"
 		},
 		{
 			"description": "This account is credited by the discount amount.",
@@ -193,6 +198,7 @@
 			"options": "Account"
 		},
 		{
+			"depends_on": "enable_accepting",
 			"fieldname": "accepting_config_section",
 			"fieldtype": "Section Break",
 			"label": "Configuration: Accepting Payments"
@@ -215,7 +221,7 @@
 			"options": "\nAuthorize.net\nMercury\nWise"
 		},
 		{
-			"description": "Required for Mercury and Wise. For Mercury, enter the Mercury Account ID for the account making transfers. For Wise, enter the Wise Profile ID for the Company making transfers. If not known, enter API credentials and click Save. The error message will display the options and their IDs, if any.",
+			"description": "Required for Mercury and Wise. For Mercury, enter the Mercury Account ID for the account making transfers. For Wise, enter the Wise Profile ID for the Company making transfers. If not known, enter API credentials and click Save. The message will display the options and their IDs, if any - copy the applicable one's ID into this field.",
 			"fieldname": "sending_ref_id",
 			"fieldtype": "Data",
 			"label": "Sending Merchant ID"
@@ -233,12 +239,14 @@
 		{
 			"fieldname": "sending_api_key",
 			"fieldtype": "Password",
-			"label": "Sending API Key"
+			"label": "Sending API Key",
+			"mandatory_depends_on": "enable_sending"
 		},
 		{
 			"fieldname": "sending_transaction_key",
 			"fieldtype": "Password",
-			"label": "Sending Transaction Key"
+			"label": "Sending Transaction Key",
+			"mandatory_depends_on": "eval:doc.enable_sending && (doc.provider !== doc.sending_provider) && (doc.sending_provider === \"Authorize.net\")"
 		},
 		{
 			"fieldname": "sending_mode_of_payment",
@@ -260,14 +268,14 @@
 		{
 			"default": "0",
 			"depends_on": "eval:doc.sending_provider === \"Wise\"",
-			"description": "Automatically fund transfers with a Direct Debit bank account linked to the company profile configured in Wise. If unchecked, transfers must be funded manually via the Wise website.",
+			"description": "Automatically fund transfers with a Direct Debit bank account linked to the company profile configured in Wise. If unchecked, Electronic Payments will initiate the transfers, but the final funding step must be completed manually via the Wise website.",
 			"fieldname": "fund_wise_with_direct_debit",
 			"fieldtype": "Check",
 			"label": "Fund Wise Transfers with Direct Debit Account"
 		},
 		{
 			"depends_on": "fund_wise_with_direct_debit",
-			"description": "The Direct Debit bank account's Account ID in Wise. If not known, enter API credentials and click Save. The error message will display the account options and their IDs, if any.",
+			"description": "The Direct Debit bank account's Account ID in Wise. If not known, enter API credentials and click Save. The message will display the account options and their IDs, if any - copy the applicable one's ID in this field.",
 			"fieldname": "wise_linked_bank_account_id",
 			"fieldtype": "Data",
 			"label": "Wise Linked Bank Account ID"
@@ -289,10 +297,21 @@
 			"label": "Wise Bank Account Currency",
 			"mandatory_depends_on": "fund_wise_with_direct_debit",
 			"options": "USD"
+		},
+		{
+			"fieldname": "accepting_payments_tab",
+			"fieldtype": "Tab Break",
+			"label": "Accepting Payments"
+		},
+		{
+			"default": "0",
+			"fieldname": "enable_accepting",
+			"fieldtype": "Check",
+			"label": "Enable Accepting Electronic Payments"
 		}
 	],
 	"links": [],
-	"modified": "2025-05-26 09:08:22.610267",
+	"modified": "2025-06-11 17:39:56.917438",
 	"modified_by": "Administrator",
 	"module": "Electronic Payments",
 	"name": "Electronic Payment Settings",
