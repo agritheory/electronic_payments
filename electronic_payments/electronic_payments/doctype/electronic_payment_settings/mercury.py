@@ -531,6 +531,7 @@ class Mercury:
 			message=f"Mercury does not allow deleting Recipients via the API. Please visit mercury.com to manually remove the payment profile {reference} for {party}.",
 			title=f"Payment profile for {party} must be deleted manually at Mercury.com",
 		)
+		return {"message": "Success"}
 
 	def delete_customer_profile(self, company, customer):
 		# Not used in Mercury

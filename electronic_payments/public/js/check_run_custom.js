@@ -33,7 +33,6 @@ async function process_check_run_electronic_payments(frm) {
 			}
 		)
 		.then(r => {
-			console.log('POST-SERVER PROCESS CALL', r)
 			if (r && r.message && r.message === 'Success') {
 				frm.set_intro(
 					__(

@@ -48,9 +48,7 @@ class ElectronicPaymentSettings(Document):
 				mop.save()
 			self.mode_of_payment = mop_name
 
-		if self.enable_sending and self.provider == self.sending_provider:
-			self.sending_mode_of_payment = mop_name
-		elif self.enable_sending and self.sending_provider:
+		if self.enable_sending and self.sending_provider:
 			sending_mop_name = self.sending_provider + " ACH"
 			if not frappe.db.exists("Mode of Payment", sending_mop_name):
 				mop = frappe.new_doc("Mode of Payment")
