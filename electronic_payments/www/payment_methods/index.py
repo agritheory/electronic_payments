@@ -95,7 +95,6 @@ def get_party():
 	company = (
 		frappe.get_value(party_type, party, "electronic_payment_company") or get_default_company()
 	)
-	print({"party": party, "party_type": party_type, "company": company})
 	return {"party": party, "party_type": party_type, "company": company}
 
 
