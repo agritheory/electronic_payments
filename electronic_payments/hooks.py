@@ -1,7 +1,6 @@
 # Copyright (c) 2025, AgriTheory and contributors
 # For license information, please see license.txt
 
-import frappe
 
 from . import __version__ as app_version  # noqa: F401
 
@@ -42,11 +41,8 @@ doctype_js = {
 	"Sales Invoice": "public/js/sales_invoice_custom.js",
 	"Purchase Order": "public/js/purchase_order_custom.js",
 	"Purchase Invoice": "public/js/purchase_invoice_custom.js",
+	"Check Run": "public/js/check_run_custom.js",
 }
-
-exists = frappe.db.sql("SHOW TABLES LIKE '%Check Run%'")
-if exists:
-	doctype_js.update({"Check Run": "public/js/check_run_custom.js"})
 
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
