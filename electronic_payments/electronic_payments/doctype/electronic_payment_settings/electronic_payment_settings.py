@@ -9,6 +9,7 @@ from frappe import _
 # from frappe.utils.data import today
 from frappe.model.document import Document
 from frappe.query_builder import Order
+from frappe.utils import getdate
 from frappe.utils.password import get_decrypted_password
 
 from electronic_payments.electronic_payments.doctype.electronic_payment_settings.authorize import (
@@ -359,6 +360,7 @@ def process_check_run_electronic_payments(cr_doc):
 			if response.get("message") == "Success":
 				transaction_id = response.get("transaction_id")
 				frappe.db.set_value(pe_doc.doctype, pe_doc.name, "reference_no", transaction_id)
+				frappe.db.set_value(pe_doc.doctype, pe_doc.name, "reference_date", getdate())
 			else:
 				errors.append(response.get("error"))
 
