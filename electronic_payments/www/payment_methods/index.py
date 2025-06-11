@@ -20,7 +20,7 @@ def get_portal_payment_methods():
 	party = party_data["party"]
 	portal_payment_methods = []
 	portal_payment_method_names = frappe.get_all(
-		"Portal Payment Method", {"parent": party}, pluck="name"
+		"Portal Payment Method", {"parent": party, "label": ["not like", "Wire%"]}, pluck="name"
 	)
 
 	if not portal_payment_method_names:
@@ -38,7 +38,8 @@ def get_portal_payment_methods():
 
 @frappe.whitelist()
 def remove_portal_payment_method(payment_method):
-	settings = get_electronic_payment_settings()
+	party_data = get_party()
+	settings = get_electronic_payment_settings(party_data["company"])
 
 	if not settings:
 		return {"error_message": _("Your Payment Method cannot be deleted.")}
@@ -50,7 +51,6 @@ def remove_portal_payment_method(payment_method):
 		payment_profile_id = frappe.db.get_value(
 			"Electronic Payment Profile", electronic_payment_profile, "payment_profile_id"
 		)
-		party_data = get_party()
 		doc = frappe._dict({party_data["party_type"].lower(): party_data["party"]})
 		client = settings.client(doc)
 		response = client.delete_payment_profile(get_default_company(), payment_profile_id)
@@ -62,8 +62,8 @@ def remove_portal_payment_method(payment_method):
 		return {"error_message": str(e)}
 
 
-def get_electronic_payment_settings():
-	company = get_default_company()
+def get_electronic_payment_settings(company=None):
+	company = company or get_default_company()
 
 	if frappe.db.exists("Electronic Payment Settings", {"company": company}):
 		return frappe.get_doc("Electronic Payment Settings", {"company": company})
@@ -92,12 +92,15 @@ def get_party():
 	if not party:
 		frappe.throw(_("Not permitted"), frappe.PermissionError)
 
-	return {"party": party, "party_type": party_type}
+	company = (
+		frappe.get_value(party_type, party, "electronic_payment_company") or get_default_company()
+	)
+	return {"party": party, "party_type": party_type, "company": company}
 
 
 def get_provider():
-	settings = get_electronic_payment_settings()
 	party_data = get_party()
+	settings = get_electronic_payment_settings(party_data["company"])
 	provider_field = (
 		"sending_provider"
 		if party_data["party_type"] == "Supplier" and settings.enable_sending

@@ -440,6 +440,7 @@ class Stripe:
 					party_obj = frappe.get_doc(party.doctype, party.name)
 					party_obj.append("portal_payment_method", ppm)
 					party_obj.save(ignore_permissions=True)
+					data.update({"ppm_name": ppm.name})
 
 				return {"message": "Success", "payment_profile_doc": payment_profile}
 			else:  # error creating the payment method

@@ -300,7 +300,7 @@ class Wise:
 
 				if payment_profile.retain and settings.create_ppm:
 					ppm = frappe.new_doc("Portal Payment Method")
-					ppm.mode_of_payment = settings.get(mop_field)
+					ppm.mode_of_payment = f"Wise {mop}"
 					ppm.label = f"{mop}-{last4}"
 					ppm.default = cint(data.get("default", 0))
 					ppm.electronic_payment_profile = payment_profile.name
@@ -312,6 +312,7 @@ class Wise:
 					party_obj = frappe.get_doc(party.doctype, party.name)
 					party_obj.append("portal_payment_method", ppm)
 					party_obj.save(ignore_permissions=True)
+					data.update({"ppm_name": ppm.name})
 
 				return {"message": "Success", "payment_profile_doc": payment_profile}
 

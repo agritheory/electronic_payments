@@ -21,7 +21,7 @@ def get_context(context):
 	party = party_data["party"]
 
 	try:
-		settings = get_electronic_payment_settings()
+		settings = get_electronic_payment_settings(party_data["company"])
 
 		if not settings:
 			return {"error_message": _("You cannot edit this Payment Method.")}
@@ -60,8 +60,8 @@ def get_context(context):
 @frappe.whitelist()
 def edit_portal_payment_method(payment_method):
 	data = json.loads(payment_method)
-	settings = get_electronic_payment_settings()
 	party_data = get_party()
+	settings = get_electronic_payment_settings(party_data["company"])
 
 	if not settings:
 		return {"error_message": _("You cannot edit this Payment Method.")}

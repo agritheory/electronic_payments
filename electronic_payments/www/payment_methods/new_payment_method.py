@@ -27,7 +27,7 @@ def new_portal_payment_method(payment_method):
 	party_data = get_party()
 	data = frappe._dict(json.loads(payment_method))
 
-	settings = get_electronic_payment_settings()
+	settings = get_electronic_payment_settings(party_data["company"])
 	provider = get_provider()
 
 	if not settings:
@@ -45,7 +45,7 @@ def new_portal_payment_method(payment_method):
 	data.save_data = "Retain payment data for this party"
 
 	try:
-		if provider != "Mercury" or provider != "Wise":
+		if provider not in ["Mercury", "Wise"]:
 			response = client.create_party_profile(doc)
 			if response.get("error"):
 				return {"error_message": response["error"]}

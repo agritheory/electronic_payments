@@ -368,13 +368,17 @@ def create_payment_terms_templates(settings):
 
 
 def create_suppliers(settings):
-	addresses = frappe._dict({})
+	sending_provider = frappe.get_value(
+		"Electronic Payment Settings", {"company": settings.company}, "sending_provider"
+	)
+	ep_mop = f"{sending_provider} ACH" if sending_provider else None
+
 	for supplier in suppliers + tax_authority:
 		biz = frappe.new_doc("Supplier")
 		biz.supplier_name = supplier[0]
 		biz.supplier_group = "Services"
 		biz.country = "United States"
-		biz.supplier_default_mode_of_payment = supplier[2]
+		biz.supplier_default_mode_of_payment = supplier[2] or ep_mop
 		if biz.supplier_default_mode_of_payment == "ACH/EFT":
 			biz.bank = "Local Bank"
 			biz.bank_account = "123456789"

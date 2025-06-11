@@ -4,10 +4,12 @@
 import json
 
 import frappe
+from frappe import _
 
 # from frappe.utils.data import today
 from frappe.model.document import Document
 from frappe.query_builder import Order
+from frappe.utils import getdate
 from frappe.utils.password import get_decrypted_password
 
 from electronic_payments.electronic_payments.doctype.electronic_payment_settings.authorize import (
@@ -47,10 +49,8 @@ class ElectronicPaymentSettings(Document):
 				mop.save()
 			self.mode_of_payment = mop_name
 
-		if self.enable_sending and self.provider == self.sending_provider:
-			self.sending_mode_of_payment = mop_name
-		elif self.enable_sending and self.sending_provider:
-			sending_mop_name = self.sending_provider + " API"
+		if self.enable_sending and self.sending_provider:
+			sending_mop_name = self.sending_provider + " ACH"
 			if not frappe.db.exists("Mode of Payment", sending_mop_name):
 				mop = frappe.new_doc("Mode of Payment")
 				mop.mode_of_payment = sending_mop_name
@@ -58,6 +58,16 @@ class ElectronicPaymentSettings(Document):
 				mop.type = "General"
 				mop.save()
 			self.sending_mode_of_payment = sending_mop_name
+
+			# Create Wire MOP for providers supporting it
+			if self.sending_provider in ["Mercury", "Wise"]:
+				wire_mop = self.sending_provider + " Wire"
+				if not frappe.db.exists("Mode of Payment", wire_mop):
+					mop = frappe.new_doc("Mode of Payment")
+					mop.mode_of_payment = wire_mop
+					mop.enabled = 1
+					mop.type = "General"
+					mop.save()
 
 	def copy_api_config_if_same_providers(self):
 		"""
@@ -181,6 +191,7 @@ def get_payment_profiles(doc):
 			ppm.subject_to_credit_limit,
 		)
 		.where(epp.party == party)
+		.where(epp.payment_type != "Wire")  # Exclude Wire methods until supported by Mercury API
 		.orderby(ppm.default, order=Order.desc)
 	)
 	return frappe.db.sql(query, as_dict=True)
@@ -260,3 +271,102 @@ def process_transactions(settings, transactions, provider):
 			},
 		)
 	return None
+
+
+@frappe.whitelist()
+def get_check_run_button_info(cr_doc):
+	"""
+	Called from Check Run. Indicates whether to include a "Send [Provider] ACH" button and the
+	appropriate button text. Check Run must be submitted and include transaction(s) with a
+	"[Provider] ACH" mode of payment.
+
+	:param cr_doc: a Check Run document
+	:return: dict with "include_button" (bool) and "button_text" (str) keys
+	"""
+	cr_doc = frappe._dict(json.loads(cr_doc)) if isinstance(cr_doc, str) else cr_doc
+	settings = frappe.get_doc("Electronic Payment Settings", {"company": cr_doc.company})
+
+	include_button = False
+	button_text = ""
+
+	if settings.enable_sending and settings.sending_provider:
+		sending_provider = settings.sending_provider
+		cr_txns = json.loads(cr_doc.transactions)
+		valid_mop_txns = [txn for txn in cr_txns if txn["mode_of_payment"] == f"{sending_provider} ACH"]
+		if valid_mop_txns:
+			button_text = f"Send {sending_provider} ACH"
+			include_button = True
+	return {"include_button": include_button, "button_text": button_text}
+
+
+@frappe.whitelist()
+def process_check_run_electronic_payments(cr_doc):
+	"""
+	Called from Check Run. Collects Payment Entries linked to given cr_doc with "[Provider] ACH"
+	mode of payment, processes a transfer with the provider, and stores the transaction ID in the
+	Payment Entry's reference_no field.
+
+	:param cr_doc: a Check Run document
+	:return: dict with either an Error or Success message, and errors if encountered.
+	"""
+	cr_doc = frappe._dict(json.loads(cr_doc)) if isinstance(cr_doc, str) else cr_doc
+	settings = frappe.get_doc("Electronic Payment Settings", {"company": cr_doc.company})
+	payment_types = ["ACH"]
+	errors = []
+	for pmt_type in payment_types:
+		mode_of_payment = f"{settings.sending_provider} {pmt_type}"
+		pes = frappe.get_all(
+			"Payment Entry", {"check_run": cr_doc.name, "mode_of_payment": mode_of_payment}
+		)
+		if not pes:
+			continue
+		for pe in pes:
+			pe_doc = frappe.get_doc("Payment Entry", pe)
+			party = pe_doc.party
+			pmt_profiles = get_payment_profiles(
+				frappe._dict({"doctype": "Purchase Invoice", "supplier": party})
+			)
+			pmt_profiles = [pp for pp in pmt_profiles if pp.payment_type == pmt_type]
+			if not pmt_profiles:
+				err_msg = f"No {pmt_type} payment profiles found for {party}"
+				frappe.log_error(
+					title=_(f"Error Processing Electronic Payment to {party} for Check Run Payment Entry"),
+					message=_(err_msg),
+					reference_doctype="Check Run",
+					reference_name=cr_doc.name,
+				)
+				errors.append(err_msg)
+				continue
+			doc = frappe._dict(
+				{
+					"doctype": "Purchase Invoice",
+					"company": cr_doc.company,
+					"supplier": party,
+					"supplier_name": party,
+					"currency": pe_doc.paid_to_account_currency,
+				}
+			)
+			data = frappe._dict(
+				{
+					"payment_profile_id": pmt_profiles[0].payment_profile_id,
+					"ppm_name": pmt_profiles[0].ppm_name,
+					"subject_to_credit_limit": pmt_profiles[0].subject_to_credit_limit,
+					"amount": pe_doc.paid_amount,
+					"mode_of_payment": "Saved",
+				}
+			)
+			client = settings.client(doc)
+			response = client.process_transaction(doc, data, bypass_je_pe_creation=True)
+			if response.get("message") == "Success":
+				transaction_id = response.get("transaction_id")
+				frappe.db.set_value(pe_doc.doctype, pe_doc.name, "reference_no", transaction_id)
+				frappe.db.set_value(pe_doc.doctype, pe_doc.name, "reference_date", getdate())
+			else:
+				errors.append(response.get("error"))
+
+	if not errors:
+		return {"message": "Success"}
+	else:
+		err_list = "</li><li>".join(errors)
+		full_msg = f"Processing {settings.sending_provider} payments generated the following errors:<br><ul><li>{err_list}</li></ul>"
+		return {"message": "Error", "errors": full_msg}

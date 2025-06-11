@@ -5,9 +5,9 @@ suppliers = [
 	(
 		"Exceptional Grid",
 		"Electricity",
-		"ACH/EFT",
+		None,
 		150.00,
-		"Net 14",
+		"2% 10 Net 30",
 		{
 			"address_line1": "2 Cosmo Point",
 			"city": "Summerville",
@@ -69,7 +69,7 @@ suppliers = [
 	(
 		"HIJ Telecom, Inc",
 		"Internet Services",
-		"Check",
+		None,
 		150.00,
 		"Net 30",
 		{
@@ -85,9 +85,9 @@ suppliers = [
 	(
 		"Sphere Cellular",
 		"Phone Services",
-		"ACH/EFT",
+		None,
 		250.00,
-		"Net 30",
+		"20 in 14 80 in 30",
 		{
 			"address_line1": "1198 Carpenter Road",
 			"city": "Rolla",

@@ -53,7 +53,7 @@ class AuthorizeNet:
 			)
 			return merchantAuth
 
-	def process_transaction(self, doc, data):
+	def process_transaction(self, doc, data, bypass_je_pe_creation=False):
 		mop = data.mode_of_payment.replace("New ", "")
 		party = get_party_details(doc)
 
@@ -63,7 +63,7 @@ class AuthorizeNet:
 			if party.doctype == "Customer":
 				response = self.charge_party_profile(doc, data)
 			else:
-				response = self.credit_bank_account(doc, data)
+				response = self.credit_bank_account(doc, data, bypass_je_pe_creation=bypass_je_pe_creation)
 		elif mop == "Card" and data.get("save_data") == "Charge now":
 			response = self.process_credit_card(doc, data)
 		else:  # charge new Card/ACH, save payment data (temporarily if txn only - payment profile deleted once charge is successful)
@@ -372,6 +372,7 @@ class AuthorizeNet:
 				party_obj = frappe.get_doc(party.doctype, party.name)
 				party_obj.append("portal_payment_method", ppm)
 				party_obj.save(ignore_permissions=True)
+				data.update({"ppm_name": ppm.name})
 
 			return {"message": "Success", "payment_profile_doc": payment_profile}
 		else:
@@ -485,7 +486,27 @@ class AuthorizeNet:
 		frappe.log_error(message=frappe.get_traceback(), title=error_message)
 		return {"error": error_message}
 
-	def credit_bank_account(self, doc, data):
+	def credit_bank_account(self, doc, data, bypass_je_pe_creation=False):
+		"""
+		Sends a payment to specified party profile in the data dict.
+
+		:param doc: typically expects a PO or PI doc. If calling from Check Run, can pass a
+		frappe._dict with company, supplier, supplier_name, and currency (and the data dict must
+		specify the amount)
+		:param data: frappe._dict must include payment_profile_id. Can optionally include amount
+		(to override calculated amount), payment_term (to calculate payment total and discounts),
+		and ppm_name (to calculate fees configured for that portal payment method)
+		:param bypass_je_pe_creation: bool; default is False. If True, will not queue method that
+		creates a Journal Entry or Payment Entry following a successful API response - useful when
+		method is called from a Check Run, and a Payment Entry already exists
+		:return: dict; either {"message": "Success", "transaction_id": ...} or {"error": ...}
+
+		Side effects:
+		- if the associated Electronic Payment Profile does not have "retain" checked,
+		it will be deleted after a successful transfer
+		- if bypass_je_pe_creation is False, will create a Journal Entry or Payment Entry tied to
+		the transfer and doc following a successful API response
+		"""
 		merchantAuth = self.merchant_auth(doc.company)
 		settings = frappe.get_doc("Electronic Payment Settings", {"company": doc.company})
 		endpoint_field = "endpoint" if settings.provider == "Authorize.net" else "sending_endpoint"
@@ -538,12 +559,13 @@ class AuthorizeNet:
 					"electronic_payment_reference",
 					str(response.transactionResponse.transId),
 				)
-				queue_method_as_admin(
-					process_electronic_payment,
-					doc=doc,
-					data=data,
-					transaction_id=str(response.transactionResponse.transId),
-				)
+				if not bypass_je_pe_creation:
+					queue_method_as_admin(
+						process_electronic_payment,
+						doc=doc,
+						data=data,
+						transaction_id=str(response.transactionResponse.transId),
+					)
 				return {
 					"message": "Success",
 					"transaction_id": str(response.transactionResponse.transId),
