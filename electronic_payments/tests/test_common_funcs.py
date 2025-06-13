@@ -32,6 +32,7 @@ def create_electronic_payment_settings(
 	)
 	eps = frappe.new_doc("Electronic Payment Settings")
 	eps.company = company
+	eps.enable_accepting = 1
 	eps.provider = provider
 	eps.api_key = "123456789"
 	eps.transaction_key = "" if provider == "Stripe" else "987654321"

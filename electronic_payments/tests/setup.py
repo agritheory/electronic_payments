@@ -921,10 +921,8 @@ def create_electronic_payment_settings(settings):
 	stripe_present = os.environ.get("STRIPE_API_KEY")
 	wise_present = os.environ.get("WISE_API_KEY")
 
-	if not (authorize_present or stripe_present):
-		print(
-			"No API Keys found for a provider that accepts payments (Authorize.net or Stripe). Please manually create Electronic Payment Settings."
-		)
+	if not (authorize_present or stripe_present or mercury_present or wise_present):
+		print("No API Keys found for any provider. Please manually create Electronic Payment Settings.")
 		return
 
 	provider_mapping = {
@@ -974,17 +972,27 @@ def create_electronic_payment_settings(settings):
 	eps = frappe.new_doc("Electronic Payment Settings")
 	eps.company = settings.company
 	eps.create_ppm = 1
-	eps.provider = provider_mapping[pa_code]["provider"]
-	eps.ref_id = provider_mapping[pa_code].get("merchant_id")
-	eps.endpoint = provider_mapping[pa_code].get("endpoint")
-	eps.api_key = provider_mapping[pa_code]["api_key"]
-	eps.transaction_key = provider_mapping[pa_code].get("transaction_key")
-	eps.deposit_account = "1201 - Primary Checking - CFC"
-	eps.accepting_fee_account = "5223 - Electronic Payments Provider Fees - CFC"
-	eps.accepting_clearing_account = "1320 - Electronic Payments Receivable - CFC"
-	eps.accepting_payment_discount_account = frappe.get_value(
-		"Account", {"name": ["like", "%Sales - CFC%"]}, "name"
-	)
+
+	if not pa_code:
+		eps.enable_accepting = 0
+	elif pa_code and not provider_mapping[pa_code]["check"]:
+		eps.enable_accepting = 0
+		print(
+			f"No API Keys found for given accepting provider: {provider_mapping[pa_code]['provider']}. Settings will not enable accepting payments - this may be changed manually in the Electronic Payments Settings doc."
+		)
+	else:
+		eps.enable_accepting = 1
+		eps.provider = provider_mapping[pa_code]["provider"]
+		eps.ref_id = provider_mapping[pa_code].get("merchant_id")
+		eps.endpoint = provider_mapping[pa_code].get("endpoint")
+		eps.api_key = provider_mapping[pa_code]["api_key"]
+		eps.transaction_key = provider_mapping[pa_code].get("transaction_key")
+		eps.deposit_account = "1201 - Primary Checking - CFC"
+		eps.accepting_fee_account = "5223 - Electronic Payments Provider Fees - CFC"
+		eps.accepting_clearing_account = "1320 - Electronic Payments Receivable - CFC"
+		eps.accepting_payment_discount_account = frappe.get_value(
+			"Account", {"name": ["like", "%Sales - CFC%"]}, "name"
+		)
 
 	if not ps_code:
 		eps.enable_sending = 0
@@ -1010,8 +1018,8 @@ def create_electronic_payment_settings(settings):
 		eps.sending_endpoint = provider_mapping[ps_code].get("endpoint")
 		eps.sending_api_key = provider_mapping[ps_code]["api_key"]
 		eps.sending_transaction_key = provider_mapping[ps_code].get("transaction_key")
-		eps.withdrawal_account = eps.deposit_account
-		eps.sending_fee_account = eps.accepting_fee_account
+		eps.withdrawal_account = "1201 - Primary Checking - CFC"
+		eps.sending_fee_account = "5223 - Electronic Payments Provider Fees - CFC"
 		eps.sending_clearing_account = "2130 - Electronic Payments Payable - CFC"
 		eps.sending_payment_discount_account = frappe.get_value(
 			"Account", {"name": ["like", "%Miscellaneous Expenses - CFC%"]}, "name"

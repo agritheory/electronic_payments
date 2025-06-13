@@ -62,7 +62,7 @@ class Stripe:
 	def get_password(self, company):
 		settings = frappe.get_doc("Electronic Payment Settings", {"company": company})
 		if not settings:
-			frappe.msgprint(_(f"No Electronic Payment Settings found for {company}-Stripe"))
+			frappe.msgprint(_(f"No Electronic Payment Settings found for {company}"))
 		else:
 			api_key_field = "api_key" if settings.provider == "Stripe" else "sending_api_key"
 			stripe.api_key = get_decrypted_password(
