@@ -56,6 +56,7 @@ class AuthorizeNet:
 	def process_transaction(self, doc, data, bypass_je_pe_creation=False):
 		mop = data.mode_of_payment.replace("New ", "")
 		party = get_party_details(doc)
+		save_only = data.save_data == "Save payment data only"
 
 		if mop.startswith("Saved"):
 			if data.get("subject_to_credit_limit") and exceeds_credit_limit(doc, data):
@@ -74,6 +75,8 @@ class AuthorizeNet:
 				if pmt_profile_response.get("message") == "Success":
 					pp_doc = pmt_profile_response.get("payment_profile_doc")
 					data.update({"payment_profile_id": pp_doc.payment_profile_id})
+					if save_only:
+						return pmt_profile_response
 					if party.doctype == "Customer":
 						response = self.charge_party_profile(doc, data)
 					else:
@@ -344,6 +347,10 @@ class AuthorizeNet:
 
 		if response.messages.resultCode == "Ok":
 			settings = frappe.get_doc("Electronic Payment Settings", {"company": doc.company})
+			save_data = data.save_data in [
+				"Retain payment data for this party and process",
+				"Save payment data only",
+			]
 			payment_profile = frappe.new_doc("Electronic Payment Profile")
 			payment_profile.party_type = party.doctype
 			payment_profile.party = party.name
@@ -352,7 +359,7 @@ class AuthorizeNet:
 			payment_profile.reference = f"**** **** **** {last4}" if mop == "Card" else f"*{last4}"
 			payment_profile.payment_profile_id = str(response.customerPaymentProfileId)
 			payment_profile.party_profile = str(party_profile_id)
-			payment_profile.retain = 1 if data.save_data == "Retain payment data for this party" else 0
+			payment_profile.retain = int(save_data)
 			payment_profile.save(ignore_permissions=True)
 
 			if payment_profile.retain and settings.create_ppm:

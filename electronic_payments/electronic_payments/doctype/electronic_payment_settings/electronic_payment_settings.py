@@ -190,6 +190,16 @@ def process(doc, data):
 
 
 @frappe.whitelist()
+def get_payment_profiles_and_billing_address(doc):
+	doc = frappe._dict(json.loads(doc)) if isinstance(doc, str) else doc
+	party = doc.supplier if "Purchase" in doc.doctype else doc.customer
+
+	billing_address = get_billing_address(doc)
+	payment_profiles = get_payment_profiles(doc)
+	results = frappe._dict({"billing_address": billing_address, "payment_profiles": payment_profiles})
+	return results
+
+
 def get_payment_profiles(doc):
 	doc = frappe._dict(json.loads(doc)) if isinstance(doc, str) else doc
 	party = doc.supplier if "Purchase" in doc.doctype else doc.customer
@@ -213,7 +223,44 @@ def get_payment_profiles(doc):
 		.where(epp.payment_type != "Wire")  # Exclude Wire methods until supported by Mercury API
 		.orderby(ppm.default, order=Order.desc)
 	)
-	return frappe.db.sql(query, as_dict=True)
+	return query.run(as_dict=True)
+
+
+def get_billing_address(doc):
+	party = doc.supplier if "Purchase" in doc.doctype else doc.customer
+	address_field = "supplier_address" if "Purchase" in doc.doctype else "customer_address"
+	uses_billing = "Billing" in doc.get(address_field)
+
+	address = frappe.qb.DocType("Address")
+	dynamic_link = frappe.qb.DocType("Dynamic Link")
+
+	query = (
+		frappe.qb.from_(address)
+		.inner_join(dynamic_link)
+		.on(address.name == dynamic_link.parent)
+		.select(
+			address.address_line1,
+			address.address_line2,
+			address.city,
+			address.state,
+			address.pincode,
+		)
+		.where(dynamic_link.link_name == party)
+		.where(address.address_type == "Billing")
+		.orderby(address.modified, order=Order.desc)
+		.limit(1)
+	)
+
+	if uses_billing:
+		query = query.where(address.name == doc.get(address_field))
+
+	results = query.run(as_dict=True)
+
+	# Form address wasn't Billing and none found in query, re-run query to return form address
+	if not results:
+		query = query.where(address.name == doc.get(address_field))
+		results = query.run(as_dict=True)
+	return results[0]
 
 
 @frappe.whitelist()

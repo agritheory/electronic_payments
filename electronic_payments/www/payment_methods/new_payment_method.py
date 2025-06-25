@@ -42,7 +42,7 @@ def new_portal_payment_method(payment_method):
 	)
 	client = settings.client(doc)
 	data.mode_of_payment = data.payment_type
-	data.save_data = "Retain payment data for this party"
+	data.save_data = "Retain payment data for this party and process"
 
 	try:
 		if provider not in ["Mercury", "Wise"]:

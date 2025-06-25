@@ -45,6 +45,7 @@ class Mercury:
 	def process_transaction(self, doc, data, bypass_je_pe_creation=False):
 		mop = data.mode_of_payment.replace("New ", "")
 		party = get_party_details(doc)
+		save_only = data.save_data == "Save payment data only"
 
 		if party.doctype == "Customer" or mop == "Card":
 			return {"error": _("Not Supported.")}
@@ -62,6 +63,8 @@ class Mercury:
 			if pmt_profile_response.get("message") == "Success":
 				pp_doc = pmt_profile_response.get("payment_profile_doc")
 				data.update({"payment_profile_id": pp_doc.payment_profile_id})
+				if save_only:
+					return pmt_profile_response
 			else:  # error creating the customer payment profile
 				return pmt_profile_response
 
@@ -292,6 +295,10 @@ class Mercury:
 		settings = frappe.get_doc("Electronic Payment Settings", {"company": doc.company})
 		mop = data.mode_of_payment.replace("New ", "")
 		pmt_types = [mop]
+		save_data = data.save_data in [
+			"Retain payment data for this party and process",
+			"Save payment data only",
+		]
 
 		if mop not in ["ACH", "Wire"]:
 			return {"error": _("Mode of Payment not supported")}
@@ -329,7 +336,7 @@ class Mercury:
 						}
 					}
 				)
-				if data.save_data == "Retain payment data for this party":
+				if save_data:
 					# Create a separate Wire profile
 					pmt_types = ["Wire"] + pmt_types
 
@@ -352,7 +359,7 @@ class Mercury:
 					payment_profile.reference = f"*{last4}"
 					payment_profile.payment_profile_id = str(r.get("id"))
 					payment_profile.party_profile = None  # Not used in Mercury
-					payment_profile.retain = 1 if data.save_data == "Retain payment data for this party" else 0
+					payment_profile.retain = int(save_data)
 					payment_profile.save(ignore_permissions=True)
 
 					if payment_profile.retain and settings.create_ppm:
