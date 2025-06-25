@@ -9,6 +9,7 @@ from frappe import _
 # from frappe.utils.data import today
 from frappe.model.document import Document
 from frappe.query_builder import Order
+from frappe.query_builder.functions import IfNull
 from frappe.utils import getdate
 from frappe.utils.password import get_decrypted_password
 
@@ -229,7 +230,7 @@ def get_payment_profiles(doc):
 def get_billing_address(doc):
 	party = doc.supplier if "Purchase" in doc.doctype else doc.customer
 	address_field = "supplier_address" if "Purchase" in doc.doctype else "customer_address"
-	uses_billing = "Billing" in doc.get(address_field)
+	uses_billing = "Billing" in doc.get(address_field, "")
 
 	address = frappe.qb.DocType("Address")
 	dynamic_link = frappe.qb.DocType("Dynamic Link")
@@ -240,7 +241,7 @@ def get_billing_address(doc):
 		.on(address.name == dynamic_link.parent)
 		.select(
 			address.address_line1,
-			address.address_line2,
+			IfNull(address.address_line2, "").as_("address_line2"),
 			address.city,
 			address.state,
 			address.pincode,
@@ -260,7 +261,7 @@ def get_billing_address(doc):
 	if not results:
 		query = query.where(address.name == doc.get(address_field))
 		results = query.run(as_dict=True)
-	return results[0]
+	return results[0] if results else {}
 
 
 @frappe.whitelist()

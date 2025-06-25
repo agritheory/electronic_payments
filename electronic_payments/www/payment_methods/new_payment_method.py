@@ -6,6 +6,12 @@ import json
 import frappe
 from frappe import _
 
+from electronic_payments.electronic_payments.doctype.electronic_payment_settings.common import (
+	state_label_lookup,
+)
+from electronic_payments.electronic_payments.doctype.electronic_payment_settings.electronic_payment_settings import (
+	get_billing_address,
+)
 from electronic_payments.www.payment_methods.index import (
 	get_electronic_payment_settings,
 	get_party,
@@ -20,6 +26,21 @@ def get_context(context):
 	context.party = party_data["party"]
 	context.party_type = party_data["party_type"]
 	context.add_breadcrumbs = 1
+
+	doc = frappe._dict(
+		{
+			"doctype": "Purchase" if party_data["party_type"] == "Supplier" else "Sales",
+			party_data["party_type"].lower(): party_data["party"],
+		}
+	)
+	billing_address = get_billing_address(doc)
+	context.address_firstline = billing_address.get("address_line1", "")
+	context.address_secondline = billing_address.get("address_line2", "")
+	context.city = billing_address.get("city", "")
+	context.state = billing_address.get("state", "")
+	context.state_label = state_label_lookup(billing_address.get("state", ""))
+	context.postcode = billing_address.get("pincode", "")
+	context.email = frappe.session.user
 
 
 @frappe.whitelist()
