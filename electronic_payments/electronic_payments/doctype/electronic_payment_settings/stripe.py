@@ -288,7 +288,7 @@ class Stripe:
 				frappe.log_error(message=frappe.get_traceback(), title=f"{e}")
 				return {"error": f"{e}"}
 
-	def get_customer_payment_profile(self, company, electronic_payment_profile_name):
+	def get_party_payment_profile(self, company, electronic_payment_profile_name):
 		self.get_password(company)
 		electronic_payment_profile = frappe.get_doc(
 			"Electronic Payment Profile", {"name": electronic_payment_profile_name}
@@ -423,6 +423,7 @@ class Stripe:
 				payment_profile.payment_profile_id = str(response.id)
 				payment_profile.party_profile = str(party_profile_id)
 				payment_profile.retain = 1 if data.save_data == "Retain payment data for this party" else 0
+				payment_profile.company = doc.company
 				payment_profile.save(ignore_permissions=True)
 
 				if payment_profile.retain and settings.create_ppm:

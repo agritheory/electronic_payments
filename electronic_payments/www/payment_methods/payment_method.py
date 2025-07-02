@@ -21,20 +21,18 @@ def get_context(context):
 	party = party_data["party"]
 
 	try:
-		settings = get_electronic_payment_settings(party_data["company"])
-
-		if not settings:
-			return {"error_message": _("You cannot edit this Payment Method.")}
-
 		portal_payment_method = frappe.get_doc("Portal Payment Method", {"name": name, "parent": party})
 		electronic_payment_profile = frappe.get_doc(
 			"Electronic Payment Profile", portal_payment_method.electronic_payment_profile
 		)
 		portal_payment_method.electronic_payment_profile_object = electronic_payment_profile
+		settings = get_electronic_payment_settings(company=electronic_payment_profile.company)
+		if not settings:
+			return {"error_message": _("You cannot edit this Payment Method.")}
 
 		doc = frappe._dict({party_data["party_type"].lower(): party})
 		client = settings.client(doc)
-		response = client.get_customer_payment_profile(settings.company, electronic_payment_profile.name)
+		response = client.get_party_payment_profile(settings.company, electronic_payment_profile.name)
 		if response.get("message") and response["message"] == "Success":
 			data = response["data"]
 			for field in [
@@ -61,12 +59,16 @@ def get_context(context):
 def edit_portal_payment_method(payment_method):
 	data = json.loads(payment_method)
 	party_data = get_party()
-	settings = get_electronic_payment_settings(party_data["company"])
+
+	portal_payment_method = frappe.get_doc("Portal Payment Method", data["name"])
+	company = frappe.db.get_value(
+		"Electronic Payment Profile", portal_payment_method.electronic_payment_profile, "company"
+	)
+	settings = get_electronic_payment_settings(company=company)
 
 	if not settings:
 		return {"error_message": _("You cannot edit this Payment Method.")}
 
-	portal_payment_method = frappe.get_doc("Portal Payment Method", data["name"])
 	try:
 		doc = frappe._dict({party_data["party_type"].lower(): party_data["party"]})
 		client = settings.client(doc)

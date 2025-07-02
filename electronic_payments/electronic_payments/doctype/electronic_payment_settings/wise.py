@@ -200,7 +200,7 @@ class Wise:
 			)
 		}
 
-	def get_customer_payment_profile(self, company, electronic_payment_profile_name):
+	def get_party_payment_profile(self, company, electronic_payment_profile_name):
 		party, payment_profile_id = frappe.get_value(
 			"Electronic Payment Profile",
 			{"name": electronic_payment_profile_name},
@@ -248,7 +248,6 @@ class Wise:
 		party = get_party_details(doc)
 		settings = frappe.get_doc("Electronic Payment Settings", {"company": doc.company})
 		merch_id_field = "ref_id" if settings.provider == "Wise" else "sending_ref_id"
-		mop_field = "mode_of_payment" if settings.provider == "Wise" else "sending_mode_of_payment"
 		profile_id = settings.get(merch_id_field)
 		mop = data.mode_of_payment.replace("New ", "")
 
@@ -296,6 +295,7 @@ class Wise:
 				payment_profile.payment_profile_id = str(r.get("id"))
 				payment_profile.party_profile = None  # Not used in Wise
 				payment_profile.retain = 1 if data.save_data == "Retain payment data for this party" else 0
+				payment_profile.company = doc.company
 				payment_profile.save(ignore_permissions=True)
 
 				if payment_profile.retain and settings.create_ppm:

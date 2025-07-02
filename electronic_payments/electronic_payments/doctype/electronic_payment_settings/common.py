@@ -82,8 +82,13 @@ def calculate_payment_method_fees(doc, data):
 
 def process_electronic_payment(doc, data, transaction_id):
 	settings = frappe.get_doc("Electronic Payment Settings", {"company": doc.company})
+	clearing_account_field = (
+		"sending_use_clearing_account" if "Purchase" in doc.doctype else "use_clearing_account"
+	)
 
-	if "Journal Entry" in settings.use_clearing_account:
+	if "Journal Entry" in settings.get(
+		clearing_account_field, "Use Journal Entry and Clearing Account"
+	):
 		create_journal_entry(doc, data, transaction_id)
 	else:
 		create_payment_entry(doc, data, transaction_id)
@@ -117,6 +122,7 @@ def create_payment_entry(doc, data, transaction_id):
 	)
 
 	pe = frappe.new_doc("Payment Entry")
+	pe.company = doc.company
 	ppm_mop = (
 		frappe.get_value("Portal Payment Method", data.get("ppm_name"), "mode_of_payment")
 		if data.get("ppm_name")
@@ -247,6 +253,7 @@ def create_journal_entry(doc, data, transaction_id):
 	discount_amount = 0 if data.get("amount") else get_discount_amount(doc, data)
 
 	je = frappe.new_doc("Journal Entry")
+	je.company = doc.company
 	je.posting_date = today()
 	ppm_mop = (
 		frappe.get_value("Portal Payment Method", data.get("ppm_name"), "mode_of_payment")
