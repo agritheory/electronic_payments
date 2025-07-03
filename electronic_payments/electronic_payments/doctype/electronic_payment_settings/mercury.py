@@ -588,9 +588,8 @@ class Mercury:
 		)
 		return {"message": "Success"}
 
-	def delete_customer_profile(self, company, customer):
+	def delete_party_profile(self, company, party, party_profile_id):
 		# Not used in Mercury
-		frappe.set_value("Customer", customer, "electronic_payment_profile", "")
 		return {"message": "Success"}
 
 

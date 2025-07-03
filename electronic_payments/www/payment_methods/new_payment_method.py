@@ -42,6 +42,9 @@ def new_portal_payment_method(payment_method):
 		provider_field = "sending_provider" if doc.get("supplier") else "provider"
 		provider = settings.get(provider_field)
 
+		if provider == "Stripe" and data.mode_of_payment == "ACH":
+			continue
+
 		try:
 			if provider not in ["Mercury", "Wise"]:
 				response = client.create_party_profile(doc)

@@ -28,6 +28,7 @@ from electronic_payments.electronic_payments.doctype.electronic_payment_settings
 	exceeds_credit_limit,
 	get_discount_amount,
 	get_party_details,
+	get_party_profile_id,
 	get_payment_amount,
 	process_electronic_payment,
 	queue_method_as_admin,
@@ -155,7 +156,7 @@ class AuthorizeNet:
 
 	def create_party_profile(self, doc):
 		party = get_party_details(doc)
-		existing_party_id = frappe.get_value(party.doctype, party.name, "electronic_payment_profile")
+		existing_party_id = get_party_profile_id(party.name, doc.company, "Authorize.net")
 		if existing_party_id:
 			return {"message": "Success", "transaction_id": existing_party_id}
 		else:
@@ -292,7 +293,7 @@ class AuthorizeNet:
 		party = get_party_details(doc)
 
 		if not data.get("party_profile_id"):
-			party_profile_id = frappe.get_value(party.doctype, party.name, "electronic_payment_profile")
+			party_profile_id = get_party_profile_id(party.name, doc.company, "Authorize.net")
 		else:
 			party_profile_id = data.get("party_profile_id")
 
@@ -386,7 +387,7 @@ class AuthorizeNet:
 		endpoint_field = "endpoint" if settings.provider == "Authorize.net" else "sending_endpoint"
 		party = get_party_details(doc)
 		if not data.get("party_profile_id"):
-			party_profile_id = frappe.get_value(party.doctype, party.name, "electronic_payment_profile")
+			party_profile_id = get_party_profile_id(party.name, doc.company, "Authorize.net")
 		else:
 			party_profile_id = data.get("party_profile_id")
 
@@ -514,7 +515,7 @@ class AuthorizeNet:
 		party = get_party_details(doc)
 
 		if not data.get("party_profile_id"):
-			party_profile_id = frappe.get_value(party.doctype, party.name, "electronic_payment_profile")
+			party_profile_id = get_party_profile_id(party.name, doc.company, "Authorize.net")
 		else:
 			party_profile_id = data.get("party_profile_id")
 
@@ -832,20 +833,11 @@ class AuthorizeNet:
 		else:
 			return {"message": "Success"}
 
-	def delete_customer_profile(self, company, customer):
-		# Delete from ERPNext
-		customer_profile_id = frappe.get_value(
-			"Customer",
-			customer,
-			"electronic_payment_profile",
-		)
-		frappe.set_value("Customer", customer, "electronic_payment_profile", "")
-
-		# Delete from API
+	def delete_party_profile(self, company, party, party_profile_id):
 		merchantAuth = self.merchant_auth(company)
 		deleteCustomerProfile = apicontractsv1.deleteCustomerProfileRequest()
 		deleteCustomerProfile.merchantAuthentication = merchantAuth
-		deleteCustomerProfile.customerProfileId = customer_profile_id
+		deleteCustomerProfile.customerProfileId = party_profile_id
 
 		controller = deleteCustomerProfileController(deleteCustomerProfile)
 		controller.execute()
@@ -855,7 +847,7 @@ class AuthorizeNet:
 		if response is None or (hasattr(response, "messages") and response.messages.resultCode != "Ok"):
 			frappe.log_error(
 				message=frappe.get_traceback(),
-				title=f"Error deleting profile for {customer}",
+				title=f"Error deleting profile for {party}",
 			)
 		else:
 			return {"message": "Success"}

@@ -824,9 +824,8 @@ class Wise:
 			)
 			return {"error": f"{e}"}
 
-	def delete_customer_profile(self, company, customer):
+	def delete_party_profile(self, company, party, party_profile_id):
 		# Not used in Wise
-		frappe.set_value("Customer", customer, "electronic_payment_profile", "")
 		return {"message": "Success"}
 
 	def create_direct_debit_account(self, company, data):

@@ -463,3 +463,15 @@ def get_party_details(doc):
 		return frappe._dict(
 			{"doctype": "Supplier", "name": doc.supplier, "description": doc.supplier_name}
 		)
+
+
+def get_party_profile_id(party, company, provider):
+	# Adjust provider since Payment Gateway field uses "Authorize" vs. "Authorize.net"
+	provider = "Authorize" if "Authorize" in provider else provider
+	existing_ppids = frappe.get_all(
+		"Electronic Payment Profile",
+		{"party": party, "company": company, "payment_gateway": provider},
+		"party_profile",
+		pluck="party_profile",
+	)
+	return existing_ppids[0] if existing_ppids else None
