@@ -14,9 +14,13 @@ Authorize.net requires both an API Key and a Transaction Key, whereas Stripe, Me
 See below for information and default values for each field:
 
 - **Company:** (required) the company in ERPNext to apply all settings to - only one Electronic Payment Settings document may exist per company
-- **Automatically Create a Portal Payment Method when Electronic Payment Profile is Saved:** (default checked) when checked, if a desk user clicks the Electronic Payment button for an Order or Invoice, then enters payment information via the dialog box on behalf of a party and selects to save the payment method, this automatically creates a Portal Payment Method for the party. In ERPNext, Portal Payment Methods are viewable and editable in the Electronic Payments tab of the respective party's page, or by the party when they log into the portal
+- **Automatically Create a Portal Payment Method when Electronic Payment Profile is Saved:** (default checked) when checked, if a desk user clicks the Electronic Payment button for an Order or Invoice, then enters payment information via the dialog box on behalf of a party and selects to save the payment method, this automatically creates a Portal Payment Method for the party. In ERPNext, Portal Payment Methods are viewable and editable in the Electronic Payments tab of the respective party's page, or by the a user associated with that party (via a Contact) when they log into the portal
+
+The following fields pertain to accepting electronic payments and are found on the "Accepting Payments" tab. Note that any field marked as "required" is only required if this feature is enabled.
 
 **Configuration: Accepting Payments**
+
+- **Enable Accepting Electronic Payments:** (default unchecked) activate the ability for the given company to accept electronic payments
 - **Provider:** Authorize.net or Stripe - this is the provider to **accept** electronic payments and may be different than the one used to send payments
 - **Merchant ID:** (optional) the company's ID associated with the provider
 - **Endpoint:** (required for Authorize.net) Authorize.net has two distinct API endpoints
@@ -71,16 +75,15 @@ The following fields pertain to sending electronic payments and are found on the
 - **Withdrawal Account:** the account that sends payments to the provider to fund transfers
 - **Payment Discount Account:** the account to net any payment discounts given to the company (this field fetches the default payment discount account specified in Company Settings but is editable)
 - **Provider Fee Account:** the account to hold any provider fees associated with transactions
+- **Use Clearing Account:** (default Use Journal Entry and Clearing Account) whether to account for a successful electronic payment via a Journal Entry and Clearing account, or a Payment Entry. The differences between the two workflows is detailed on the [Electronic Payments Permissions and Workflows page](./permissions.md)
 - **Clearing Account:** (required if Use Journal Entry and Clearing Account is selected) the account to use when the Use Journal Entry and Clearing Account option is selected. The accounting entries for an example transaction using a clearing account can be found on the [Electronic Payments Permissions and Workflows page](./permissions.md)
 
-## Configuring a Company for Customers and Suppliers
+## Managing Payment Methods for Customers and Suppliers in a Multi-Company ERPNext Instance
 
 ERPNext does not link a Company to Customers, Suppliers, Users, or Contacts. In a single-Company ERPNext instance, this won't be cause for any issues using Electronic Payments.
 
-However, in a multi-Company ERPNext instance (assuming each Company has its own provider account, API keys, and Electronic Payment Settings document), if a Customer or Supplier contact uses the Portal to add, edit, or remove electronic payment methods, this can raise an issue of which Company's provider account to use to store the payment method.
+However, in a multi-Company ERPNext instance (assuming each Company has its own provider account, API keys, and Electronic Payment Settings document), if a Customer or Supplier contact uses the Portal to add an electronic payment method, this can raise an issue of which Company's provider account to use to store the payment method.
 
-The app adds an Electronic Payment Company field to Customer and Supplier documents. This field should be filled in for any party that does business with a non-default Company if that party will use the portal to manage their payment methods. This field ensures that a Customer's or Supplier's payment method gets linked to the correct Company's provider account in that scenario. The field's value should match the Company that's used in the party's Purchase or Sales documents. If the field is empty, the system will use the default Company's provider information.
+When a portal user adds a payment method, the app loops over all valid Electronic Payment Settings and adds the payment method in each Setting's company's provider. A valid Electronic Payment Settings document is when the "Enable Accepting" box is checked when the portal user is associated with a customer or the "Enable Sending" box is checked when the portal user is associated with a supplier.
 
-![Screen shot showing the Electronic Payments tab of a Supplier, highlighting the Electronic Payment Company field.](./assets/electronic_payment_company.png)
-
-Note that this is not an issue when there's only one Company in ERPNext, and in the case when the payment information is recorded directly in ERPNext through the Electronic Payments dialog box in the Purchase or Sales document (those documents have a Company field that's used to get the correct Electronic Payment Settings).
+Note that this behavior only occurs when a portal user adds their payment information and not when it's collected on the desk side through the Electronic Payments dialog box in the Purchase or Sales document. Those documents have a Company field, which the app uses to get the correct Electronic Payment Settings provider and credentials.
