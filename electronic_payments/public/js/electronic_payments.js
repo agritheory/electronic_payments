@@ -29,25 +29,29 @@ electronic_payments.electronic_payments = frm => {
 					default: mop_options[0].split('\n')[0],
 					change: () => {
 						d.set_required_fields(mop_options, billing_address_dict)
+						d.set_save_and_process_options(frm)
 					},
 				},
 				{
 					fieldname: 'save_data',
-					label: 'Charge Now?',
+					label: 'Save Data and Process Payment',
 					fieldtype: 'Select',
-					options: [
-						'Charge now',
-						'Save payment data for only this transaction and process',
-						'Retain payment data for this party and process',
-						'Save payment data only',
-					],
+					options: [],
 					change: () => {
 						let selection = d.get_value('save_data')
 						let button_text = 'Process Payment'
 						if (selection && selection !== 'Charge now') {
 							button_text = selection === 'Save payment data only' ? 'Save Payment Data' : 'Save and Process Payment'
 						}
-						d.update_primary_action_label(button_text)
+						d.set_primary_action(__(button_text), () => {
+							process(frm, d)
+						})
+						if (selection && selection == 'Save payment data only') {
+							d.fields_dict.amount.df.hidden = 1
+						} else {
+							d.fields_dict.amount.df.hidden = 0
+						}
+						d.refresh()
 					},
 				},
 				{ fieldname: 'amount', label: 'Payment Amount', fieldtype: 'Currency', default: outstanding_amount },
@@ -193,16 +197,24 @@ electronic_payments.electronic_payments = frm => {
 				}
 				d.refresh()
 			},
-			update_primary_action_label: (button_text = 'Process Payment') => {
-				d.primary_action_label = button_text
+			set_save_and_process_options: frm => {
+				let options = [
+					'Save payment data for only this transaction and process',
+					'Retain payment data for this party and process',
+					'Save payment data only',
+				]
+				if (frm.doc.doctype.indexOf('Sales') >= 0 && d.fields_dict.mode_of_payment.value == 'New Card') {
+					options.unshift('Charge now')
+				}
+				d.fields_dict.save_data.df.options = options
 				d.refresh()
-				return button_text
 			},
 		})
-		d.set_primary_action(__(d.update_primary_action_label()), () => {
+		d.set_primary_action(__('Process Payment'), () => {
 			process(frm, d)
 		})
 		d.set_required_fields(mop_options, billing_address_dict)
+		d.set_save_and_process_options(frm)
 		d.show()
 	})
 }
