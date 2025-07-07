@@ -41,9 +41,10 @@
 		"wise_bank_account_currency",
 		"sending_payments_accounts_section",
 		"withdrawal_account",
+		"sending_fee_account",
 		"sending_payment_discount_account",
 		"column_break_ra5el",
-		"sending_fee_account",
+		"sending_use_clearing_account",
 		"sending_clearing_account",
 		"sending_mode_of_payment"
 	],
@@ -114,6 +115,7 @@
 			"options": "Account"
 		},
 		{
+			"default": "Use Journal Entry and Clearing Account",
 			"fieldname": "use_clearing_account",
 			"fieldtype": "Select",
 			"label": "Use Clearing Account",
@@ -168,7 +170,7 @@
 			"fieldname": "sending_clearing_account",
 			"fieldtype": "Link",
 			"label": "Clearing Account",
-			"mandatory_depends_on": "eval:doc.enable_sending && doc.use_clearing_account === \"Use Journal Entry and Clearing Account\"",
+			"mandatory_depends_on": "eval:doc.enable_sending && doc.sending_use_clearing_account === \"Use Journal Entry and Clearing Account\"",
 			"options": "Account"
 		},
 		{
@@ -308,10 +310,17 @@
 			"fieldname": "enable_accepting",
 			"fieldtype": "Check",
 			"label": "Enable Accepting Electronic Payments"
+		},
+		{
+			"default": "Use Journal Entry and Clearing Account",
+			"fieldname": "sending_use_clearing_account",
+			"fieldtype": "Select",
+			"label": "Use Clearing Account",
+			"options": "Use Journal Entry and Clearing Account\nUse Payment Entry"
 		}
 	],
 	"links": [],
-	"modified": "2025-06-11 17:39:56.917438",
+	"modified": "2025-07-01 22:02:09.369844",
 	"modified_by": "Administrator",
 	"module": "Electronic Payments",
 	"name": "Electronic Payment Settings",

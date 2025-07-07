@@ -14,6 +14,7 @@ from electronic_payments.electronic_payments.doctype.electronic_payment_settings
 	exceeds_credit_limit,
 	get_discount_amount,
 	get_party_details,
+	get_party_profile_id,
 	get_payment_amount,
 	process_electronic_payment,
 )
@@ -32,12 +33,12 @@ def create_electronic_payment_settings(
 	)
 	eps = frappe.new_doc("Electronic Payment Settings")
 	eps.company = company
+	eps.create_ppm = 1
 	eps.enable_accepting = 1
 	eps.provider = provider
 	eps.api_key = "123456789"
 	eps.transaction_key = "" if provider == "Stripe" else "987654321"
 	eps.endpoint = "www.example.com"
-	eps.create_ppm = 1
 	eps.use_clearing_account = clearing_acct
 	eps.deposit_account = "1201 - Primary Checking - CFC"
 	eps.accepting_fee_account = "5223 - Electronic Payments Provider Fees - CFC"
@@ -52,6 +53,7 @@ def create_electronic_payment_settings(
 		eps.sending_endpoint = eps.endpoint
 		eps.sending_api_key = eps.api_key
 		eps.sending_transaction_key = eps.transaction_key
+		eps.sending_use_clearing_account = clearing_acct
 		eps.withdrawal_account = eps.deposit_account
 		eps.sending_fee_account = eps.accepting_fee_account
 		eps.sending_clearing_account = "2130 - Electronic Payments Payable - CFC"
@@ -74,11 +76,11 @@ def create_party_payment_method(party, party_type, service_charge=False):
 	settings = frappe.get_doc(
 		"Electronic Payment Settings", {"company": frappe.defaults.get_defaults().company}
 	)
-	party_profile = frappe.get_value(party_type, party, "electronic_payment_profile")
 	last4 = randint(1000, 9999)  # Random 4 digit number
 	pmt_type = "Card" if party_type == "Customer" else "ACH"
 	provider_field = "provider" if party_type == "Customer" else "sending_provider"
 	mop_field = "mode_of_payment" if party_type == "Customer" else "sending_mode_of_payment"
+	party_profile = get_party_profile_id(party, settings.company, settings.get(provider_field))
 
 	payment_profile = frappe.new_doc("Electronic Payment Profile")
 	payment_profile.party_type = party_type

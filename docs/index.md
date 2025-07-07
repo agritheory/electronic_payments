@@ -36,7 +36,7 @@ The portal also allows the customer or supplier to remove and in some cases edit
 
 ![Screen shot showing the same Manage Payment Methods page but the table now shows a credit card available for use. There are now Edit and Remove options.](./assets/ep_edit_remove_in_table.png)
 
-There's an important consideration regarding the Electronic Payment Settings and payment methods being added via the portal. As noted in the [Configuration and Settings page](./configuration.md), Electronic Payment Settings are specified on a per-company basis. When a portal user adds a payment method, there's no built-in way in ERPNext to associate it to a Company. The app provides an Electronic Payment Company field on the Supplier and Customer documents, which should be populated when there are multiple Companies in ERPNext (each with their own provider accounts), and the party does business with the non-default Company. If the field is left blank, the app uses the **default Company** set in ERPNext to find the provider and API keys to use. Otherwise, it will link the payment method to the specified Company's provider account. More details about the field and when to fill it in can be found on the [Configuration and Settings page's Configuring a Company for Customers and Suppliers section](./configuration.md).
+There's an important consideration regarding the Electronic Payment Settings and payment methods being added via the portal. As noted in the [Configuration and Settings page](./configuration.md), Electronic Payment Settings are specified on a per-company basis. When a portal user adds a payment method, there's no built-in way in ERPNext to associate it to a Company. In this case, the app creates it for all companies with an Electronic Payment Settings document if the document has "Enable Accepting" checked (when it's a customer adding a payment method) or "Enable Sending" checked (when it's a supplier adding a payment method).
 
 In the desk view, stored payment methods are visible on the Electronic Payments tab in that party's page.
 
@@ -52,7 +52,7 @@ If the provider accepts the payment and returns a success message, the app creat
 
 ![Screen shot of the portal view of an invoice showing rows with two payment terms, where the user may select which one to pay - there is a button to make a payment for that term's amount. If a payment term is already settled, it will show as "Paid" and not have the "Pay" button.](./assets/ep_portal_payment_terms.png)
 
-The app also allows a desk user to make an advance payment on a Sales Order or a payment on a Sales Invoice on a customer's behalf. If sending payments is enabled in Electronic Payment Settings, and a supplier has authorized the use of a checking account to receive ACH payments, the desk user may also make an advance payment against a Purchase Order or a payment against a Purchase Invoice. The document's page will show an Electronic Payment button which launches a dialog box to put the payment through.
+The app also allows a desk user to make an advance payment on a Sales Order or a payment on a Sales Invoice on a customer's behalf, or send an advance payment on a Purchase Order or payment on a Purchase Invoice to a supplier. The Order's or Invoice's page will show an Electronic Payment button which launches a dialog box that may be used to save new payment details, save payment details and process a payment, or process a payment from a saved method.
 
 ![Screen shot showing the Electronic Payment button at the top of a Sales Invoice page in the desk view.](./assets/ep_desk_ep_button.png)
 
@@ -64,10 +64,10 @@ The app also allows a desk user to make an advance payment on a Sales Order or a
 There are some limitations with using Stripe as a provider. First, only credit card payment methods (not ACH ones) are configurable. Stripe uses its own mandate workflow (to verify that the customer allows making a charge to their bank account) that is currently not supported by the app. Second, given that sending payments to suppliers is only possible via an ACH payment method, Stripe does not show as a provider option for sending payments.
 
 **Mercury**
-Currently, Mercury only allows for ACH transfers via their API. Other transfer types are possible, but they must be executed through the Mercury website.
+Currently, Mercury only allows for ACH transfers via their API. Other transfer types are possible, but they must be executed through the Mercury website. Mercury also doesn't allow for deleting a payment method via the API. Any delete actions only remove it from ERPNext, but the user must log into their Mercury account and manually remove it there as well.
 
 **Wise**
-The final step in a Wise transfer process is for the user to tell Wise which method they'd like to use to fund the transfer. If done in the Wise website, it will show that user's available funding options depending on what's configured - these may include using funds in their Wise account, using a linked bank account, or sending a bank wire. However, the Wise API offers limited options to specify how the transfer should be funded. Currently, the only option is to fund transfers via direct debit account, if it's set up in Wise. If not, the user can set up the transfers with the Electronic Payments app, but will need to complete the final funding step through their account on the Wise website.
+The final step in a Wise transfer process is for the user to tell Wise which method they'd like to use to fund the transfer. If done in the Wise website, it will show that user's available funding options depending on what's configured - these may include using funds in their Wise account, using a linked bank account, or sending a bank wire. However, the Wise API offers limited options to specify how the transfer should be funded to comply with UK and EEA regulations. Currently, the only option is to fund transfers via direct debit account, if it's set up in Wise. If not, the user can set up the transfers with the Electronic Payments app, but will need to complete the final funding step through their account on the Wise website.
 
 ## Sending Payments in Test Mode with Authorize.net
 
