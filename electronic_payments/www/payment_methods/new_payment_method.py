@@ -65,7 +65,7 @@ def new_portal_payment_method(payment_method):
 		)
 		client = settings.client(doc)
 		data.mode_of_payment = data.payment_type
-    data.save_data = "Retain payment data for this party and process"
+		data.save_data = "Retain payment data for this party and process"
 		provider_field = "sending_provider" if doc.get("supplier") else "provider"
 		provider = settings.get(provider_field)
 
@@ -74,7 +74,7 @@ def new_portal_payment_method(payment_method):
 
 		try:
 			if provider not in ["Mercury", "Wise"]:
-        # Authorize and Stripe use party profiles
+				# Authorize and Stripe use party profiles
 				response = client.create_party_profile(doc)
 				if response.get("error"):
 					error_messages.append(response["error"])
