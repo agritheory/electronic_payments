@@ -43,6 +43,7 @@ class Wise:
 		party = get_party_details(doc)
 		settings = frappe.get_doc("Electronic Payment Settings", {"company": doc.company})
 		use_batch = settings.sending_provider == "Wise" and settings.wise_linked_bank_account_id
+		save_only = data.save_data == "Save payment data only"
 
 		if party.doctype == "Customer" or (mop == "Card" and data.get("save_data") == "Charge now"):
 			return {"error": _("Not Supported.")}
@@ -60,12 +61,13 @@ class Wise:
 			if pmt_profile_response.get("message") == "Success":
 				pp_doc = pmt_profile_response.get("payment_profile_doc")
 				data.update({"payment_profile_id": pp_doc.payment_profile_id})
+				if save_only:
+					return pmt_profile_response
 			else:  # error creating the customer payment profile
 				return pmt_profile_response
 
 		quote_response = self.create_quote(doc, data)
 		if quote_response.get("message") == "Success":
-			# TODO: serialize and save payment options from quote response?
 			data.update(
 				{"quote_id": quote_response["quote_id"], "target_amount": quote_response["target_amount"]}
 			)
@@ -286,6 +288,10 @@ class Wise:
 			response.raise_for_status()
 			r = response.json()
 			if r.get("id"):
+				save_data = data.save_data in [
+					"Retain payment data for this party and process",
+					"Save payment data only",
+				]
 				payment_profile = frappe.new_doc("Electronic Payment Profile")
 				payment_profile.party_type = party.doctype
 				payment_profile.party = party.name
@@ -294,7 +300,7 @@ class Wise:
 				payment_profile.reference = f"*{last4}"
 				payment_profile.payment_profile_id = str(r.get("id"))
 				payment_profile.party_profile = None  # Not used in Wise
-				payment_profile.retain = 1 if data.save_data == "Retain payment data for this party" else 0
+				payment_profile.retain = int(save_data)
 				payment_profile.company = doc.company
 				payment_profile.save(ignore_permissions=True)
 

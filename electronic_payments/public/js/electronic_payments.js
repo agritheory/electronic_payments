@@ -4,7 +4,9 @@
 frappe.provide('electronic_payments')
 
 electronic_payments.electronic_payments = frm => {
-	payment_options(frm).then(mop_options => {
+	payment_options(frm).then(results => {
+		let mop_options = results['mop_options']
+		let billing_address_dict = results['billing_address']
 		let payment_profile_id = undefined
 		let customer_profile_id = undefined
 		let ppm_name = undefined
@@ -26,14 +28,31 @@ electronic_payments.electronic_payments = frm => {
 					bold: 1,
 					default: mop_options[0].split('\n')[0],
 					change: () => {
-						d.set_required_fields(mop_options)
+						d.set_required_fields(mop_options, billing_address_dict)
+						d.set_save_and_process_options(frm)
 					},
 				},
 				{
 					fieldname: 'save_data',
-					label: 'Charge Now?',
+					label: 'Save Data and Process Payment',
 					fieldtype: 'Select',
-					options: ['Charge now', 'Save payment data for only this transaction', 'Retain payment data for this party'],
+					options: [],
+					change: () => {
+						let selection = d.get_value('save_data')
+						let button_text = 'Process Payment'
+						if (selection && selection !== 'Charge now') {
+							button_text = selection === 'Save payment data only' ? 'Save Payment Data' : 'Save and Process Payment'
+						}
+						d.set_primary_action(__(button_text), () => {
+							process(frm, d)
+						})
+						if (selection && selection == 'Save payment data only') {
+							d.fields_dict.amount.df.hidden = 1
+						} else {
+							d.fields_dict.amount.df.hidden = 0
+						}
+						d.refresh()
+					},
 				},
 				{ fieldname: 'amount', label: 'Payment Amount', fieldtype: 'Currency', default: outstanding_amount },
 				{ fieldname: 'address_firstline', label: 'Address', fieldtype: 'Data', hidden: 1 },
@@ -41,7 +60,7 @@ electronic_payments.electronic_payments = frm => {
 				{ fieldname: 'city', label: 'City', fieldtype: 'Data', hidden: 1 },
 				{ fieldname: 'state', label: 'State', fieldtype: 'Data', hidden: 1 },
 				{ fieldname: 'postcode', label: 'Post/Zip Code', fieldtype: 'Data', hidden: 1 },
-				{ fieldname: 'country', label: '2-Digit Country Code', fieldtype: 'Data', default: 'US', hidden: 1, length: 2 },
+				{ fieldname: 'country', label: '2-Digit Country Code', fieldtype: 'Data', hidden: 1, length: 2, default: 'US' },
 				{ fieldname: 'col_1', fieldtype: 'Column Break' },
 				{
 					fieldname: 'card_number',
@@ -54,7 +73,7 @@ electronic_payments.electronic_payments = frm => {
 				},
 				{ fieldname: 'card_cvc', fieldtype: 'Int', label: 'CVC', hidden: 1 },
 				{ fieldname: 'account_holders_name', fieldtype: 'Data', label: "Account Holder's Name", hidden: 1 },
-				{ fieldname: 'email', label: 'Email', fieldtype: 'Data', hidden: 1 },
+				{ fieldname: 'email', label: 'Email', fieldtype: 'Data', hidden: 1, default: frm.doc.contact_email },
 				{ fieldname: 'dl_state', fieldtype: 'Data', label: 'Drivers License State', hidden: 1 },
 				{ fieldname: 'dl_number', fieldtype: 'Data', label: 'Drivers License Number', hidden: 1 },
 				{ fieldname: 'col_2', fieldtype: 'Column Break', hidden: 1 },
@@ -75,7 +94,7 @@ electronic_payments.electronic_payments = frm => {
 				{ fieldname: 'ppm_name', fieldtype: 'Data', default: ppm_name, hidden: 1 },
 				{ fieldname: 'subject_to_credit_limit', fieldtype: 'Int', default: subject_to_credit_limit, hidden: 1 },
 			],
-			set_required_fields: mop_options => {
+			set_required_fields: (mop_options, billing_address_dict) => {
 				if (d.fields_dict.mode_of_payment.value == 'New Card') {
 					d.fields_dict.save_data.df.hidden = 0
 					d.fields_dict.card_number.df.hidden = 0
@@ -115,6 +134,12 @@ electronic_payments.electronic_payments = frm => {
 					d.fields_dict.state.df.hidden = 0
 					d.fields_dict.postcode.df.hidden = 0
 					d.fields_dict.country.df.hidden = 0
+					// Pre-fill billing address fields
+					d.fields_dict.address_firstline.set_value(billing_address_dict['address_line1'])
+					d.fields_dict.address_secondline.set_value(billing_address_dict['address_line2'])
+					d.fields_dict.city.set_value(billing_address_dict['city'])
+					d.fields_dict.state.set_value(billing_address_dict['state'])
+					d.fields_dict.postcode.set_value(billing_address_dict['pincode'])
 				} else if (d.fields_dict.mode_of_payment.value.slice(0, 5) == 'Saved') {
 					let ref_last4 = d.fields_dict.mode_of_payment.value.slice(d.fields_dict.mode_of_payment.value.length - 4)
 					let selected = mop_options[1].filter(item => item.reference.slice(item.reference.length - 4) == ref_last4)
@@ -172,11 +197,24 @@ electronic_payments.electronic_payments = frm => {
 				}
 				d.refresh()
 			},
+			set_save_and_process_options: frm => {
+				let options = [
+					'Save payment data for only this transaction and process',
+					'Retain payment data for this party and process',
+					'Save payment data only',
+				]
+				if (frm.doc.doctype.indexOf('Sales') >= 0 && d.fields_dict.mode_of_payment.value == 'New Card') {
+					options.unshift('Charge now')
+				}
+				d.fields_dict.save_data.df.options = options
+				d.refresh()
+			},
 		})
 		d.set_primary_action(__('Process Payment'), () => {
 			process(frm, d)
 		})
-		d.set_required_fields(mop_options)
+		d.set_required_fields(mop_options, billing_address_dict)
+		d.set_save_and_process_options(frm)
 		d.show()
 	})
 }
@@ -256,16 +294,21 @@ async function payment_options(frm) {
 	let payment_profiles = []
 	let saved_methods = []
 	let is_sales = frm.doc.doctype.indexOf('Sales') >= 0 ? true : false
+	let results = { mop_options: [], billing_address: {} }
 	await frappe
 		.xcall(
-			'electronic_payments.electronic_payments.doctype.electronic_payment_settings.electronic_payment_settings.get_payment_profiles',
+			'electronic_payments.electronic_payments.doctype.electronic_payment_settings.electronic_payment_settings.get_payment_profiles_and_billing_address',
 			{ doc: frm.doc }
 		)
 		.then(r => {
-			payment_profiles = r
-			for (let i = 0; i < r.length; ++i) {
+			results['billing_address'] = r['billing_address']
+			payment_profiles = r['payment_profiles']
+			for (let i = 0; i < r['payment_profiles'].length; ++i) {
 				saved_methods.push(
-					'Saved Payment Method: ' + r[i].payment_type + ' ' + r[i].reference.slice(r[i].reference.length - 4)
+					'Saved Payment Method: ' +
+						r['payment_profiles'][i].payment_type +
+						' ' +
+						r['payment_profiles'][i].reference.slice(r['payment_profiles'][i].reference.length - 4)
 				)
 			}
 		})
@@ -276,14 +319,15 @@ async function payment_options(frm) {
 		} else {
 			options = saved_methods.concat(['New ACH']).join('\n')
 		}
-		return [options, payment_profiles]
+		results['mop_options'] = [options, payment_profiles]
 	} else {
 		if (is_sales) {
-			return ['New Card\nNew ACH']
+			results['mop_options'] = ['New Card\nNew ACH']
 		} else {
-			return ['New ACH']
+			results['mop_options'] = ['New ACH']
 		}
 	}
+	return results
 }
 
 function format_credit_card() {

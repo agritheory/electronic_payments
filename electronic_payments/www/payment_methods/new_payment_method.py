@@ -6,6 +6,12 @@ import json
 import frappe
 from frappe import _
 
+from electronic_payments.electronic_payments.doctype.electronic_payment_settings.common import (
+	state_label_lookup,
+)
+from electronic_payments.electronic_payments.doctype.electronic_payment_settings.electronic_payment_settings import (
+	get_billing_address,
+)
 from electronic_payments.www.payment_methods.index import get_party
 
 no_cache = 1
@@ -16,6 +22,21 @@ def get_context(context):
 	context.party = party_data["party"]
 	context.party_type = party_data["party_type"]
 	context.add_breadcrumbs = 1
+
+	doc = frappe._dict(
+		{
+			"doctype": "Purchase" if party_data["party_type"] == "Supplier" else "Sales",
+			party_data["party_type"].lower(): party_data["party"],
+		}
+	)
+	billing_address = get_billing_address(doc)
+	context.address_firstline = billing_address.get("address_line1", "")
+	context.address_secondline = billing_address.get("address_line2", "")
+	context.city = billing_address.get("city", "")
+	context.state = billing_address.get("state", "")
+	context.state_label = state_label_lookup(billing_address.get("state", ""))
+	context.postcode = billing_address.get("pincode", "")
+	context.email = frappe.session.user
 
 
 @frappe.whitelist()
@@ -44,7 +65,7 @@ def new_portal_payment_method(payment_method):
 		)
 		client = settings.client(doc)
 		data.mode_of_payment = data.payment_type
-		data.save_data = "Retain payment data for this party"
+		data.save_data = "Retain payment data for this party and process"
 		provider_field = "sending_provider" if doc.get("supplier") else "provider"
 		provider = settings.get(provider_field)
 
@@ -53,6 +74,7 @@ def new_portal_payment_method(payment_method):
 
 		try:
 			if provider not in ["Mercury", "Wise"]:
+				# Authorize and Stripe use party profiles
 				response = client.create_party_profile(doc)
 				if response.get("error"):
 					error_messages.append(response["error"])

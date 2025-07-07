@@ -68,14 +68,14 @@
                         </div>
                         <div class="col-sm-6">
                             <label for="email" class="control-label text-muted small">{{ _("Email") }}</label>
-                            <input id="ppm_email" type="text" class="form-control" name="email">
+                            <input id="ppm_email" type="text" class="form-control" name="email" value="{{ email }}">
                         </div>
                     </div>
 
                     <div class="form-group row">
                         <div class="col-sm-6">
                             <label for="address_firstline" class="control-label text-muted small">{{ _("Address") }}</label>
-                            <input id="ppm_address_firstline" type="text" class="form-control" name="address_firstline">
+                            <input id="ppm_address_firstline" type="text" class="form-control" name="address_firstline" value="{{ address_firstline }}">
                         </div>
                         <div class="col-sm-6">
                             <label for="routing_number" class="control-label text-muted small">{{ _("Routing Number") }}</label>
@@ -86,7 +86,7 @@
                     <div class="form-group row">
                         <div class="col-sm-6">
                             <label for="address_secondline" class="control-label text-muted small">{{ _("Address Line 2") }}</label>
-                            <input id="ppm_address_secondline" type="text" class="form-control" name="address_secondline">
+                            <input id="ppm_address_secondline" type="text" class="form-control" name="address_secondline" value="{{ address_secondline }}">
                         </div>
                         <div class="col-sm-6">
                             <label for="account_number" class="control-label text-muted small">{{ _("Checking Account Number") }}</label>
@@ -97,7 +97,7 @@
                     <div class="form-group row">
                         <div class="col-sm-6">
                             <label for="city" class="control-label text-muted small">{{ _("City") }}</label>
-                            <input id="ppm_city" type="text" class="form-control" name="city">
+                            <input id="ppm_city" type="text" class="form-control" name="city" value="{{ city }}">
                         </div>
 
                         <div class="col-sm-6">
@@ -109,7 +109,8 @@
                     <div class="form-group row">
                         <div class="col-sm-6">
                             <label for="state" class="control-label text-muted small">{{ _("State") }}</label>
-                            <select id="ppm_state" class="form-control" name="state" data-label="state" data-fieldtype="Select">
+                            <select id="ppm_state" class="form-control" name="state" data-label="state" data-fieldtype="Select" value="{{ state }}">
+                                <option value="{{ state }}" selected>{{ state_label }}</option>
                                 <option value="AL">{{ _("Alabama (AL)") }}</option>
                                 <option value="AK">{{ _("Alaska (AK)") }}</option>
                                 <option value="AZ">{{ _("Arizona (AZ)") }}</option>
@@ -180,7 +181,7 @@
                     <div class="form-group row">
                         <div class="col-sm-6">
                             <label for="postcode" class="control-label text-muted small">{{ _("Post/Zip Code") }}</label>
-                            <input id="ppm_postcode" type="text" class="form-control" name="postcode">
+                            <input id="ppm_postcode" type="text" class="form-control" name="postcode" value="{{ postcode }}">
                         </div>
                     </div>
 
