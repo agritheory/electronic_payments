@@ -10,7 +10,7 @@ The Electronic Payments app integrates with ERPNext's existing documents and wor
 - Users with the Role of System Manager may create and edit the Electronic Payments Settings for a company
 - Users with access to Sales Orders and Sales Invoices, or Purchase Orders and Purchase Invoices will see an "Electronic Payments" button on those documents, enabling them to make a payment on behalf of a customer or to a supplier
 - Users with access to Customers or Suppliers are able to see that party's associated Portal Payment Methods on the Electronic Payments tab
-- Users with the Role of Customer or Supplier are able to add credit cards (and ACH accounts for Authorize.net) as payment methods via their portal access. Customers may apply those payment methods on outstanding orders or invoices
+- Users with the Role of Customer or Supplier are able to add payment methods via their portal access. Customers may apply those payment methods on outstanding Sales Orders or Sales Invoices
 
 ## Workflows
 

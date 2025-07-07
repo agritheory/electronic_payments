@@ -17,6 +17,7 @@ from electronic_payments.electronic_payments.doctype.electronic_payment_settings
 	exceeds_credit_limit,
 	get_discount_amount,
 	get_party_details,
+	get_party_profile_id,
 	get_payment_amount,
 	process_electronic_payment,
 	queue_method_as_admin,
@@ -276,12 +277,11 @@ class Stripe:
 		party = get_party_details(doc)
 		self.get_password(doc.company)
 		try:
-			existing_customer_id = frappe.get_value(party.doctype, party.name, "electronic_payment_profile")
-			if existing_customer_id:
-				return {"message": "Success", "transaction_id": existing_customer_id}
+			existing_party_id = get_party_profile_id(party.name, doc.company, "Stripe")
+			if existing_party_id:
+				return {"message": "Success", "transaction_id": existing_party_id}
 			else:
 				response = stripe.Customer.create(name=doc.customer)
-				frappe.db.set_value(party.doctype, party.name, "electronic_payment_profile", response.id)
 				return {"message": "Success", "transaction_id": response.id}
 		except Exception as e:
 			try:
@@ -291,7 +291,7 @@ class Stripe:
 				frappe.log_error(message=frappe.get_traceback(), title=f"{e}")
 				return {"error": f"{e}"}
 
-	def get_customer_payment_profile(self, company, electronic_payment_profile_name):
+	def get_party_payment_profile(self, company, electronic_payment_profile_name):
 		self.get_password(company)
 		electronic_payment_profile = frappe.get_doc(
 			"Electronic Payment Profile", {"name": electronic_payment_profile_name}
@@ -396,7 +396,7 @@ class Stripe:
 		party = get_party_details(doc)
 
 		if not data.get("party_profile_id"):
-			party_profile_id = frappe.get_value("Customer", doc.customer, "electronic_payment_profile")
+			party_profile_id = get_party_profile_id(party.name, doc.company, "Stripe")
 		else:
 			party_profile_id = data.get("party_profile_id")
 
@@ -430,6 +430,7 @@ class Stripe:
 				payment_profile.payment_profile_id = str(response.id)
 				payment_profile.party_profile = str(party_profile_id)
 				payment_profile.retain = int(save_data)
+				payment_profile.company = doc.company
 				payment_profile.save(ignore_permissions=True)
 
 				if payment_profile.retain and settings.create_ppm:
@@ -464,7 +465,7 @@ class Stripe:
 		self.get_password(doc.company)
 		party = get_party_details(doc)
 		if not data.get("party_profile_id"):
-			party_profile_id = frappe.get_value("Customer", doc.customer, "electronic_payment_profile")
+			party_profile_id = get_party_profile_id(party.name, doc.company, "Stripe")
 		else:
 			party_profile_id = data.get("party_profile_id")
 
@@ -585,25 +586,16 @@ class Stripe:
 				frappe.log_error(message=frappe.get_traceback(), title=f"{e}")
 				return {"error": f"{e}"}
 
-	def delete_customer_profile(self, company, customer):
-		# Delete from ERPNext
-		customer_profile_id = frappe.get_value(
-			"Customer",
-			customer,
-			"electronic_payment_profile",
-		)
-		frappe.set_value("Customer", customer, "electronic_payment_profile", "")
-
-		# Delete from API
+	def delete_party_profile(self, company, party, party_profile_id):
 		self.get_password(company)
 		try:
-			response = stripe.Customer.delete(customer_profile_id)
+			response = stripe.Customer.delete(party_profile_id)
 			if response.deleted:
 				return {"message": "Success"}
 			else:
 				frappe.log_error(
 					message=frappe.get_traceback(),
-					title=f"Error deleting profile for {customer}",
+					title=f"Error deleting profile for {party}",
 				)
 		except Exception as e:
 			try:

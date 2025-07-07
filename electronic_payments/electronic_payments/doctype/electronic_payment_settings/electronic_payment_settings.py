@@ -209,18 +209,20 @@ def get_payment_profiles(doc):
 
 	query = (
 		frappe.qb.from_(epp)
-		.inner_join(ppm)
+		.left_join(ppm)  # in case create_ppm not checked in Electronic Payment Settings
 		.on(ppm.electronic_payment_profile == epp.name)
 		.select(
 			epp.payment_profile_id,
 			epp.reference,
 			epp.payment_type,
 			epp.party_profile,
+			epp.company,
 			(ppm.name).as_("ppm_name"),
-			ppm.default,
-			ppm.subject_to_credit_limit,
+			IfNull(ppm.default, 0).as_("default"),
+			IfNull(ppm.subject_to_credit_limit, 0).as_("subject_to_credit_limit"),
 		)
 		.where(epp.party == party)
+		.where(epp.company == doc.company)
 		.where(epp.payment_type != "Wire")  # Exclude Wire methods until supported by Mercury API
 		.orderby(ppm.default, order=Order.desc)
 	)
