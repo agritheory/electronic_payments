@@ -56,7 +56,7 @@ bench start
 ```
 
 ## Optional: Set up Developer API Keys and Install a Demo Company to Test App Functionality
-Electronic Payments comes packaged with a script to optionally install a [demo Company and its data](./exampledata.md) to test the application's functionality. If there are certain environment variables present for a provider's test API keys (see below) when the script runs, it will automatically create an Electronic Payments Settings document for the preferred provider.
+Electronic Payments comes packaged with a script to optionally install a [demo Company and its data](./docs/exampledata.md) to test the application's functionality. If there are certain environment variables present for a provider's test API keys (see below) when the script runs, it will automatically create an Electronic Payments Settings document for the preferred provider.
 
 1. Create an account with the preferred provider and get test API keys. This process is different for each provider:
 
