@@ -67,7 +67,7 @@ Electronic Payments comes packaged with a script to optionally install a [demo C
 - Use Authorize.net's [Testing Guide](https://developer.authorize.net/hello_world/testing_guide.html) for test card and account numbers
 
 **Stripe**
-- [Create a Stripe account](www.stripe.com)
+- [Create a Stripe account](https://www.stripe.com)
 - Flip the account to "Test Mode", and collect the Secret key from the Dashboard
 - Use Stripe's [Testing Guide](https://docs.stripe.com/testing) for test card and account numbers
 
