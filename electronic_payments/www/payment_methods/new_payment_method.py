@@ -72,24 +72,20 @@ def new_portal_payment_method(payment_method):
 		if provider == "Stripe" and data.mode_of_payment == "ACH":
 			continue
 
-		try:
-			if provider not in ["Mercury", "Wise"]:
-				# Authorize and Stripe use party profiles
-				response = client.create_party_profile(doc)
-				if response.get("error"):
-					error_messages.append(response["error"])
-					continue
-
-				data["party_profile_id"] = response.get("transaction_id")
-			response = client.create_party_payment_profile(doc, data)
-
+		if provider not in ["Mercury", "Wise"]:
+			# Authorize and Stripe use party profiles
+			response = client.create_party_profile(doc)
 			if response.get("error"):
 				error_messages.append(response["error"])
 				continue
 
-		except Exception as e:
-			error_messages.append(str(e))
+			data["party_profile_id"] = response.get("transaction_id")
+		response = client.create_party_payment_profile(doc, data)
+
+		if response.get("error"):
+			error_messages.append(response["error"])
 			continue
+
 
 	if error_messages:
 		return {"error_message": " ".join(error_messages)}
