@@ -222,6 +222,7 @@ electronic_payments.electronic_payments = frm => {
 electronic_payments.add_payment_method = frm => {
 	payment_options(frm).then(results => {
 		let mop_options = results['mop_options']
+		let company_options = results['company_options']
 		let billing_address_dict = results['billing_address']
 		let subject_to_credit_limit = 0
 		let d = new frappe.ui.Dialog({
@@ -229,6 +230,14 @@ electronic_payments.add_payment_method = frm => {
 			size: 'extra-large',
 			fields: [
 				{ fieldname: 'sec_1', fieldtype: 'Section Break' },
+				{
+					fieldname: 'company',
+					fieldtype: 'Select',
+					label: 'Company',
+					options: company_options[0],
+					bold: 1,
+					default: company_options[0].split('\n')[0],
+				},
 				{
 					fieldname: 'mode_of_payment',
 					fieldtype: 'Select',
@@ -457,7 +466,7 @@ async function payment_options(frm) {
 	let payment_profiles = []
 	let saved_methods = []
 	let is_sales = (frm.doc.doctype.indexOf('Sales') >= 0 || frm.doc.doctype == "Customer") ? true : false
-	let results = { mop_options: [], billing_address: {} }
+	let results = { mop_options: [], billing_address: {}, company_options: [] }
 	await frappe
 		.xcall(
 			'electronic_payments.electronic_payments.doctype.electronic_payment_settings.electronic_payment_settings.get_payment_profiles_and_billing_address',
@@ -465,6 +474,7 @@ async function payment_options(frm) {
 		)
 		.then(r => {
 			results['billing_address'] = r['billing_address']
+			results['company_options'] = r['company_options']
 			payment_profiles = r['payment_profiles']
 			for (let i = 0; i < r['payment_profiles'].length; ++i) {
 				saved_methods.push(
