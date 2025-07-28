@@ -456,7 +456,7 @@ async function process(frm, dialog) {
 async function payment_options(frm) {
 	let payment_profiles = []
 	let saved_methods = []
-	let is_sales = frm.doc.doctype.indexOf('Sales') >= 0 ? true : false
+	let is_sales = (frm.doc.doctype.indexOf('Sales') >= 0 || frm.doc.doctype == "Customer") ? true : false
 	let results = { mop_options: [], billing_address: {} }
 	await frappe
 		.xcall(
