@@ -196,15 +196,25 @@ def get_payment_profiles_and_billing_address(doc):
 	billing_address = get_billing_address(doc)
 	payment_profiles = get_payment_profiles(doc)
 	company_options = get_company_options(doc)
-	results = frappe._dict({"billing_address": billing_address, "payment_profiles": payment_profiles, "company_options": company_options})
+	results = frappe._dict(
+		{
+			"billing_address": billing_address,
+			"payment_profiles": payment_profiles,
+			"company_options": company_options,
+		}
+	)
 	return results
 
 
 def get_company_options(doc):
 	if doc.doctype == "Customer" or "Sales" in doc.doctype:
-		return frappe.get_all("Electronic Payment Settings", filters={"enable_accepting": 1}, pluck="company")
+		return frappe.get_all(
+			"Electronic Payment Settings", filters={"enable_accepting": 1}, pluck="company"
+		)
 	elif doc.doctype == "Supplier" or "Purchase" in doc.doctype:
-		return frappe.get_all("Electronic Payment Settings", filters={"enable_sending": 1}, pluck="company")
+		return frappe.get_all(
+			"Electronic Payment Settings", filters={"enable_sending": 1}, pluck="company"
+		)
 
 
 def get_payment_profiles(doc):
@@ -256,7 +266,7 @@ def get_billing_address(doc):
 	else:
 		party = doc.customer
 		address_field = "customer_address"
-	
+
 	uses_billing = "Billing" in doc.get(address_field, "")
 
 	address = frappe.qb.DocType("Address")
