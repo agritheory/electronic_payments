@@ -44,25 +44,24 @@ def new_portal_payment_method(payment_method):
 	data = frappe._dict(json.loads(payment_method))
 
 	doctype = data.get("doctype", "")
-	if "Sales" in doctype:
-		filters = {"enable_accepting": 1}
-	elif "Purchase" in doctype:
-		filters = {"enable_sending": 1}
+	if doctype:
+		party_data = {"party_type": doctype}
 	else:
 		party_data = get_party()
-		if party_data["party_type"] == "Customer":
-			filters = {"enable_accepting": 1}
-		elif party_data["party_type"] == "Supplier":
-			filters = {"enable_sending": 1}
+
+	if party_data["party_type"] == "Customer":
+		filters = {"enable_accepting": 1}
+	elif party_data["party_type"] == "Supplier":
+		filters = {"enable_sending": 1}
 
 	if data.get("company"):
 		all_settings = [frappe.get_doc("Electronic Payment Settings", data.company)]
 	else:
 		all_settings = frappe.get_all("Electronic Payment Settings", filters)
-	
+
 	if not all_settings:
 		return {"error_message": _("You cannot add a new Payment Method.")}
-	
+
 	error_messages = []
 
 	for setting_name in all_settings:

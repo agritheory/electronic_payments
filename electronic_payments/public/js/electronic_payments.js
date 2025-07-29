@@ -246,7 +246,7 @@ electronic_payments.add_payment_method_dialog = frm => {
 					bold: 1,
 					default: mop_options[0].split('\n')[0],
 					change: () => {
-						d.set_required_fields(mop_options, billing_address_dict)
+						d.set_required_fields(billing_address_dict)
 					},
 				},
 				{ fieldname: 'address_firstline', label: 'Address', fieldtype: 'Data', hidden: 1 },
@@ -285,13 +285,12 @@ electronic_payments.add_payment_method_dialog = frm => {
 				{ fieldname: 'check_number', fieldtype: 'Int', label: 'Check Number', description: 'Optional', hidden: 1 },
 				{ fieldname: 'subject_to_credit_limit', fieldtype: 'Int', default: subject_to_credit_limit, hidden: 1 },
 			],
-			set_required_fields: (mop_options, billing_address_dict) => {
+			set_required_fields: billing_address_dict => {
 				if (d.fields_dict.mode_of_payment.value == 'New Card') {
 					d.fields_dict.card_number.df.hidden = 0
 					d.fields_dict.card_cvc.df.hidden = 0
 					d.fields_dict.cardholder_name.df.hidden = 0
 					d.fields_dict.card_expiration_date.df.hidden = 0
-
 					d.fields_dict.account_holders_name.df.hidden = 1
 					d.fields_dict.dl_state.df.hidden = 1
 					d.fields_dict.dl_number.df.hidden = 1
@@ -306,7 +305,6 @@ electronic_payments.add_payment_method_dialog = frm => {
 					d.fields_dict.card_cvc.df.hidden = 1
 					d.fields_dict.cardholder_name.df.hidden = 1
 					d.fields_dict.card_expiration_date.df.hidden = 1
-
 					d.fields_dict.account_holders_name.df.hidden = 0
 					d.fields_dict.dl_state.df.hidden = 0
 					d.fields_dict.dl_number.df.hidden = 0
@@ -329,56 +327,6 @@ electronic_payments.add_payment_method_dialog = frm => {
 					d.fields_dict.city.set_value(billing_address_dict['city'])
 					d.fields_dict.state.set_value(billing_address_dict['state'])
 					d.fields_dict.postcode.set_value(billing_address_dict['pincode'])
-				} else if (d.fields_dict.mode_of_payment.value.slice(0, 5) == 'Saved') {
-					let ref_last4 = d.fields_dict.mode_of_payment.value.slice(d.fields_dict.mode_of_payment.value.length - 4)
-					let selected = mop_options[1].filter(item => item.reference.slice(item.reference.length - 4) == ref_last4)
-					d.fields_dict.subject_to_credit_limit.set_value(selected[0].subject_to_credit_limit)
-					if (selected[0].payment_type == 'ACH') {
-						d.fields_dict.account_number.df.hidden = 0
-						d.fields_dict.card_number.df.hidden = 1
-						d.fields_dict.account_number.df.read_only = 1
-						d.fields_dict.account_number.set_value(selected[0].reference)
-
-						d.fields_dict.account_holders_name.df.hidden = 1
-						d.fields_dict.dl_state.df.hidden = 1
-						d.fields_dict.dl_number.df.hidden = 1
-						d.fields_dict.routing_number.df.hidden = 1
-						d.fields_dict.accept_wire.df.hidden = 1
-						d.fields_dict.check_number.df.hidden = 1
-						d.fields_dict.card_number.df.hidden = 1
-						d.fields_dict.card_cvc.df.hidden = 1
-						d.fields_dict.cardholder_name.df.hidden = 1
-						d.fields_dict.card_expiration_date.df.hidden = 1
-						d.fields_dict.email.df.hidden = 1
-						d.fields_dict.address_firstline.df.hidden = 1
-						d.fields_dict.address_secondline.df.hidden = 1
-						d.fields_dict.city.df.hidden = 1
-						d.fields_dict.state.df.hidden = 1
-						d.fields_dict.postcode.df.hidden = 1
-						d.fields_dict.country.df.hidden = 1
-					} else {
-						d.fields_dict.card_number.df.hidden = 0
-						d.fields_dict.account_number.df.hidden = 1
-						d.fields_dict.card_number.df.read_only = 1
-						d.fields_dict.card_number.set_value(selected[0].reference)
-
-						d.fields_dict.account_holders_name.df.hidden = 1
-						d.fields_dict.dl_state.df.hidden = 1
-						d.fields_dict.dl_number.df.hidden = 1
-						d.fields_dict.routing_number.df.hidden = 1
-						d.fields_dict.accept_wire.df.hidden = 1
-						d.fields_dict.check_number.df.hidden = 1
-						d.fields_dict.card_cvc.df.hidden = 1
-						d.fields_dict.cardholder_name.df.hidden = 1
-						d.fields_dict.card_expiration_date.df.hidden = 1
-						d.fields_dict.email.df.hidden = 1
-						d.fields_dict.address_firstline.df.hidden = 1
-						d.fields_dict.address_secondline.df.hidden = 1
-						d.fields_dict.city.df.hidden = 1
-						d.fields_dict.state.df.hidden = 1
-						d.fields_dict.postcode.df.hidden = 1
-						d.fields_dict.country.df.hidden = 1
-					}
 				}
 				d.refresh()
 			},
@@ -386,7 +334,7 @@ electronic_payments.add_payment_method_dialog = frm => {
 		d.set_primary_action(__('Add Payment Method'), () => {
 			add_payment_method(frm, d)
 		})
-		d.set_required_fields(mop_options, billing_address_dict)
+		d.set_required_fields(billing_address_dict)
 		d.show()
 	})
 }
@@ -465,15 +413,15 @@ async function process(frm, dialog) {
 async function add_payment_method(frm, dialog) {
 	let values = dialog.get_values()
 	values['doctype'] = frm.doc.doctype
+	values['payment_type'] = values['mode_of_payment'].replace('New ', '')
+	values['party'] = frm.doc.name
 	await frappe
-		.xcall(
-			'electronic_payments.electronic_payments.doctype.electronic_payment_settings.electronic_payment_settings.process',
-			{ payment_method: values }
-		)
+		.xcall('electronic_payments.www.payment_methods.new_payment_method.new_portal_payment_method', {
+			payment_method: values,
+		})
 		.then(r => {
 			if (r.message == 'Success') {
 				dialog.fields_dict.ht.$wrapper.html(`<p style="color: green; font-weight: bold;">Success!</p>`)
-				// TODO: hide/remove Process Payment button
 			} else {
 				dialog.fields_dict.ht.$wrapper.html(`<p style="color: red; font-weight: bold;">${r.error}</p>`)
 			}
@@ -484,7 +432,7 @@ async function add_payment_method(frm, dialog) {
 async function payment_options(frm) {
 	let payment_profiles = []
 	let saved_methods = []
-	let is_sales = (frm.doc.doctype.indexOf('Sales') >= 0 || frm.doc.doctype == "Customer") ? true : false
+	let is_sales = frm.doc.doctype.indexOf('Sales') >= 0 || frm.doc.doctype == 'Customer' ? true : false
 	let results = { mop_options: [], billing_address: {}, company_options: [] }
 	await frappe
 		.xcall(
