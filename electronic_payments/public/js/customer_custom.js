@@ -9,7 +9,7 @@ frappe.ui.form.on("Customer", {
             const $add_payment_method_btn = $(
                 `<button type="button" class="btn btn-xs btn-secondary">Add Payment Method</button>`
             )
-            $add_payment_method_btn.on('click', () => electronic_payments.add_payment_method(frm))
+            $add_payment_method_btn.on('click', () => electronic_payments.add_payment_method_dialog(frm))
             grid.wrapper.append($add_payment_method_btn)
         }
 	},

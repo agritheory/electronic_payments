@@ -219,7 +219,7 @@ electronic_payments.electronic_payments = frm => {
 	})
 }
 
-electronic_payments.add_payment_method = frm => {
+electronic_payments.add_payment_method_dialog = frm => {
 	payment_options(frm).then(results => {
 		let mop_options = results['mop_options']
 		let company_options = results['company_options']
@@ -384,7 +384,7 @@ electronic_payments.add_payment_method = frm => {
 			},
 		})
 		d.set_primary_action(__('Add Payment Method'), () => {
-			process(frm, d)
+			add_payment_method(frm, d)
 		})
 		d.set_required_fields(mop_options, billing_address_dict)
 		d.show()
@@ -450,6 +450,25 @@ async function process(frm, dialog) {
 		.xcall(
 			'electronic_payments.electronic_payments.doctype.electronic_payment_settings.electronic_payment_settings.process',
 			{ doc: frm.doc, data: values }
+		)
+		.then(r => {
+			if (r.message == 'Success') {
+				dialog.fields_dict.ht.$wrapper.html(`<p style="color: green; font-weight: bold;">Success!</p>`)
+				// TODO: hide/remove Process Payment button
+			} else {
+				dialog.fields_dict.ht.$wrapper.html(`<p style="color: red; font-weight: bold;">${r.error}</p>`)
+			}
+			frm.reload_doc()
+		})
+}
+
+async function add_payment_method(frm, dialog) {
+	let values = dialog.get_values()
+	values['doctype'] = frm.doc.doctype
+	await frappe
+		.xcall(
+			'electronic_payments.electronic_payments.doctype.electronic_payment_settings.electronic_payment_settings.process',
+			{ payment_method: values }
 		)
 		.then(r => {
 			if (r.message == 'Success') {
