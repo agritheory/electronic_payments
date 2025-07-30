@@ -54,10 +54,7 @@ def new_portal_payment_method(payment_method):
 	elif party_data["party_type"] == "Supplier":
 		filters = {"enable_sending": 1}
 
-	if data.get("company"):
-		all_settings = [frappe.get_doc("Electronic Payment Settings", data.company)]
-	else:
-		all_settings = frappe.get_all("Electronic Payment Settings", filters)
+	all_settings = frappe.get_all("Electronic Payment Settings", filters)
 
 	if not all_settings:
 		return {"error_message": _("You cannot add a new Payment Method.")}
@@ -82,18 +79,22 @@ def new_portal_payment_method(payment_method):
 		if provider == "Stripe" and data.mode_of_payment == "ACH":
 			continue
 
-		if provider not in ["Mercury", "Wise"]:
-			# Authorize and Stripe use party profiles
-			response = client.create_party_profile(doc)
+		try:
+			if provider not in ["Mercury", "Wise"]:
+				# Authorize and Stripe use party profiles
+				response = client.create_party_profile(doc)
+				if response.get("error"):
+					error_messages.append(response["error"])
+					continue
+
+				data["party_profile_id"] = response.get("transaction_id")
+			response = client.create_party_payment_profile(doc, data)
+
 			if response.get("error"):
 				error_messages.append(response["error"])
 				continue
-
-			data["party_profile_id"] = response.get("transaction_id")
-		response = client.create_party_payment_profile(doc, data)
-
-		if response.get("error"):
-			error_messages.append(response["error"])
+		except Exception as e:
+			error_messages.append(str(e))
 			continue
 
 	if error_messages:
