@@ -229,6 +229,8 @@ electronic_payments.add_payment_method_dialog = frm => {
 			size: 'extra-large',
 			fields: [
 				{ fieldname: 'sec_1', fieldtype: 'Section Break' },
+				{ fieldname: 'ht', fieldtype: 'HTML' },
+				{ fieldname: 'sec_2', fieldtype: 'Section Break' },
 				{
 					fieldname: 'mode_of_payment',
 					fieldtype: 'Select',
@@ -411,10 +413,11 @@ async function add_payment_method(frm, dialog) {
 			payment_method: values,
 		})
 		.then(r => {
-			if (r.message == 'Success') {
-				dialog.fields_dict.ht.$wrapper.html(`<p style="color: green; font-weight: bold;">Success!</p>`)
-			} else {
-				dialog.fields_dict.ht.$wrapper.html(`<p style="color: red; font-weight: bold;">${r.error}</p>`)
+			if (r.success_message) {
+				dialog.fields_dict.ht.$wrapper.html(`<p style="color: green; font-weight: bold;">${r.success_message}</p>`)
+			}
+			if (r.error_message) {
+				dialog.fields_dict.ht.$wrapper.html(`<p style="color: red; font-weight: bold;">${r.error_message}</p>`)
 			}
 			frm.reload_doc()
 		})
