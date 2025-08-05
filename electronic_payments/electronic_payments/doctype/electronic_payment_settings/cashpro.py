@@ -1,26 +1,11 @@
 # Copyright (c) 2025, AgriTheory and contributors
 # For license information, please see license.txt
 
-import json
-import uuid
-from urllib.parse import urljoin
 
 import frappe
-import requests
 from frappe import _
-from frappe.utils import cint, flt
 from frappe.utils.password import get_decrypted_password
-from requests.exceptions import HTTPError
 
-from electronic_payments.electronic_payments.doctype.electronic_payment_settings.common import (
-	calculate_payment_method_fees,
-	exceeds_credit_limit,
-	get_discount_amount,
-	get_party_details,
-	get_payment_amount,
-	process_electronic_payment,
-	queue_method_as_admin,
-)
 
 
 class Wise:
