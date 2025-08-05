@@ -40,8 +40,12 @@ def get_portal_payment_methods():
 
 
 @frappe.whitelist()
-def remove_portal_payment_method(payment_method):
-	party_data = get_party()
+def remove_portal_payment_method(payment_method, party_type=None, party=None):
+
+	if party_type and party:
+		party_data = {"party_type": party_type, "party": party}
+	else:
+		party_data = get_party()
 
 	try:
 		electronic_payment_profile = frappe.db.get_value(
