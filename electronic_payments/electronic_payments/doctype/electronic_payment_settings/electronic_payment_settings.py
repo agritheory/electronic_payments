@@ -17,6 +17,10 @@ from electronic_payments.electronic_payments.doctype.electronic_payment_settings
 	AuthorizeNet,
 	fetch_authorize_transactions,
 )
+from electronic_payments.electronic_payments.doctype.electronic_payment_settings.cashpro import (
+	CashPro,
+	fetch_cashpro_transactions,
+)
 from electronic_payments.electronic_payments.doctype.electronic_payment_settings.mercury import (
 	Mercury,
 	fetch_mercury_transactions,
@@ -63,7 +67,7 @@ class ElectronicPaymentSettings(Document):
 			self.sending_mode_of_payment = sending_mop_name
 
 			# Create Wire MOP for providers supporting it
-			if self.sending_provider in ["Mercury", "Wise"]:
+			if self.sending_provider in ["Mercury", "Wise", "CashPro"]:
 				wire_mop = self.sending_provider + " Wire"
 				if not frappe.db.exists("Mode of Payment", wire_mop):
 					mop = frappe.new_doc("Mode of Payment")
@@ -176,6 +180,8 @@ class ElectronicPaymentSettings(Document):
 			return Wise()
 		if self.get(provider_field) == "Mercury":
 			return Mercury()
+		if self.get(provider_field) == "CashPro":
+			return CashPro()
 
 
 @frappe.whitelist()
@@ -293,6 +299,9 @@ def fetch_transactions():
 		if settings.sending_provider == "Mercury":
 			s_response = fetch_mercury_transactions(settings)
 			s_provider = "Mercury"
+		if settings.sending_provider == "CashPro":
+			s_response = fetch_cashpro_transactions(settings)
+			s_provider = "CashPro"
 		elif settings.sending_provider == "Authorize.net" and not settings.provider == "Authorize.net":
 			s_response = fetch_authorize_transactions(settings)
 			s_provider = "Authorize.net"

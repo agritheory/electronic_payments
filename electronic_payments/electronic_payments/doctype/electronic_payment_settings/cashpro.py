@@ -31,7 +31,7 @@ class CashPro:
 			}
 			try:
 				response = requests.post(
-					f"{base_url}client-authentication",
+					f"{base_url}authn/v1/client-authentication",
 					headers={"Content-Type": "application/json"},
 					data=json.dumps(data),
 				)
@@ -56,3 +56,9 @@ class CashPro:
 			}
 
 			return base_url, headers
+
+
+def fetch_cashpro_transactions(settings):
+	# TODO
+	settings = frappe._dict(json.loads(settings)) if isinstance(settings, str) else settings
+	return []
