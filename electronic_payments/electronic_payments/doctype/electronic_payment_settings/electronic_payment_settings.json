@@ -39,6 +39,8 @@
 		"sending_transaction_key",
 		"wise_bank_account_type",
 		"wise_bank_account_currency",
+		"cashpro_application_id",
+		"cashpro_client_id",
 		"sending_payments_accounts_section",
 		"withdrawal_account",
 		"sending_fee_account",
@@ -220,7 +222,7 @@
 			"fieldtype": "Select",
 			"label": "Sending Provider",
 			"mandatory_depends_on": "enable_sending",
-			"options": "\nAuthorize.net\nMercury\nWise"
+			"options": "\nAuthorize.net\nMercury\nWise\nCashPro"
 		},
 		{
 			"description": "Required for Mercury and Wise. For Mercury, enter the Mercury Account ID for the account making transfers. For Wise, enter the Wise Profile ID for the Company making transfers. If not known, enter API credentials and click Save. The message will display the options and their IDs, if any - copy the applicable one's ID into this field.",
@@ -245,6 +247,7 @@
 			"mandatory_depends_on": "enable_sending"
 		},
 		{
+			"depends_on": "eval:doc.sending_provider !== \"CashPro\"",
 			"fieldname": "sending_transaction_key",
 			"fieldtype": "Password",
 			"label": "Sending Transaction Key",
@@ -317,10 +320,24 @@
 			"fieldtype": "Select",
 			"label": "Use Clearing Account",
 			"options": "Use Journal Entry and Clearing Account\nUse Payment Entry"
+		},
+		{
+			"depends_on": "eval:doc.sending_provider === \"CashPro\"",
+			"fieldname": "cashpro_application_id",
+			"fieldtype": "Data",
+			"label": "CashPro Application ID",
+			"mandatory_depends_on": "eval:doc.sending_provider === \"CashPro\""
+		},
+		{
+			"depends_on": "eval:doc.sending_provider === \"CashPro\"",
+			"fieldname": "cashpro_client_id",
+			"fieldtype": "Data",
+			"label": "CashPro Client ID",
+			"mandatory_depends_on": "eval:doc.sending_provider === \"CashPro\""
 		}
 	],
 	"links": [],
-	"modified": "2025-07-01 22:02:09.369844",
+	"modified": "2025-08-14 08:46:29.488744",
 	"modified_by": "Administrator",
 	"module": "Electronic Payments",
 	"name": "Electronic Payment Settings",
