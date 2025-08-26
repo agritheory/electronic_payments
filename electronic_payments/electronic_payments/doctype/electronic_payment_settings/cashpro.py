@@ -247,7 +247,7 @@ class CashPro:
 			base_url, headers = self.get_base_url_and_header(company)
 			headers["templateIdentification"] = payment_profile_id
 			response = requests.delete(
-				urljoin(base_url, f"/cashpro/repetitive/v1/template"),
+				urljoin(base_url, "/cashpro/repetitive/v1/template"),
 				headers=headers,
 				timeout=10,
 			)
@@ -367,19 +367,10 @@ class CashPro:
 			}
 
 			response = requests.post(
-				urljoin(base_url, "/csashpro/payments/v2/payment-initiations"),  # assumes regular transfer
+				urljoin(base_url, "/cashpro/payments/v2/payment-initiations"),
 				headers=headers,
 				timeout=10,
-				data=json.dumps(
-					{
-						"targetAccount": payment_profile_id,
-						"customerTransactionId": customer_txn_id_uuid,
-						"details": {
-							"reference": doc.name[-10:],
-							"transferPurpose": "verification.transfers.purpose.pay.bills",
-						},
-					}
-				),
+				data=json.dumps(payment_data),
 			)
 			response.raise_for_status()
 			r = response.json()
@@ -396,8 +387,9 @@ class CashPro:
 					).delete()
 
 					try:
+						headers["templateIdentification"] = payment_profile_id
 						del_response = requests.delete(
-							urljoin(base_url, f"/v2/accounts/{payment_profile_id}"),
+							urljoin(base_url, "/cashpro/repetitive/v1/template"),
 							headers=headers,
 							timeout=10,
 						)
