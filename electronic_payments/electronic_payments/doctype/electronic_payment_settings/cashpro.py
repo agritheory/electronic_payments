@@ -23,31 +23,41 @@ from electronic_payments.electronic_payments.doctype.electronic_payment_settings
 
 
 class CashPro:
-	def get_base_url_and_header(self, company):
+	def get_base_url_and_header(self, company, app_type):
 		settings = frappe.get_doc("Electronic Payment Settings", {"company": company})
 		if not settings:
 			frappe.msgprint(_(f"No Electronic Payment Settings found for {company}"))
 		else:
-			api_key_field = "api_key" if settings.provider == "CashPro" else "sending_api_key"
+			if app_type == "payments":
+				api_key_field = "cashpro_payments_api_key"
+				application_id_field = "cashpro_payments_application_id"
+				client_id_field = "cashpro_payments_client_id"
+			elif app_type == "templates":
+				api_key_field = "cashpro_payment_templates_api_key"
+				application_id_field = "cashpro_payment_templates_application_id"
+				client_id_field = "cashpro_payment_templates_client_id"
+
 			endpoint_field = "endpoint" if settings.provider == "CashPro" else "sending_endpoint"
 			api_key = get_decrypted_password(
 				settings.doctype, settings.name, api_key_field, raise_exception=False
 			)
 			base_url = settings.get(endpoint_field)
-			cashpro_application_id = settings.cashpro_application_id
-			cashpro_client_id = settings.cashpro_client_id
+			application_id = settings.get(application_id_field)
+			client_id = settings.get(client_id_field)
 
 			# Get access token
 			data = {
-				"applicationID": cashpro_application_id,
-				"authn": {"client_id": cashpro_client_id, "client_secret": api_key},
+				"applicationID": application_id,
+				"authn": {"client_id": client_id, "client_secret": api_key},
 			}
+
 			try:
 				response = requests.post(
 					f"{base_url}authn/v1/client-authentication",
 					headers={"Content-Type": "application/json"},
 					data=json.dumps(data),
 				)
+				response.raise_for_status()
 			except HTTPError as e_http:
 				err_msg = response.json().get("errors", {}).get("message", e_http)
 				frappe.log_error(
@@ -123,10 +133,10 @@ class CashPro:
 			last4 = account_number[-4:]
 			payload = {
 				"templateIdentification": {
-					"templateRequestIdentification": "",  # optional
-					"templateCode": "",
-					"templateName": "",
-					"isTemplateInternal": True,  # optional
+					"templateRequestIdentification": "111111",
+					"templateCode": "111111",
+					"templateName": "111111",
+					"isTemplateInternal": True,
 				},
 				"creditInitiation": {
 					"paymentMethod": "TRF",
@@ -175,7 +185,7 @@ class CashPro:
 					},
 				},
 			}
-			base_url, headers = self.get_base_url_and_header(doc.company)
+			base_url, headers = self.get_base_url_and_header(doc.company, "templates")
 			response = requests.post(
 				urljoin(base_url, "/cashpro/repetitive/v1/template"),
 				headers=headers,
@@ -244,7 +254,7 @@ class CashPro:
 
 		# Delete from API
 		try:
-			base_url, headers = self.get_base_url_and_header(company)
+			base_url, headers = self.get_base_url_and_header(company, "templates")
 			headers["templateIdentification"] = payment_profile_id
 			response = requests.delete(
 				urljoin(base_url, "/cashpro/repetitive/v1/template"),
@@ -284,7 +294,7 @@ class CashPro:
 			frappe.get_precision(doc.doctype, "grand_total"),
 		)
 		try:
-			base_url, headers = self.get_base_url_and_header(doc.company)
+			base_url, headers = self.get_base_url_and_header(doc.company, "payments")
 			customer_txn_id_uuid = str(uuid.uuid4())  # TODO: save to doc if transfer fails?
 
 			# ACH

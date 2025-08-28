@@ -39,8 +39,12 @@
 		"sending_transaction_key",
 		"wise_bank_account_type",
 		"wise_bank_account_currency",
-		"cashpro_application_id",
-		"cashpro_client_id",
+		"cashpro_payments_application_id",
+		"cashpro_payments_client_id",
+		"cashpro_payments_api_key",
+		"cashpro_payment_templates_application_id",
+		"cashpro_payment_templates_client_id",
+		"cashpro_payment_templates_api_key",
 		"sending_payments_accounts_section",
 		"withdrawal_account",
 		"sending_fee_account",
@@ -241,10 +245,11 @@
 			"mandatory_depends_on": "eval:doc.enable_sending && (doc.provider !== doc.sending_provider) && (doc.sending_provider === \"Authorize.net\" || doc.sending_provider === \"Mercury\" || doc.sending_provider === \"Wise\")"
 		},
 		{
+			"depends_on": "eval:doc.sending_provider !== \"CashPro\"",
 			"fieldname": "sending_api_key",
 			"fieldtype": "Password",
 			"label": "Sending API Key",
-			"mandatory_depends_on": "enable_sending"
+			"mandatory_depends_on": "enable_sending && eval:doc.sending_provider !== \"CashPro\""
 		},
 		{
 			"depends_on": "eval:doc.sending_provider !== \"CashPro\"",
@@ -323,21 +328,49 @@
 		},
 		{
 			"depends_on": "eval:doc.sending_provider === \"CashPro\"",
-			"fieldname": "cashpro_application_id",
+			"fieldname": "cashpro_payments_application_id",
 			"fieldtype": "Data",
-			"label": "CashPro Application ID",
+			"label": "CashPro Payments Application ID",
 			"mandatory_depends_on": "eval:doc.sending_provider === \"CashPro\""
 		},
 		{
 			"depends_on": "eval:doc.sending_provider === \"CashPro\"",
-			"fieldname": "cashpro_client_id",
+			"fieldname": "cashpro_payments_client_id",
 			"fieldtype": "Data",
-			"label": "CashPro Client ID",
+			"label": "CashPro Payments Client ID",
+			"mandatory_depends_on": "eval:doc.sending_provider === \"CashPro\""
+		},
+		{
+			"depends_on": "eval:doc.sending_provider === \"CashPro\"",
+			"fieldname": "cashpro_payment_templates_application_id",
+			"fieldtype": "Data",
+			"label": "CashPro Payment Templates Application ID",
+			"mandatory_depends_on": "eval:doc.sending_provider === \"CashPro\""
+		},
+		{
+			"depends_on": "eval:doc.sending_provider === \"CashPro\"",
+			"fieldname": "cashpro_payment_templates_client_id",
+			"fieldtype": "Data",
+			"label": "CashPro Payment Templates Client ID",
+			"mandatory_depends_on": "eval:doc.sending_provider === \"CashPro\""
+		},
+		{
+			"depends_on": "eval:doc.sending_provider === \"CashPro\"",
+			"fieldname": "cashpro_payments_api_key",
+			"fieldtype": "Password",
+			"label": "CashPro Payments API Key",
+			"mandatory_depends_on": "eval:doc.sending_provider === \"CashPro\""
+		},
+		{
+			"depends_on": "eval:doc.sending_provider === \"CashPro\"",
+			"fieldname": "cashpro_payment_templates_api_key",
+			"fieldtype": "Password",
+			"label": "CashPro Payment Templates API Key",
 			"mandatory_depends_on": "eval:doc.sending_provider === \"CashPro\""
 		}
 	],
 	"links": [],
-	"modified": "2025-08-14 08:46:29.488744",
+	"modified": "2025-08-28 09:14:52.647174",
 	"modified_by": "Administrator",
 	"module": "Electronic Payments",
 	"name": "Electronic Payment Settings",
