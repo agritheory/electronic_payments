@@ -131,26 +131,27 @@ class CashPro:
 		try:
 			account_number = str(data.get("account_number"))
 			last4 = account_number[-4:]
+			template_code = f"{party.name[:31]}{last4}"
 			payload = {
 				"templateIdentification": {
-					"templateRequestIdentification": "111111",
-					"templateCode": "111111",
-					"templateName": "111111",
-					"isTemplateInternal": True,
+					# "templateRequestIdentification": "",
+					"templateCode": template_code,
+					# "templateName": "",
+					# "isTemplateInternal": True,
 				},
 				"creditInitiation": {
 					"paymentMethod": "TRF",
 					"amount": {
-						"value": "",  # optional?
-						"type": "",  # optional?
+						"value": str(data.get("amount")),
+						# "type": "",
 					},
 					"debtorAccount": {
 						"identification": "",
 						"schemeName": "",
-						"currency": "USD",
+						"currency": doc.get("currency", "USD").upper(),
 					},
 					"debtorAgent": {
-						"institution": {"name": "", "identification": "", "schemeName": ""},  # optional  # optional
+						"institution": {"name": "", "identification": "", "schemeName": ""},
 						"postalAddress": {
 							"addressLine": [],
 							"city": "",
@@ -158,8 +159,8 @@ class CashPro:
 						},
 					},
 					"creditor": {
-						"name": data.get("account_holders_name"),  # optional?
-						"postalAddress": {  # optional?
+						"name": data.get("account_holders_name"),
+						"postalAddress": {
 							"addressLine": [data.get("address_firstline"), data.get("address_secondline", "")],
 							"city": data.get("city"),
 							"country": data.get("country", "US").upper(),
@@ -171,17 +172,16 @@ class CashPro:
 						"currency": "USD",
 					},
 					"creditorAgent": {
-						"institution": {"name": "", "identification": "", "schemeName": ""},  # optional  # optional
+						"institution": {"name": "", "identification": "", "schemeName": ""},
 					},
 					"instructionForCreditorAgent": [],
 					"paymentType": {
-						"priority": "",  # optional?
-						"serviceLevel": "",  # optional?
-						"categoryOfPurpose": "",  # optional?
+						"priority": "",
+						"serviceLevel": "",
+						"categoryOfPurpose": "",
 					},
 					"purpose": {
 						"code": "",
-						"description": "",  # optional
 					},
 				},
 			}
