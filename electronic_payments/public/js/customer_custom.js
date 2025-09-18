@@ -44,10 +44,10 @@ frappe.ui.form.on('Customer', {
 			const message =
 				selected.length === 1
 					? __(
-							'Do you want to delete the selected payment method only in ERPNext, or also remove it from the external Provider?'
+							'Do you want to delete the selected payment method only in ERPNext, or also remove it from the external provider?'
 						)
 					: __(
-							'Do you want to delete the selected payment methods only in ERPNext, or also remove them from the external Provider?'
+							'Do you want to delete the selected payment methods only in ERPNext, or also remove them from the external provider?'
 						)
 
 			const d = new frappe.ui.Dialog({
