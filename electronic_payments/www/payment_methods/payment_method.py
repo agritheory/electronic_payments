@@ -72,7 +72,7 @@ def edit_portal_payment_method(payment_method):
 	try:
 		doc = frappe._dict({party_data["party_type"].lower(): party_data["party"]})
 		client = settings.client(doc)
-		response = client.edit_customer_payment_profile(
+		response = client.edit_payment_profile(
 			settings.company, portal_payment_method.electronic_payment_profile, data
 		)
 		if response.get("error"):

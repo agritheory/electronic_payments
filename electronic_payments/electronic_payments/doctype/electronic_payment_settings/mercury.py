@@ -12,6 +12,9 @@ from frappe.utils import cint, flt
 from frappe.utils.password import get_decrypted_password
 from requests.exceptions import HTTPError
 
+from electronic_payments.electronic_payments.doctype.electronic_payment_settings.base import (
+	BaseProvider,
+)
 from electronic_payments.electronic_payments.doctype.electronic_payment_settings.common import (
 	calculate_payment_method_fees,
 	exceeds_credit_limit,
@@ -24,14 +27,22 @@ from electronic_payments.electronic_payments.doctype.electronic_payment_settings
 )
 
 
-class Mercury:
+class Mercury(BaseProvider):
+	def __init__(self):
+		"""
+		self.provider value should match the selection text in Electronic Payment Settings
+		self.gateway value should match the selection text in Electronic Payment Profile
+		"""
+		self.provider = "Mercury"
+		self.gateway = "Mercury"
+
 	def get_base_url_and_header(self, company):
 		settings = frappe.get_doc("Electronic Payment Settings", {"company": company})
 		if not settings:
 			frappe.msgprint(_(f"No Electronic Payment Settings found for {company}"))
 		else:
-			api_key_field = "api_key" if settings.provider == "Mercury" else "sending_api_key"
-			endpoint_field = "endpoint" if settings.provider == "Mercury" else "sending_endpoint"
+			api_key_field = "api_key" if settings.provider == self.provider else "sending_api_key"
+			endpoint_field = "endpoint" if settings.provider == self.provider else "sending_endpoint"
 			api_key = get_decrypted_password(
 				settings.doctype, settings.name, api_key_field, raise_exception=False
 			)
@@ -74,6 +85,12 @@ class Mercury:
 		)
 		return response
 
+	def create_party_profile(self, doc):
+		"""
+		Not used in Mercury
+		"""
+		return {"message": "Success", "transaction_id": None}
+
 	def process_credit_card(self, doc, data):
 		"""
 		Unsupported
@@ -81,6 +98,15 @@ class Mercury:
 		return {"error": _("Not supported.")}
 
 	def get_accounts(self, company):
+		"""
+		Helper function used in the Electronic Payment Settings doc to make an API call to get the
+		account IDs associated with the given access token
+
+		:param company: str; the company in ERPNext the provider account is connected to. Used to
+		get the correct Electronic Payment Setting doc
+		:return: dict; either {"message": "Success", "data": list with account ID information} or
+		{"error": error message}
+		"""
 		try:
 			base_url, headers = self.get_base_url_and_header(company)
 			response = requests.get(
@@ -116,7 +142,7 @@ class Mercury:
 			)
 			return {"error": f"{e}"}
 
-	def edit_customer_payment_profile(self, company, electronic_payment_profile_name, data):
+	def edit_payment_profile(self, company, electronic_payment_profile_name, data):
 		payment_profile = frappe.get_doc(
 			"Electronic Payment Profile", {"name": electronic_payment_profile_name}
 		)
@@ -204,7 +230,7 @@ class Mercury:
 					payment_profile.save(ignore_permissions=True)
 
 					ppm = frappe.new_doc("Portal Payment Method")
-					ppm.mode_of_payment = "Mercury Wire"
+					ppm.mode_of_payment = f"{self.provider} Wire"
 					ppm.label = f"Wire-{last4}"
 					ppm.default = 0
 					ppm.electronic_payment_profile = payment_profile.name
@@ -357,7 +383,7 @@ class Mercury:
 					payment_profile.party_type = party.doctype
 					payment_profile.party = party.name
 					payment_profile.payment_type = pmt_type
-					payment_profile.payment_gateway = "Mercury"
+					payment_profile.payment_gateway = self.gateway
 					payment_profile.reference = f"*{last4}"
 					payment_profile.payment_profile_id = str(r.get("id"))
 					payment_profile.party_profile = None  # Not used in Mercury
@@ -367,7 +393,7 @@ class Mercury:
 
 					if payment_profile.retain and settings.create_ppm:
 						ppm = frappe.new_doc("Portal Payment Method")
-						ppm.mode_of_payment = f"Mercury {pmt_type}"
+						ppm.mode_of_payment = f"{self.provider} {pmt_type}"
 						ppm.label = f"{pmt_type}-{last4}"
 						ppm.default = cint(data.get("default", 0))
 						ppm.electronic_payment_profile = payment_profile.name
@@ -424,7 +450,7 @@ class Mercury:
 		"""
 		party = get_party_details(doc)
 		settings = frappe.get_doc("Electronic Payment Settings", {"company": doc.company})
-		merch_id_field = "ref_id" if settings.provider == "Mercury" else "sending_ref_id"
+		merch_id_field = "ref_id" if settings.provider == self.provider else "sending_ref_id"
 		account_id = settings.get(merch_id_field)
 		payment_profile_id = data.get("payment_profile_id")
 		payment_amount = data.get("amount") or get_payment_amount(doc, data)
@@ -530,7 +556,7 @@ class Mercury:
 
 	def get_transaction_details(self, company, transaction_id):
 		settings = frappe.get_doc("Electronic Payment Settings", {"company": company})
-		merch_id_field = "ref_id" if settings.provider == "Mercury" else "sending_ref_id"
+		merch_id_field = "ref_id" if settings.provider == self.provider else "sending_ref_id"
 		account_id = settings.get(merch_id_field)
 		try:
 			base_url, headers = self.get_base_url_and_header(company)

@@ -12,6 +12,9 @@ from frappe.utils import cint, flt
 from frappe.utils.password import get_decrypted_password
 from requests.exceptions import HTTPError
 
+from electronic_payments.electronic_payments.doctype.electronic_payment_settings.base import (
+	BaseProvider,
+)
 from electronic_payments.electronic_payments.doctype.electronic_payment_settings.common import (
 	calculate_payment_method_fees,
 	exceeds_credit_limit,
@@ -23,14 +26,22 @@ from electronic_payments.electronic_payments.doctype.electronic_payment_settings
 )
 
 
-class Wise:
+class Wise(BaseProvider):
+	def __init__(self):
+		"""
+		self.provider value should match the selection text in Electronic Payment Settings
+		self.gateway value should match the selection text in Electronic Payment Profile
+		"""
+		self.provider = "Wise"
+		self.gateway = "Wise"
+
 	def get_base_url_and_header(self, company):
 		settings = frappe.get_doc("Electronic Payment Settings", {"company": company})
 		if not settings:
 			frappe.msgprint(_(f"No Electronic Payment Settings found for {company}"))
 		else:
-			api_key_field = "api_key" if settings.provider == "Wise" else "sending_api_key"
-			endpoint_field = "endpoint" if settings.provider == "Wise" else "sending_endpoint"
+			api_key_field = "api_key" if settings.provider == self.provider else "sending_api_key"
+			endpoint_field = "endpoint" if settings.provider == self.provider else "sending_endpoint"
 			api_key = get_decrypted_password(
 				settings.doctype, settings.name, api_key_field, raise_exception=False
 			)
@@ -39,10 +50,14 @@ class Wise:
 			return base_url, headers
 
 	def process_transaction(self, doc, data):
+		"""
+		Overrides BaseProvider class method because Wise's payment flow requiring quotes and
+		funding steps differ significantly
+		"""
 		mop = data.mode_of_payment.replace("New ", "")
 		party = get_party_details(doc)
 		settings = frappe.get_doc("Electronic Payment Settings", {"company": doc.company})
-		use_batch = settings.sending_provider == "Wise" and settings.wise_linked_bank_account_id
+		use_batch = settings.sending_provider == self.provider and settings.wise_linked_bank_account_id
 		save_only = data.save_data == "Save payment data only"
 
 		if party.doctype == "Customer" or (mop == "Card" and data.get("save_data") == "Charge now"):
@@ -94,6 +109,12 @@ class Wise:
 
 		return response
 
+	def create_party_profile(
+		self, doc
+	):  # Never called because process_transaction overrides BaseProvider
+		"""Not used in Wise"""
+		return {"message": "Success", "transaction_id": None}
+
 	def process_credit_card(self, doc, data):
 		"""
 		Currently unsupported - replace with code to generate a Wise payment request link
@@ -136,7 +157,7 @@ class Wise:
 
 	def create_quote(self, doc, data):
 		settings = frappe.get_doc("Electronic Payment Settings", {"company": doc.company})
-		merch_id_field = "ref_id" if settings.provider == "Wise" else "sending_ref_id"
+		merch_id_field = "ref_id" if settings.provider == self.provider else "sending_ref_id"
 		profile_id = settings.get(merch_id_field)
 
 		payment_amount = data.get("amount") or get_payment_amount(doc, data)
@@ -194,7 +215,7 @@ class Wise:
 			)
 			return {"error": f"{e}"}
 
-	def edit_customer_payment_profile(self, company, electronic_payment_profile_name, data):
+	def edit_payment_profile(self, company, electronic_payment_profile_name, data):
 		# Per docs, can't edit an existing recipient account - must delete, then re-add
 		return {
 			"error": _(
@@ -249,7 +270,7 @@ class Wise:
 	def create_party_payment_profile(self, doc, data):
 		party = get_party_details(doc)
 		settings = frappe.get_doc("Electronic Payment Settings", {"company": doc.company})
-		merch_id_field = "ref_id" if settings.provider == "Wise" else "sending_ref_id"
+		merch_id_field = "ref_id" if settings.provider == self.provider else "sending_ref_id"
 		profile_id = settings.get(merch_id_field)
 		mop = data.mode_of_payment.replace("New ", "")
 
@@ -296,7 +317,7 @@ class Wise:
 				payment_profile.party_type = party.doctype
 				payment_profile.party = party.name
 				payment_profile.payment_type = mop
-				payment_profile.payment_gateway = "Wise"
+				payment_profile.payment_gateway = self.gateway
 				payment_profile.reference = f"*{last4}"
 				payment_profile.payment_profile_id = str(r.get("id"))
 				payment_profile.party_profile = None  # Not used in Wise
@@ -306,7 +327,7 @@ class Wise:
 
 				if payment_profile.retain and settings.create_ppm:
 					ppm = frappe.new_doc("Portal Payment Method")
-					ppm.mode_of_payment = f"Wise {mop}"
+					ppm.mode_of_payment = f"{self.provider} {mop}"
 					ppm.label = f"{mop}-{last4}"
 					ppm.default = cint(data.get("default", 0))
 					ppm.electronic_payment_profile = payment_profile.name
@@ -342,7 +363,7 @@ class Wise:
 
 	def create_batch_group(self, doc, data):
 		settings = frappe.get_doc("Electronic Payment Settings", {"company": doc.company})
-		merch_id_field = "ref_id" if settings.provider == "Wise" else "sending_ref_id"
+		merch_id_field = "ref_id" if settings.provider == self.provider else "sending_ref_id"
 		profile_id = settings.get(merch_id_field)
 		pmt_term = f"|{data.get('payment_term')}" if data.get("payment_term") else ""
 		batch_name = f"{doc.name}{pmt_term}"
@@ -381,7 +402,7 @@ class Wise:
 
 	def create_batch_group_transfer(self, doc, data):
 		settings = frappe.get_doc("Electronic Payment Settings", {"company": doc.company})
-		merch_id_field = "ref_id" if settings.provider == "Wise" else "sending_ref_id"
+		merch_id_field = "ref_id" if settings.provider == self.provider else "sending_ref_id"
 		profile_id = settings.get(merch_id_field)
 		payment_profile_id = data.get("payment_profile_id")
 		batch_id = data.get("batch_id")
@@ -428,7 +449,7 @@ class Wise:
 
 	def complete_batch_group(self, doc, data):
 		settings = frappe.get_doc("Electronic Payment Settings", {"company": doc.company})
-		merch_id_field = "ref_id" if settings.provider == "Wise" else "sending_ref_id"
+		merch_id_field = "ref_id" if settings.provider == self.provider else "sending_ref_id"
 		profile_id = settings.get(merch_id_field)
 		batch_id = data.get("batch_id")
 		try:
@@ -497,7 +518,7 @@ class Wise:
 		party = get_party_details(doc)
 		payment_profile_id = data.get("payment_profile_id")
 		settings = frappe.get_doc("Electronic Payment Settings", {"company": doc.company})
-		merch_id_field = "ref_id" if settings.provider == "Wise" else "sending_ref_id"
+		merch_id_field = "ref_id" if settings.provider == self.provider else "sending_ref_id"
 		profile_id = settings.get(merch_id_field)
 		batch_id = data.get("batch_id")
 		account_id = settings.wise_linked_bank_account_id
