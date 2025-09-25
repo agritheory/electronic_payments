@@ -219,6 +219,119 @@ electronic_payments.electronic_payments = frm => {
 	})
 }
 
+electronic_payments.add_payment_method_dialog = frm => {
+	payment_options(frm).then(results => {
+		let mop_options = results['mop_options']
+		let billing_address_dict = results['billing_address']
+		let subject_to_credit_limit = 0
+		let d = new frappe.ui.Dialog({
+			title: __('Add Payment Method'),
+			size: 'extra-large',
+			fields: [
+				{ fieldname: 'sec_1', fieldtype: 'Section Break' },
+				{ fieldname: 'ht', fieldtype: 'HTML' },
+				{ fieldname: 'sec_2', fieldtype: 'Section Break' },
+				{
+					fieldname: 'mode_of_payment',
+					fieldtype: 'Select',
+					label: 'Mode of Payment',
+					options: mop_options[0],
+					bold: 1,
+					default: mop_options[0].split('\n')[0],
+					change: () => {
+						d.set_required_fields(billing_address_dict)
+					},
+				},
+				{ fieldname: 'address_firstline', label: 'Address', fieldtype: 'Data', hidden: 1 },
+				{ fieldname: 'address_secondline', label: 'Address Line 2', fieldtype: 'Data', hidden: 1 },
+				{ fieldname: 'city', label: 'City', fieldtype: 'Data', hidden: 1 },
+				{ fieldname: 'state', label: 'State', fieldtype: 'Data', hidden: 1 },
+				{ fieldname: 'postcode', label: 'Post/Zip Code', fieldtype: 'Data', hidden: 1 },
+				{ fieldname: 'country', label: '2-Digit Country Code', fieldtype: 'Data', hidden: 1, length: 2, default: 'US' },
+				{ fieldname: 'col_1', fieldtype: 'Column Break' },
+				{
+					fieldname: 'card_number',
+					fieldtype: 'Data',
+					label: 'Card Number',
+					change: () => {
+						format_credit_card()
+					},
+					hidden: 1,
+				},
+				{ fieldname: 'card_cvc', fieldtype: 'Int', label: 'CVC', hidden: 1 },
+				{ fieldname: 'account_holders_name', fieldtype: 'Data', label: "Account Holder's Name", hidden: 1 },
+				{ fieldname: 'email', label: 'Email', fieldtype: 'Data', hidden: 1, default: frm.doc.contact_email },
+				{ fieldname: 'dl_state', fieldtype: 'Data', label: 'Drivers License State', hidden: 1 },
+				{ fieldname: 'dl_number', fieldtype: 'Data', label: 'Drivers License Number', hidden: 1 },
+				{ fieldname: 'col_2', fieldtype: 'Column Break', hidden: 1 },
+				{ fieldname: 'cardholder_name', fieldtype: 'Data', label: "Card Holder's Name", hidden: 1 },
+				{
+					fieldname: 'card_expiration_date',
+					fieldtype: 'Data',
+					label: 'Card Expiration Date',
+					description: "Enter as '2022-12' ",
+					hidden: 1,
+				},
+				{ fieldname: 'routing_number', fieldtype: 'Data', label: 'Routing Number', hidden: 1 },
+				{ fieldname: 'account_number', fieldtype: 'Data', label: 'Checking Account Number', hidden: 1 },
+				{ fieldname: 'accept_wire', fieldtype: 'Check', label: 'Routing Number can accept wire transfers?', hidden: 1 },
+				{ fieldname: 'check_number', fieldtype: 'Int', label: 'Check Number', description: 'Optional', hidden: 1 },
+				{ fieldname: 'subject_to_credit_limit', fieldtype: 'Int', default: subject_to_credit_limit, hidden: 1 },
+			],
+			set_required_fields: billing_address_dict => {
+				if (d.fields_dict.mode_of_payment.value == 'New Card') {
+					d.fields_dict.card_number.df.hidden = 0
+					d.fields_dict.card_cvc.df.hidden = 0
+					d.fields_dict.cardholder_name.df.hidden = 0
+					d.fields_dict.card_expiration_date.df.hidden = 0
+					d.fields_dict.account_holders_name.df.hidden = 1
+					d.fields_dict.dl_state.df.hidden = 1
+					d.fields_dict.dl_number.df.hidden = 1
+					d.fields_dict.routing_number.df.hidden = 1
+					d.fields_dict.account_number.df.hidden = 1
+					d.fields_dict.accept_wire.df.hidden = 1
+					d.fields_dict.check_number.df.hidden = 1
+					d.fields_dict.card_number.df.read_only = 0
+					d.fields_dict.card_number.set_value('')
+				} else if (d.fields_dict.mode_of_payment.value == 'New ACH') {
+					d.fields_dict.card_number.df.hidden = 1
+					d.fields_dict.card_cvc.df.hidden = 1
+					d.fields_dict.cardholder_name.df.hidden = 1
+					d.fields_dict.card_expiration_date.df.hidden = 1
+					d.fields_dict.account_holders_name.df.hidden = 0
+					d.fields_dict.dl_state.df.hidden = 0
+					d.fields_dict.dl_number.df.hidden = 0
+					d.fields_dict.routing_number.df.hidden = 0
+					d.fields_dict.account_number.df.hidden = 0
+					d.fields_dict.check_number.df.hidden = 0
+					d.fields_dict.account_number.df.read_only = 0
+					d.fields_dict.account_number.set_value('')
+					d.fields_dict.accept_wire.df.hidden = 0
+					d.fields_dict.email.df.hidden = 0
+					d.fields_dict.address_firstline.df.hidden = 0
+					d.fields_dict.address_secondline.df.hidden = 0
+					d.fields_dict.city.df.hidden = 0
+					d.fields_dict.state.df.hidden = 0
+					d.fields_dict.postcode.df.hidden = 0
+					d.fields_dict.country.df.hidden = 0
+					// Pre-fill billing address fields
+					d.fields_dict.address_firstline.set_value(billing_address_dict['address_line1'])
+					d.fields_dict.address_secondline.set_value(billing_address_dict['address_line2'])
+					d.fields_dict.city.set_value(billing_address_dict['city'])
+					d.fields_dict.state.set_value(billing_address_dict['state'])
+					d.fields_dict.postcode.set_value(billing_address_dict['pincode'])
+				}
+				d.refresh()
+			},
+		})
+		d.set_primary_action(__('Add Payment Method'), () => {
+			add_payment_method(frm, d)
+		})
+		d.set_required_fields(billing_address_dict)
+		d.show()
+	})
+}
+
 function render_frm_data(frm) {
 	if (frm.doc.doctype.indexOf('Sales') >= 0) {
 		return (
@@ -290,10 +403,30 @@ async function process(frm, dialog) {
 		})
 }
 
+async function add_payment_method(frm, dialog) {
+	let values = dialog.get_values()
+	values['doctype'] = frm.doc.doctype
+	values['payment_type'] = values['mode_of_payment'].replace('New ', '')
+	values['party'] = frm.doc.name
+	await frappe
+		.xcall('electronic_payments.www.payment_methods.new_payment_method.new_portal_payment_method', {
+			payment_method: values,
+		})
+		.then(r => {
+			if (r.success_message) {
+				dialog.fields_dict.ht.$wrapper.html(`<p style="color: green; font-weight: bold;">${r.success_message}</p>`)
+			}
+			if (r.error_message) {
+				dialog.fields_dict.ht.$wrapper.html(`<p style="color: red; font-weight: bold;">${r.error_message}</p>`)
+			}
+			frm.reload_doc()
+		})
+}
+
 async function payment_options(frm) {
 	let payment_profiles = []
 	let saved_methods = []
-	let is_sales = frm.doc.doctype.indexOf('Sales') >= 0 ? true : false
+	let is_sales = frm.doc.doctype.indexOf('Sales') >= 0 || frm.doc.doctype == 'Customer' ? true : false
 	let results = { mop_options: [], billing_address: {} }
 	await frappe
 		.xcall(

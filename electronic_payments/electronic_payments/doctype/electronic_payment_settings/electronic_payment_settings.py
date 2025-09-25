@@ -193,17 +193,28 @@ def process(doc, data):
 @frappe.whitelist()
 def get_payment_profiles_and_billing_address(doc):
 	doc = frappe._dict(json.loads(doc)) if isinstance(doc, str) else doc
-	party = doc.supplier if "Purchase" in doc.doctype else doc.customer
-
 	billing_address = get_billing_address(doc)
 	payment_profiles = get_payment_profiles(doc)
-	results = frappe._dict({"billing_address": billing_address, "payment_profiles": payment_profiles})
+	results = frappe._dict(
+		{
+			"billing_address": billing_address,
+			"payment_profiles": payment_profiles,
+		}
+	)
 	return results
 
 
 def get_payment_profiles(doc):
 	doc = frappe._dict(json.loads(doc)) if isinstance(doc, str) else doc
-	party = doc.supplier if "Purchase" in doc.doctype else doc.customer
+	if doc.doctype == "Customer":
+		party = doc.name
+	elif doc.doctype == "Supplier":
+		party = doc.name
+	elif "Purchase" in doc.doctype:
+		party = doc.supplier
+	else:
+		party = doc.customer
+
 	epp = frappe.qb.DocType("Electronic Payment Profile")
 	ppm = frappe.qb.DocType("Portal Payment Method")
 
@@ -230,8 +241,19 @@ def get_payment_profiles(doc):
 
 
 def get_billing_address(doc):
-	party = doc.supplier if "Purchase" in doc.doctype else doc.customer
-	address_field = "supplier_address" if "Purchase" in doc.doctype else "customer_address"
+	if doc.doctype == "Customer":
+		party = doc.name
+		address_field = "customer_address"
+	elif doc.doctype == "Supplier":
+		party = doc.name
+		address_field = "supplier_address"
+	elif "Purchase" in doc.doctype:
+		party = doc.supplier
+		address_field = "supplier_address"
+	else:
+		party = doc.customer
+		address_field = "customer_address"
+
 	uses_billing = "Billing" in doc.get(address_field, "")
 
 	address = frappe.qb.DocType("Address")

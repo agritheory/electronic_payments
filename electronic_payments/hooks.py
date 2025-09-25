@@ -42,6 +42,8 @@ doctype_js = {
 	"Purchase Order": "public/js/purchase_order_custom.js",
 	"Purchase Invoice": "public/js/purchase_invoice_custom.js",
 	"Check Run": "public/js/check_run_custom.js",
+	"Customer": "public/js/customer_custom.js",
+	"Supplier": "public/js/supplier_custom.js",
 }
 
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}

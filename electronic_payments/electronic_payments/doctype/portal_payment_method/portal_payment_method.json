@@ -38,7 +38,8 @@
 			"fieldname": "electronic_payment_profile",
 			"fieldtype": "Link",
 			"label": "Electronic Payment Profile",
-			"options": "Electronic Payment Profile"
+			"options": "Electronic Payment Profile",
+			"read_only": 1
 		},
 		{
 			"columns": 1,
@@ -88,12 +89,13 @@
 	"index_web_pages_for_search": 1,
 	"istable": 1,
 	"links": [],
-	"modified": "2024-02-06 10:44:00.330153",
+	"modified": "2025-07-28 11:30:45.853997",
 	"modified_by": "Administrator",
 	"module": "Electronic Payments",
 	"name": "Portal Payment Method",
 	"owner": "Administrator",
 	"permissions": [],
+	"row_format": "Dynamic",
 	"sort_field": "modified",
 	"sort_order": "DESC",
 	"states": []

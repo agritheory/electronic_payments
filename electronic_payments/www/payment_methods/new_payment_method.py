@@ -41,8 +41,13 @@ def get_context(context):
 
 @frappe.whitelist()
 def new_portal_payment_method(payment_method):
-	party_data = get_party()
 	data = frappe._dict(json.loads(payment_method))
+
+	doctype = data.get("doctype", "")
+	if doctype:
+		party_data = {"party_type": doctype}
+	else:
+		party_data = get_party()
 
 	if party_data["party_type"] == "Customer":
 		filters = {"enable_accepting": 1}
@@ -50,8 +55,10 @@ def new_portal_payment_method(payment_method):
 		filters = {"enable_sending": 1}
 
 	all_settings = frappe.get_all("Electronic Payment Settings", filters)
+
 	if not all_settings:
 		return {"error_message": _("You cannot add a new Payment Method.")}
+
 	error_messages = []
 
 	for setting_name in all_settings:
@@ -86,7 +93,6 @@ def new_portal_payment_method(payment_method):
 			if response.get("error"):
 				error_messages.append(response["error"])
 				continue
-
 		except Exception as e:
 			error_messages.append(str(e))
 			continue
