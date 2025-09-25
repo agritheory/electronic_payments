@@ -176,7 +176,6 @@ class AuthorizeNet:
 
 			if response.messages.resultCode == "Ok":
 				party_profile_id = str(response.customerProfileId)
-				frappe.db.set_value(party.doctype, party.name, "electronic_payment_profile", party_profile_id)
 				return {"message": "Success", "transaction_id": party_profile_id}
 			else:
 				error_message = str(response.messages.message[0]["text"].text)
