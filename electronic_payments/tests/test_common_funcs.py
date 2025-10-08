@@ -26,6 +26,7 @@ def create_electronic_payment_settings(
 	"""
 	Helper function to create Electronic Payment Settings for default company with dummy API keys
 	"""
+	provider = "Authorize.net"  # overrides parameter since field names are unique to provider
 	company = frappe.defaults.get_defaults().company
 	frappe.delete_doc_if_exists(
 		"Electronic Payment Settings",
@@ -36,9 +37,9 @@ def create_electronic_payment_settings(
 	eps.create_ppm = 1
 	eps.enable_accepting = 1
 	eps.provider = provider
-	eps.api_key = "123456789"
-	eps.transaction_key = "" if provider == "Stripe" else "987654321"
-	eps.endpoint = "www.example.com"
+	eps.authorize_accepting_api_key = "123456789"
+	eps.authorize_accepting_transaction_key = "987654321"
+	eps.authorize_accepting_endpoint = "www.example.com"
 	eps.use_clearing_account = clearing_acct
 	eps.deposit_account = "1201 - Primary Checking - CFC"
 	eps.accepting_fee_account = "5223 - Electronic Payments Provider Fees - CFC"
@@ -49,16 +50,15 @@ def create_electronic_payment_settings(
 	eps.enable_sending = int(provider == "Authorize.net")
 	if eps.enable_sending:
 		eps.sending_provider = provider
-		eps.sending_ref_id = eps.ref_id
-		eps.sending_endpoint = eps.endpoint
-		eps.sending_api_key = eps.api_key
-		eps.sending_transaction_key = eps.transaction_key
+		eps.authorize_sending_endpoint = eps.authorize_accepting_endpoint
+		eps.authorize_sending_api_key = eps.authorize_accepting_api_key
+		eps.authorize_sending_transaction_key = eps.authorize_accepting_transaction_key
 		eps.sending_use_clearing_account = clearing_acct
 		eps.withdrawal_account = eps.deposit_account
 		eps.sending_fee_account = eps.accepting_fee_account
 		eps.sending_clearing_account = "2130 - Electronic Payments Payable - CFC"
 		eps.sending_payment_discount_account = frappe.get_value(
-			"Account", {"name": ["like", "%Miscellaneous Expenses%"]}, "name"
+			"Account", {"name": ["like", "%Miscellaneous Expenses - CFC%"]}, "name"
 		)
 	eps.save()
 	return eps
@@ -936,7 +936,9 @@ def test_sending_payment_create_payment_entry_discount():
 		"taxes",
 		{
 			"charge_type": "Actual",
-			"account_head": frappe.get_value("Account", {"name": ["like", "%Freight%"]}),
+			"account_head": frappe.get_value(
+				"Account", {"name": ["like", "%Freight%"], "company": doc.company}
+			),
 			"description": "Freight",
 			"cost_center": "Main - CFC",
 			"tax_amount": 10,
@@ -946,7 +948,9 @@ def test_sending_payment_create_payment_entry_discount():
 		"taxes",
 		{
 			"charge_type": "Actual",
-			"account_head": frappe.get_value("Account", {"name": ["like", "%Marketing Expenses%"]}),
+			"account_head": frappe.get_value(
+				"Account", {"name": ["like", "%Marketing Expenses%"], "company": doc.company}
+			),
 			"description": "Marketing",
 			"cost_center": "Main - CFC",
 			"tax_amount": 5,
@@ -1195,7 +1199,9 @@ def test_sending_payment_create_journal_entry_discount():
 		"taxes",
 		{
 			"charge_type": "Actual",
-			"account_head": frappe.get_value("Account", {"name": ["like", "%Freight%"]}),
+			"account_head": frappe.get_value(
+				"Account", {"name": ["like", "%Freight%"], "company": doc.company}
+			),
 			"description": "Freight",
 			"cost_center": "Main - CFC",
 			"tax_amount": 10,
@@ -1205,7 +1211,9 @@ def test_sending_payment_create_journal_entry_discount():
 		"taxes",
 		{
 			"charge_type": "Actual",
-			"account_head": frappe.get_value("Account", {"name": ["like", "%Marketing Expenses%"]}),
+			"account_head": frappe.get_value(
+				"Account", {"name": ["like", "%Marketing Expenses%"], "company": doc.company}
+			),
 			"description": "Marketing",
 			"cost_center": "Main - CFC",
 			"tax_amount": 5,
