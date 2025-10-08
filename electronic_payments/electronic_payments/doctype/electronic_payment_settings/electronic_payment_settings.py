@@ -34,11 +34,11 @@ from electronic_payments.electronic_payments.doctype.electronic_payment_settings
 class ElectronicPaymentSettings(Document):
 	def validate(self):
 		self.create_electronic_payment_mop()
-		self.copy_api_config_if_same_providers()
 
 	def on_update(self):
-		self.validate_mercury_merchant_id()
-		self.validate_wise_merchant_id()
+		self.copy_api_config_if_same_providers()
+		self.validate_mercury_account_id()
+		self.validate_wise_profile_id()
 		self.validate_wise_direct_debit_account_id()
 
 	def create_electronic_payment_mop(self):
@@ -75,65 +75,77 @@ class ElectronicPaymentSettings(Document):
 	def copy_api_config_if_same_providers(self):
 		"""
 		If sending payments is enabled and accepting and sending providers match, copies API
-		configuration fields (if empty)
+		configuration fields (if empty). Currently only Authorize.net can be both accepting and
+		sending provider.
 		"""
 		if self.enable_accepting and self.enable_sending and self.provider == self.sending_provider:
-			if self.ref_id and not self.sending_ref_id:
-				self.sending_ref_id = self.sending_ref_id
-			elif self.sending_ref_id and not self.ref_id:
-				self.ref_id = self.sending_ref_id
+			ap = "authorize" if self.provider == "Authorize.net" else self.provider.lower()
+			sp = "authorize" if self.sending_provider == "Authorize.net" else self.sending_provider.lower()
+			accepting_endpoint = f"{ap}_accepting_endpoint"
+			sending_endpoint = f"{sp}_sending_endpoint"
+			accepting_api_key = f"{ap}_accepting_api_key"
+			sending_api_key = f"{sp}_sending_api_key"
 
-			if self.endpoint and not self.sending_endpoint:
-				self.sending_endpoint = self.endpoint
-			elif self.sending_endpoint and not self.endpoint:
-				self.endpoint = self.sending_endpoint
+			if ap == "authorize":
+				accepting_txn_key = f"{ap}_accepting_transaction_key"
+			if sp == "authorize":
+				sending_txn_key = f"{sp}_sending_transaction_key"
 
-			if self.api_key and not self.sending_api_key:
-				api_key = get_decrypted_password(self.doctype, self.name, "api_key", raise_exception=False)
-				self.sending_api_key = api_key
-			elif self.sending_api_key and not self.api_key:
+			if self.get(accepting_endpoint) and not self.get(sending_endpoint):
+				frappe.db.set_value(self.doctype, self.name, sending_endpoint, self.get(accepting_endpoint))
+			elif self.get(sending_endpoint) and not self.get(accepting_endpoint):
+				frappe.db.set_value(self.doctype, self.name, accepting_endpoint, self.get(sending_endpoint))
+
+			if self.get(accepting_api_key) and not self.get(sending_api_key):
 				api_key = get_decrypted_password(
-					self.doctype, self.name, "sending_api_key", raise_exception=False
+					self.doctype, self.name, accepting_api_key, raise_exception=False
 				)
-				self.api_key = api_key
+				frappe.db.set_value(self.doctype, self.name, sending_api_key, api_key)
+			elif self.get(sending_api_key) and not self.get(accepting_api_key):
+				api_key = get_decrypted_password(
+					self.doctype, self.name, sending_api_key, raise_exception=False
+				)
+				frappe.db.set_value(self.doctype, self.name, accepting_api_key, api_key)
 
-			if self.transaction_key and not self.sending_transaction_key:
+			if self.get(accepting_txn_key) and not self.get(sending_txn_key):
 				t_key = get_decrypted_password(
-					self.doctype, self.name, "transaction_key", raise_exception=False
+					self.doctype, self.name, accepting_txn_key, raise_exception=False
 				)
-				self.sending_transaction_key = t_key
-			elif self.sending_transaction_key and not self.transaction_key:
-				t_key = get_decrypted_password(
-					self.doctype, self.name, "sending_transaction_key", raise_exception=False
-				)
-				self.transaction_key = t_key
+				frappe.db.set_value(self.doctype, self.name, sending_txn_key, t_key)
+			elif self.get(sending_txn_key) and not self.get(accepting_txn_key):
+				t_key = get_decrypted_password(self.doctype, self.name, sending_txn_key, raise_exception=False)
+				frappe.db.set_value(self.doctype, self.name, accepting_txn_key, t_key)
 
-	def validate_mercury_merchant_id(self):
-		if self.enable_sending and self.sending_provider == "Mercury" and not self.sending_ref_id:
+	def validate_mercury_account_id(self):
+		if (
+			self.enable_sending
+			and self.sending_provider == "Mercury"
+			and not self.mercury_sending_account_id
+		):
 			client = Mercury()
 			accounts_resp = client.get_accounts(self.company)
 			if accounts_resp.get("message") == "Success":
 				if not accounts_resp.get("data"):
-					message = "Please fill in the Merchant ID field for Mercury with the Account ID of the account making transfers. There were no accounts found associated with the provided Mercury credentials, you can create them in the Mercury platform."
+					message = "Please fill in the Mercury Account ID field with the Account ID of the account making transfers. There were no accounts found associated with the provided Mercury credentials, you can create them in the Mercury platform."
 				else:
 					m1 = "</li><li>".join(accounts_resp["data"])
-					message = f"Please fill in the Merchant ID field for Mercury with the Account ID of the account making transfers. The following account options were found:<br><ul><li>{m1}</li></ul>"
+					message = f"Please fill in the Mercury Account ID field with the Account ID of the account making transfers. The following account options were found:<br><ul><li>{m1}</li></ul>"
 			else:
-				message = f"Please fill in the Merchant ID field for Mercury with the Account ID of the account making transfers. {accounts_resp['error']}"
+				message = f"Please fill in the Mercury Account ID field with the Account ID of the account making transfers. {accounts_resp['error']}"
 			frappe.msgprint(msg=message, title="Missing Required Field")
 
-	def validate_wise_merchant_id(self):
-		if self.enable_sending and self.sending_provider == "Wise" and not self.sending_ref_id:
+	def validate_wise_profile_id(self):
+		if self.enable_sending and self.sending_provider == "Wise" and not self.wise_sending_profile_id:
 			client = Wise()
 			profiles_resp = client.get_profiles(self.company)
 			if profiles_resp.get("message") == "Success":
 				if not profiles_resp["data"]:
-					message = "Please fill in the Merchant ID field for Wise. There were no profiles found associated with this Wise account, you can create them in the Wise platform."
+					message = "Please fill in the Wise Profile ID field. There were no profiles found associated with this Wise account, you can create them in the Wise platform."
 				else:
 					m1 = "</li><li>".join(profiles_resp["data"])
-					message = f"Please fill in the Merchant ID field for Wise. The following profiles were found for this account:<br><ul><li>{m1}</li></ul>"
+					message = f"Please fill in the Wise Profile ID field. The following profiles were found for this account:<br><ul><li>{m1}</li></ul>"
 			else:
-				message = f"Please fill in the Merchant ID field for Wise. {profiles_resp['error']}"
+				message = f"Please fill in the Wise Profile ID field. {profiles_resp['error']}"
 			frappe.msgprint(msg=message, title="Missing Required Field")
 
 	def validate_wise_direct_debit_account_id(self):
@@ -295,35 +307,37 @@ def fetch_transactions():
 		settings = frappe.get_doc("Electronic Payments Settings", settings)
 
 		# Collect and process accepting payment transactions
-		if settings.provider == "Authorize.net":
-			response = fetch_authorize_transactions(settings)
-			provider = "Authorize.net"
-		elif settings.provider == "Stripe":
-			response = fetch_stripe_transactions(settings)
-			provider = "Stripe"
+		if settings.enable_accepting:
+			if settings.provider == "Authorize.net":
+				response = fetch_authorize_transactions(settings)
+				provider = "Authorize.net"
+			elif settings.provider == "Stripe":
+				response = fetch_stripe_transactions(settings)
+				provider = "Stripe"
 
-		if response.get("message") == "Success":
-			transactions = response.get("transactions")
-			process_transactions(settings, transactions, provider)
-		else:  # TODO: handle error in way to notify users
-			errors.append(response["error"])
+			if response.get("message") == "Success":
+				transactions = response.get("transactions")
+				process_transactions(settings, transactions, provider)
+			else:  # TODO: handle error in way to notify users
+				errors.append(response["error"])
 
 		# Collect and process sending payment transactions
-		if settings.sending_provider == "Wise":
-			s_response = fetch_wise_transactions(settings)
-			s_provider = "Wise"
-		if settings.sending_provider == "Mercury":
-			s_response = fetch_mercury_transactions(settings)
-			s_provider = "Mercury"
-		elif settings.sending_provider == "Authorize.net" and not settings.provider == "Authorize.net":
-			s_response = fetch_authorize_transactions(settings)
-			s_provider = "Authorize.net"
+		if settings.enable_sending:
+			if settings.sending_provider == "Wise":
+				s_response = fetch_wise_transactions(settings)
+				s_provider = "Wise"
+			if settings.sending_provider == "Mercury":
+				s_response = fetch_mercury_transactions(settings)
+				s_provider = "Mercury"
+			elif settings.sending_provider == "Authorize.net" and not settings.provider == "Authorize.net":
+				s_response = fetch_authorize_transactions(settings)
+				s_provider = "Authorize.net"
 
-		if s_response.get("message") == "Success":
-			s_transactions = s_response.get("transactions")
-			process_transactions(settings, s_transactions, s_provider)
-		else:  # TODO: handle error in way to notify users
-			errors.append(response["error"])
+			if s_response.get("message") == "Success":
+				s_transactions = s_response.get("transactions")
+				process_transactions(settings, s_transactions, s_provider)
+			else:  # TODO: handle error in way to notify users
+				errors.append(response["error"])
 
 	if errors:
 		return ", ".join(errors)

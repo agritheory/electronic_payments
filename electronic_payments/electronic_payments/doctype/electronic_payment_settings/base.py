@@ -11,7 +11,7 @@ from electronic_payments.electronic_payments.doctype.electronic_payment_settings
 
 class BaseProvider:
 	"""
-	Base class for all payment providers. Code expects that the child provider-specific class
+	Base class for all payment providers. Code expects that the child provider-specific classes
 	implement their own version for any method below that raises a `NotImplementedError`.
 
 	For all methods:
@@ -19,15 +19,29 @@ class BaseProvider:
 	:param doc: may be a Sales Order, Sales Invoice, Purchase Order, or Purchase Invoice. When
 	method is called from Customer or Supplier page, or from the portal (Customer or Supplier self
 	-service), then it can be a frappe._dict with some/all of the following keys (depending on
-	context): "company", either "customer" or "supplier" (set to the party's name), "doctype" (set
-	to "Sales" or "Purchase"), and "currency"
+	context):
+	    {
+	            "company": company in ERPNext (to collect the right Electronic Payment Settings),
+	                "customer" or "supplier": the name of a Customer or Supplier doc in ERPNext,
+	                "doctype": "Sales" or "Purchase" (determines the accepting or sending provider/keys),
+	                "currency": currency code signifier in ERPNext,
+	        }
+
 	:param data: a dict object containing the necessary data to make an API call. This may be to
-	create or update a payment method with the provider or accept/send a payment against an
+	create or update a payment method with the provider or to accept/send a payment against an
 	existing payment method. The required data to create or update a payment method will depend on
-	the provider. To accept or send a payment, data must include the "payment_profile_id", then it
-	can optionally include "amount" (to override calculated amount), "payment_term" (to
-	calculate payment total and discounts), "ppm_name" (to calculate fees configured for that
-	portal payment method), or "subject_to_credit_limit" (a Boolean value)
+	what the provider needs in their API calls. To accept or send a payment:
+	    {
+	            # Required:
+	            "payment_profile_id": ID of a payment method with the provider,
+
+	                # Optional:
+	    "amount": amount to charge or pay (if not provided, looks for a payment term or the
+	                doc's outstanding amount),
+	                "payment_term": name of a Payment Term in ERPNext associated with the doc,
+	                "ppm_name": name of a Portal Payment Method in ERPNext (to calculate configured fees),
+	                "subject_to_credit_limit": 1/True or 0/False/not provided,
+	        }
 	"""
 
 	def process_transaction(self, doc, data, bypass_je_pe_creation=False):
@@ -44,42 +58,40 @@ class BaseProvider:
 		party = get_party_details(doc)
 		save_only = data.save_data == "Save payment data only"
 
-		if mop.startswith("Saved"):
-			# check against credit limit, if applicable
-			if data.get("subject_to_credit_limit") and exceeds_credit_limit(doc, data):
-				return {"error": "Credit Limit exceeded for selected Mode of Payment"}
-			# accept from or pay to the saved payment method
-			if party.doctype == "Customer":
-				response = self.charge_party_profile(doc, data)
-			else:
-				response = self.create_transfer_to_party_profile(
-					doc, data, bypass_je_pe_creation=bypass_je_pe_creation
-				)
-		elif mop == "Card" and data.get("save_data") == "Charge now":
+		if mop == "Card" and data.get("save_data") == "Charge now":
 			response = self.process_credit_card(doc, data)
-		else:  # new mode of payment
-			# find party profile, if used by provider
+
+		if not mop.startswith("Saved"):  # new payment method
+			# find party profile (if used by provider)
 			party_response = self.get_or_create_party_profile(doc)
 			if party_response.get("message") == "Success":
 				data.update({"party_profile_id": party_response.get("transaction_id")})
-				# creates payment method with provider, saves ID (temporarily if txn only - payment profile deleted once charge is successful)
+
+				# create payment method with provider, save ID to data
 				pmt_profile_response = self.create_party_payment_profile(doc, data)
 				if pmt_profile_response.get("message") == "Success":
 					pp_doc = pmt_profile_response.get("payment_profile_doc")
 					data.update({"payment_profile_id": pp_doc.payment_profile_id})
 					if save_only:
 						return pmt_profile_response
-					# charge or transfers to payment profile
-					if party.doctype == "Customer":
-						response = self.charge_party_profile(doc, data)
-					else:
-						response = self.create_transfer_to_party_profile(
-							doc, data, bypass_je_pe_creation=bypass_je_pe_creation
-						)
 				else:  # error creating the payment profile
 					return pmt_profile_response
 			else:  # error getting / creating party profile
 				return party_response
+		elif (  # handle a saved method where amount exceeds credit limit
+			mop.startswith("Saved")
+			and data.get("subject_to_credit_limit")
+			and exceeds_credit_limit(doc, data)
+		):
+			return {"error": "Credit Limit exceeded for selected Mode of Payment"}
+
+		# charge or send transfer to the saved or newly created payment method
+		if party.doctype == "Customer":
+			response = self.charge_party_profile(doc, data)
+		else:
+			response = self.create_transfer_to_party_profile(
+				doc, data, bypass_je_pe_creation=bypass_je_pe_creation
+			)
 		return response
 
 	def get_or_create_party_profile(self, doc):
@@ -200,6 +212,24 @@ class BaseProvider:
 		"""
 		return NotImplementedError
 
+	def process_credit_card(self, doc, data):
+		"""
+		Implement in the provider class - for a one-time charge of a credit card (not saved / not
+		associated with a party profile)
+
+		If this functionality isn't supported by the provider:
+		- return {"error": _("Not supported.")}
+
+		Successful API call:
+		- save the transaction ID to doc's electronic_payment_reference field
+		- run common.py's process_electronic_payment via queue_method_as_admin
+		- return {"message": "Success", "transaction_id": str(transaction_id)}
+
+		Unsuccessful API call / Error:
+		- return {"error": error_message}
+		"""
+		raise NotImplementedError
+
 	def charge_party_profile(self, doc, data):
 		"""
 		Implement in the provider class - for accepting a payment from an existing party's profile
@@ -230,24 +260,6 @@ class BaseProvider:
 		- delete the payment profile from ERPNext if retain isn't checked in EPP doc
 		- run common.py's process_electronic_payment via queue_method_as_admin if
 		  bypass_je_pe_creation is False (flag is used when called from Check Run)
-		- return {"message": "Success", "transaction_id": str(transaction_id)}
-
-		Unsuccessful API call / Error:
-		- return {"error": error_message}
-		"""
-		raise NotImplementedError
-
-	def process_credit_card(self, doc, data):
-		"""
-		Implement in the provider class - for a one-time charge of a credit card (not saved / not
-		associated with a party profile)
-
-		If this functionality isn't supported by the provider:
-		- return {"error": _("Not supported.")}
-
-		Successful API call:
-		- save the transaction ID to doc's electronic_payment_reference field
-		- run common.py's process_electronic_payment via queue_method_as_admin
 		- return {"message": "Success", "transaction_id": str(transaction_id)}
 
 		Unsuccessful API call / Error:

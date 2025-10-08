@@ -36,23 +36,24 @@ class Wise(BaseProvider):
 		self.gateway = "Wise"
 
 	def get_base_url_and_header(self, company):
+		"""
+		Provider-specific method for API authentication
+		"""
 		settings = frappe.get_doc("Electronic Payment Settings", {"company": company})
 		if not settings:
 			frappe.msgprint(_(f"No Electronic Payment Settings found for {company}"))
 		else:
-			api_key_field = "api_key" if settings.provider == self.provider else "sending_api_key"
-			endpoint_field = "endpoint" if settings.provider == self.provider else "sending_endpoint"
 			api_key = get_decrypted_password(
-				settings.doctype, settings.name, api_key_field, raise_exception=False
+				settings.doctype, settings.name, "wise_sending_api_key", raise_exception=False
 			)
-			base_url = settings.get(endpoint_field)
+			base_url = settings.wise_sending_endpoint
 			headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
 			return base_url, headers
 
 	def process_transaction(self, doc, data):
 		"""
-		Overrides BaseProvider class method because Wise's payment flow requiring quotes and
-		funding steps differ significantly
+		Overrides BaseProvider class method because Wise's payment flow (requiring quotes and
+		funding steps) differs significantly from other providers
 		"""
 		mop = data.mode_of_payment.replace("New ", "")
 		party = get_party_details(doc)
@@ -109,169 +110,16 @@ class Wise(BaseProvider):
 
 		return response
 
-	def create_party_profile(
-		self, doc
-	):  # Never called because process_transaction overrides BaseProvider
-		"""Not used in Wise"""
+	def create_party_profile(self, doc):
+		"""
+		Not used in Wise - never called because process_transaction overrides BaseProvider
+		"""
 		return {"message": "Success", "transaction_id": None}
-
-	def process_credit_card(self, doc, data):
-		"""
-		Currently unsupported - replace with code to generate a Wise payment request link
-		"""
-		return {"error": _("Not supported")}
-
-	def get_profiles(self, company):
-		try:
-			base_url, headers = self.get_base_url_and_header(company)
-			response = requests.get(
-				urljoin(base_url, "/v2/profiles"),
-				headers=headers,
-				timeout=10,
-			)
-			response.raise_for_status()
-			r = response.json()
-			if r:
-				profile_data = []
-				for profile in r:
-					p_type = profile["type"].lower()
-					name = profile["businessName"] if p_type == "business" else profile["fullName"]
-					profile_data.append(f"{p_type.title()} Account for {name} has ID: {profile['id']}")
-
-				return {"message": "Success", "data": profile_data}
-
-		except HTTPError as e_http:
-			err_msg = " ".join([err.get("message") for err in response.json().get("errors", [])])
-			frappe.log_error(
-				message=f"{response.json()}\n\n{e_http}\n\n{frappe.get_traceback()}",
-				title="Error requesting a list of profiles associated with this Wise account.",
-			)
-			return {"error": f"{err_msg}"}
-
-		except requests.exceptions.RequestException as e:
-			frappe.log_error(
-				message=f"{e}\n\n{frappe.get_traceback()}",
-				title="Error requesting a list of profiles associated with this Wise account.",
-			)
-			return {"error": f"{e}"}
-
-	def create_quote(self, doc, data):
-		settings = frappe.get_doc("Electronic Payment Settings", {"company": doc.company})
-		merch_id_field = "ref_id" if settings.provider == self.provider else "sending_ref_id"
-		profile_id = settings.get(merch_id_field)
-
-		payment_amount = data.get("amount") or get_payment_amount(doc, data)
-		discount_amount = 0 if data.get("amount") else get_discount_amount(doc, data)
-		if data.get("ppm_name") and not data.get("additional_charges"):
-			data.update({"additional_charges": calculate_payment_method_fees(doc, data)})
-		total_to_charge = flt(
-			payment_amount - discount_amount + data.get("additional_charges", 0),
-			frappe.get_precision(doc.doctype, "grand_total"),
-		)
-
-		try:
-			base_url, headers = self.get_base_url_and_header(doc.company)
-			response = requests.post(
-				urljoin(base_url, f"/v3/profiles/{profile_id}/quotes"),
-				headers=headers,
-				timeout=10,
-				data=json.dumps(
-					{
-						"sourceCurrency": frappe.defaults.get_global_default("currency"),
-						"targetCurrency": doc.currency,
-						"sourceAmount": None,
-						"targetAmount": total_to_charge,
-						"payOut": "BANK_TRANSFER",
-						"preferredPayIn": "BANK_TRANSFER",  # TODO: give user choice? BALANCE if funding via multi-currency balance
-						"targetAccount": data.get("payment_profile_id"),
-						"pricingConfiguration": {},  # required when configured in client ID
-					}
-				),
-			)
-			response.raise_for_status()
-			r = response.json()
-			if r.get("id"):
-				return {
-					"message": "Success",
-					"quote_id": r["id"],
-					"target_amount": total_to_charge,
-					"quotes": r.get("paymentOptions"),
-				}
-			else:
-				return {"error": "No quote payment options found."}
-
-		except HTTPError as e_http:
-			err_msg = " ".join([err.get("message") for err in response.json().get("errors", [])])
-			frappe.log_error(
-				message=f"{response.json()}\n\n{e_http}\n\n{frappe.get_traceback()}",
-				title="Error trying to create a Quote.",
-			)
-			return {"error": f"{err_msg}"}
-
-		except requests.exceptions.RequestException as e:
-			frappe.log_error(
-				message=f"{e}\n\n{frappe.get_traceback()}",
-				title="Request error while trying to create a Quote.",
-			)
-			return {"error": f"{e}"}
-
-	def edit_payment_profile(self, company, electronic_payment_profile_name, data):
-		# Per docs, can't edit an existing recipient account - must delete, then re-add
-		return {
-			"error": _(
-				"Wise does not support editing payment methods. Please delete the payment method then re-create it."
-			)
-		}
-
-	def get_party_payment_profile(self, company, electronic_payment_profile_name):
-		party, payment_profile_id = frappe.get_value(
-			"Electronic Payment Profile",
-			{"name": electronic_payment_profile_name},
-			["party", "payment_profile_id"],
-		)
-		try:
-			base_url, headers = self.get_base_url_and_header(company)
-			response = requests.get(
-				urljoin(base_url, f"/v2/accounts/{payment_profile_id}"),
-				headers=headers,
-				timeout=10,
-			)
-			response.raise_for_status()
-			r = response.json()
-			if r.get("id"):
-				return {
-					"message": "Success",
-					"data": {
-						"first_name": r.get("name", {}).get("givenName"),
-						"last_name": r.get("name", {}).get("familyName"),
-						"account_type": r.get("details", {}).get("accountType", "").title(),
-						"routing_number": str(r.get("details", {}).get("abartn", "")),
-						"account_number": str(r.get("details", {}).get("accountNumber", "")),
-						"name_on_account": r.get("name", {}).get("fullName"),
-						"echeck_type": None,
-					},
-				}
-
-		except HTTPError as e_http:
-			err_msg = " ".join([err.get("message") for err in response.json().get("errors", [])])
-			frappe.log_error(
-				message=f"{response.json()}\n\n{e_http}\n\n{frappe.get_traceback()}",
-				title=f"Error collecting payment profile for {party}",
-			)
-			return {"error": f"{err_msg}"}
-
-		except requests.exceptions.RequestException as e:
-			frappe.log_error(
-				message=f"{e}\n\n{frappe.get_traceback()}",
-				title=f"Request error collecting payment profile for {party}",
-			)
-			return {"error": f"{e}"}
 
 	def create_party_payment_profile(self, doc, data):
 		party = get_party_details(doc)
 		settings = frappe.get_doc("Electronic Payment Settings", {"company": doc.company})
-		merch_id_field = "ref_id" if settings.provider == self.provider else "sending_ref_id"
-		profile_id = settings.get(merch_id_field)
+		profile_id = settings.wise_sending_profile_id
 		mop = data.mode_of_payment.replace("New ", "")
 
 		try:
@@ -358,13 +206,258 @@ class Wise(BaseProvider):
 			)
 			return {"error": f"{e}"}
 
-	def charge_party_profile(self, doc, data):
+	def get_party_payment_profile(self, company, electronic_payment_profile_name):
+		party, payment_profile_id = frappe.get_value(
+			"Electronic Payment Profile",
+			{"name": electronic_payment_profile_name},
+			["party", "payment_profile_id"],
+		)
+		try:
+			base_url, headers = self.get_base_url_and_header(company)
+			response = requests.get(
+				urljoin(base_url, f"/v2/accounts/{payment_profile_id}"),
+				headers=headers,
+				timeout=10,
+			)
+			response.raise_for_status()
+			r = response.json()
+			if r.get("id"):
+				return {
+					"message": "Success",
+					"data": {
+						"first_name": r.get("name", {}).get("givenName"),
+						"last_name": r.get("name", {}).get("familyName"),
+						"account_type": r.get("details", {}).get("accountType", "").title(),
+						"routing_number": str(r.get("details", {}).get("abartn", "")),
+						"account_number": str(r.get("details", {}).get("accountNumber", "")),
+						"name_on_account": r.get("name", {}).get("fullName"),
+						"echeck_type": None,
+					},
+				}
+
+		except HTTPError as e_http:
+			err_msg = " ".join([err.get("message") for err in response.json().get("errors", [])])
+			frappe.log_error(
+				message=f"{response.json()}\n\n{e_http}\n\n{frappe.get_traceback()}",
+				title=f"Error collecting payment profile for {party}",
+			)
+			return {"error": f"{err_msg}"}
+
+		except requests.exceptions.RequestException as e:
+			frappe.log_error(
+				message=f"{e}\n\n{frappe.get_traceback()}",
+				title=f"Request error collecting payment profile for {party}",
+			)
+			return {"error": f"{e}"}
+
+	def edit_payment_profile(self, company, electronic_payment_profile_name, data):
+		# Per docs, can't edit an existing recipient account - must delete, then re-add
+		return {
+			"error": _(
+				"Wise does not support editing payment methods. Please delete the payment method then re-create it."
+			)
+		}
+
+	def delete_payment_profile(self, company, payment_profile_id):
+		# Delete from ERPNext
+		epp_name, party = frappe.get_value(
+			"Electronic Payment Profile",
+			{"payment_profile_id": payment_profile_id},
+			["name", "party"],
+		)
+		pmm_name = frappe.get_value("Portal Payment Method", {"electronic_payment_profile": epp_name})
+
+		frappe.delete_doc("Portal Payment Method", pmm_name, ignore_permissions=True)
+		frappe.delete_doc("Electronic Payment Profile", epp_name, ignore_permissions=True)
+
+		# Delete from API
+		try:
+			base_url, headers = self.get_base_url_and_header(company)
+			response = requests.delete(
+				urljoin(base_url, f"/v2/accounts/{payment_profile_id}"),
+				headers=headers,
+				timeout=10,
+			)
+			response.raise_for_status()
+			return {"message": "Success"}
+
+		except HTTPError as e_http:
+			err_msg = " ".join([err.get("message") for err in response.json().get("errors", [])])
+			frappe.log_error(
+				message=f"{response.json()}\n\n{e_http}\n\n{frappe.get_traceback()}",
+				title=f"Error deleting payment profile for {party}",
+			)
+			return {"error": f"{err_msg}"}
+
+		except requests.exceptions.RequestException as e:
+			frappe.log_error(
+				message=f"{e}\n\n{frappe.get_traceback()}",
+				title=f"Request error deleting payment profile for {party}",
+			)
+			return {"error": f"{e}"}
+
+	def delete_party_profile(self, company, party, party_profile_id):
+		# Not used in Wise
+		return {"message": "Success"}
+
+	def process_credit_card(self, doc, data):
+		"""
+		Currently unsupported - replace with code to generate a Wise payment request link
+		"""
 		return {"error": _("Not supported")}
+
+	def charge_party_profile(self, doc, data):
+		"""
+		Currently unsupported - replace with code to generate a Wise payment request link
+		"""
+		return {"error": _("Not supported")}
+
+	def create_transfer_to_party_profile(self, doc, data):
+		party = get_party_details(doc)
+		payment_profile_id = data.get("payment_profile_id")
+		quote_id = data.get("quote_id")
+		try:
+			base_url, headers = self.get_base_url_and_header(doc.company)
+			customer_txn_id_uuid = str(uuid.uuid4())  # TODO: save to doc if transfer fails?
+			response = requests.post(
+				urljoin(base_url, "/v1/transfers"),
+				headers=headers,
+				timeout=10,
+				data=json.dumps(
+					{
+						"targetAccount": payment_profile_id,
+						"quoteUuid": quote_id,
+						"customerTransactionId": customer_txn_id_uuid,
+						"details": {
+							"reference": doc.name[-10:],
+							"transferPurpose": "verification.transfers.purpose.pay.bills",
+						},
+					}
+				),
+			)
+			response.raise_for_status()
+			r = response.json()
+			if r.get("id"):
+				transaction_id = r.get("id")
+				if not frappe.get_value(
+					"Electronic Payment Profile",
+					{"party": party.name, "payment_profile_id": payment_profile_id},
+					"retain",
+				):
+					frappe.get_doc(
+						"Electronic Payment Profile",
+						{"party": party.name, "payment_profile_id": payment_profile_id},
+					).delete()
+
+					try:
+						del_response = requests.delete(
+							urljoin(base_url, f"/v2/accounts/{payment_profile_id}"),
+							headers=headers,
+							timeout=10,
+						)
+						del_response.raise_for_status()
+
+					# If deletion on API-side fails, log error but continue processing
+					except HTTPError as e_http:
+						err_msg = " ".join([err.get("message") for err in del_response.json().get("errors", [])])
+						frappe.log_error(
+							message=f"{del_response.json()}\n\n{e_http}\n\n{frappe.get_traceback()}",
+							title=f"Error deleting payment profile used for {doc.name}",
+						)
+
+					except requests.exceptions.RequestException as e:
+						frappe.log_error(
+							message=f"{e}\n\n{frappe.get_traceback()}",
+							title=f"Request error deleting payment profile used for {doc.name}",
+						)
+
+				queue_method_as_admin(
+					process_electronic_payment,
+					doc=doc,
+					data=data,
+					transaction_id=str(transaction_id),
+				)
+				return {
+					"message": "Success",
+					"transaction_id": str(transaction_id),
+				}
+
+		except HTTPError as e_http:
+			err_msg = " ".join([err.get("message") for err in response.json().get("errors", [])])
+			frappe.log_error(
+				message=f"{response.json()}\n\n{e_http}\n\n{frappe.get_traceback()}",
+				title="Error creating Transfer.",
+			)
+			return {"error": f"{err_msg}"}
+
+		except requests.exceptions.RequestException as e:
+			frappe.log_error(
+				message=f"{e}\n\n{frappe.get_traceback()}", title="Request error creating Transfer."
+			)
+			return {"error": f"{e}"}
+
+	def create_quote(self, doc, data):
+		settings = frappe.get_doc("Electronic Payment Settings", {"company": doc.company})
+		profile_id = settings.wise_sending_profile_id
+
+		payment_amount = data.get("amount") or get_payment_amount(doc, data)
+		discount_amount = 0 if data.get("amount") else get_discount_amount(doc, data)
+		if data.get("ppm_name") and not data.get("additional_charges"):
+			data.update({"additional_charges": calculate_payment_method_fees(doc, data)})
+		total_to_charge = flt(
+			payment_amount - discount_amount + data.get("additional_charges", 0),
+			frappe.get_precision(doc.doctype, "grand_total"),
+		)
+
+		try:
+			base_url, headers = self.get_base_url_and_header(doc.company)
+			response = requests.post(
+				urljoin(base_url, f"/v3/profiles/{profile_id}/quotes"),
+				headers=headers,
+				timeout=10,
+				data=json.dumps(
+					{
+						"sourceCurrency": frappe.defaults.get_global_default("currency"),
+						"targetCurrency": doc.currency,
+						"sourceAmount": None,
+						"targetAmount": total_to_charge,
+						"payOut": "BANK_TRANSFER",
+						"preferredPayIn": "BANK_TRANSFER",  # TODO: give user choice? BALANCE if funding via multi-currency balance
+						"targetAccount": data.get("payment_profile_id"),
+						"pricingConfiguration": {},  # required when configured in client ID
+					}
+				),
+			)
+			response.raise_for_status()
+			r = response.json()
+			if r.get("id"):
+				return {
+					"message": "Success",
+					"quote_id": r["id"],
+					"target_amount": total_to_charge,
+					"quotes": r.get("paymentOptions"),
+				}
+			else:
+				return {"error": "No quote payment options found."}
+
+		except HTTPError as e_http:
+			err_msg = " ".join([err.get("message") for err in response.json().get("errors", [])])
+			frappe.log_error(
+				message=f"{response.json()}\n\n{e_http}\n\n{frappe.get_traceback()}",
+				title="Error trying to create a Quote.",
+			)
+			return {"error": f"{err_msg}"}
+
+		except requests.exceptions.RequestException as e:
+			frappe.log_error(
+				message=f"{e}\n\n{frappe.get_traceback()}",
+				title="Request error while trying to create a Quote.",
+			)
+			return {"error": f"{e}"}
 
 	def create_batch_group(self, doc, data):
 		settings = frappe.get_doc("Electronic Payment Settings", {"company": doc.company})
-		merch_id_field = "ref_id" if settings.provider == self.provider else "sending_ref_id"
-		profile_id = settings.get(merch_id_field)
+		profile_id = settings.wise_sending_profile_id
 		pmt_term = f"|{data.get('payment_term')}" if data.get("payment_term") else ""
 		batch_name = f"{doc.name}{pmt_term}"
 		try:
@@ -402,8 +495,7 @@ class Wise(BaseProvider):
 
 	def create_batch_group_transfer(self, doc, data):
 		settings = frappe.get_doc("Electronic Payment Settings", {"company": doc.company})
-		merch_id_field = "ref_id" if settings.provider == self.provider else "sending_ref_id"
-		profile_id = settings.get(merch_id_field)
+		profile_id = settings.wise_sending_profile_id
 		payment_profile_id = data.get("payment_profile_id")
 		batch_id = data.get("batch_id")
 		quote_id = data.get("quote_id")
@@ -449,8 +541,7 @@ class Wise(BaseProvider):
 
 	def complete_batch_group(self, doc, data):
 		settings = frappe.get_doc("Electronic Payment Settings", {"company": doc.company})
-		merch_id_field = "ref_id" if settings.provider == self.provider else "sending_ref_id"
-		profile_id = settings.get(merch_id_field)
+		profile_id = settings.wise_sending_profile_id
 		batch_id = data.get("batch_id")
 		try:
 			base_url, headers = self.get_base_url_and_header(doc.company)
@@ -518,8 +609,7 @@ class Wise(BaseProvider):
 		party = get_party_details(doc)
 		payment_profile_id = data.get("payment_profile_id")
 		settings = frappe.get_doc("Electronic Payment Settings", {"company": doc.company})
-		merch_id_field = "ref_id" if settings.provider == self.provider else "sending_ref_id"
-		profile_id = settings.get(merch_id_field)
+		profile_id = settings.wise_sending_profile_id
 		batch_id = data.get("batch_id")
 		account_id = settings.wise_linked_bank_account_id
 		fees = flt(
@@ -605,90 +695,6 @@ class Wise(BaseProvider):
 			frappe.log_error(
 				message=f"{e}\n\n{frappe.get_traceback()}",
 				title="Error funding batch group transfer with a direct debit account.",
-			)
-			return {"error": f"{e}"}
-
-	def create_transfer_to_party_profile(self, doc, data):
-		party = get_party_details(doc)
-		payment_profile_id = data.get("payment_profile_id")
-		quote_id = data.get("quote_id")
-		try:
-			base_url, headers = self.get_base_url_and_header(doc.company)
-			customer_txn_id_uuid = str(uuid.uuid4())  # TODO: save to doc if transfer fails?
-			response = requests.post(
-				urljoin(base_url, "/v1/transfers"),  # assumes regular transfer
-				headers=headers,
-				timeout=10,
-				data=json.dumps(
-					{
-						"targetAccount": payment_profile_id,
-						"quoteUuid": quote_id,
-						"customerTransactionId": customer_txn_id_uuid,
-						"details": {
-							"reference": doc.name[-10:],
-							"transferPurpose": "verification.transfers.purpose.pay.bills",
-						},
-					}
-				),
-			)
-			response.raise_for_status()
-			r = response.json()
-			if r.get("id"):
-				transaction_id = r.get("id")
-				if not frappe.get_value(
-					"Electronic Payment Profile",
-					{"party": party.name, "payment_profile_id": payment_profile_id},
-					"retain",
-				):
-					frappe.get_doc(
-						"Electronic Payment Profile",
-						{"party": party.name, "payment_profile_id": payment_profile_id},
-					).delete()
-
-					try:
-						del_response = requests.delete(
-							urljoin(base_url, f"/v2/accounts/{payment_profile_id}"),
-							headers=headers,
-							timeout=10,
-						)
-						del_response.raise_for_status()
-
-					# If deletion on API-side fails, log error but continue processing
-					except HTTPError as e_http:
-						err_msg = " ".join([err.get("message") for err in del_response.json().get("errors", [])])
-						frappe.log_error(
-							message=f"{del_response.json()}\n\n{e_http}\n\n{frappe.get_traceback()}",
-							title=f"Error deleting payment profile used for {doc.name}",
-						)
-
-					except requests.exceptions.RequestException as e:
-						frappe.log_error(
-							message=f"{e}\n\n{frappe.get_traceback()}",
-							title=f"Request error deleting payment profile used for {doc.name}",
-						)
-
-				queue_method_as_admin(
-					process_electronic_payment,
-					doc=doc,
-					data=data,
-					transaction_id=str(transaction_id),
-				)
-				return {
-					"message": "Success",
-					"transaction_id": str(transaction_id),
-				}
-
-		except HTTPError as e_http:
-			err_msg = " ".join([err.get("message") for err in response.json().get("errors", [])])
-			frappe.log_error(
-				message=f"{response.json()}\n\n{e_http}\n\n{frappe.get_traceback()}",
-				title="Error creating Transfer.",
-			)
-			return {"error": f"{err_msg}"}
-
-		except requests.exceptions.RequestException as e:
-			frappe.log_error(
-				message=f"{e}\n\n{frappe.get_traceback()}", title="Request error creating Transfer."
 			)
 			return {"error": f"{e}"}
 
@@ -813,47 +819,39 @@ class Wise(BaseProvider):
 			)
 			return {"error": f"{e}"}
 
-	def delete_payment_profile(self, company, payment_profile_id):
-		# Delete from ERPNext
-		epp_name, party = frappe.get_value(
-			"Electronic Payment Profile",
-			{"payment_profile_id": payment_profile_id},
-			["name", "party"],
-		)
-		pmm_name = frappe.get_value("Portal Payment Method", {"electronic_payment_profile": epp_name})
-
-		frappe.delete_doc("Portal Payment Method", pmm_name, ignore_permissions=True)
-		frappe.delete_doc("Electronic Payment Profile", epp_name, ignore_permissions=True)
-
-		# Delete from API
+	def get_profiles(self, company):
 		try:
 			base_url, headers = self.get_base_url_and_header(company)
-			response = requests.delete(
-				urljoin(base_url, f"/v2/accounts/{payment_profile_id}"),
+			response = requests.get(
+				urljoin(base_url, "/v2/profiles"),
 				headers=headers,
 				timeout=10,
 			)
 			response.raise_for_status()
-			return {"message": "Success"}
+			r = response.json()
+			if r:
+				profile_data = []
+				for profile in r:
+					p_type = profile["type"].lower()
+					name = profile["businessName"] if p_type == "business" else profile["fullName"]
+					profile_data.append(f"{p_type.title()} Account for {name} has ID: {profile['id']}")
+
+				return {"message": "Success", "data": profile_data}
 
 		except HTTPError as e_http:
 			err_msg = " ".join([err.get("message") for err in response.json().get("errors", [])])
 			frappe.log_error(
 				message=f"{response.json()}\n\n{e_http}\n\n{frappe.get_traceback()}",
-				title=f"Error deleting payment profile for {party}",
+				title="Error requesting a list of profiles associated with this Wise account.",
 			)
 			return {"error": f"{err_msg}"}
 
 		except requests.exceptions.RequestException as e:
 			frappe.log_error(
 				message=f"{e}\n\n{frappe.get_traceback()}",
-				title=f"Request error deleting payment profile for {party}",
+				title="Error requesting a list of profiles associated with this Wise account.",
 			)
 			return {"error": f"{e}"}
-
-	def delete_party_profile(self, company, party, party_profile_id):
-		# Not used in Wise
-		return {"message": "Success"}
 
 	def create_direct_debit_account(self, company, data):
 		"""
@@ -862,7 +860,7 @@ class Wise(BaseProvider):
 		"routing_number", "account_number", and "account_type" (either "Checking" or "Savings")
 		"""
 		settings = frappe.get_doc("Electronic Payment Settings", {"company": company})
-		profile_id = settings.sending_ref_id
+		profile_id = settings.wise_sending_profile_id
 		try:
 			base_url, headers = self.get_base_url_and_header(company)
 			response = requests.post(
@@ -909,7 +907,7 @@ class Wise(BaseProvider):
 
 	def get_direct_debit_accounts(self, company):
 		settings = frappe.get_doc("Electronic Payment Settings", {"company": company})
-		profile_id = settings.sending_ref_id
+		profile_id = settings.wise_sending_profile_id
 		account_type = settings.wise_bank_account_type.upper()
 		account_currency = settings.wise_bank_account_currency
 		try:

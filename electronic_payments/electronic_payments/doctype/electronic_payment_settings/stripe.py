@@ -17,7 +17,6 @@ from electronic_payments.electronic_payments.doctype.electronic_payment_settings
 )
 from electronic_payments.electronic_payments.doctype.electronic_payment_settings.common import (
 	calculate_payment_method_fees,
-	exceeds_credit_limit,
 	get_discount_amount,
 	get_party_details,
 	get_party_profile_id,
@@ -72,52 +71,16 @@ class Stripe(BaseProvider):
 		self.gateway = "Stripe"
 
 	def get_password(self, company):
+		"""
+		Provider-specific method for API authentication
+		"""
 		settings = frappe.get_doc("Electronic Payment Settings", {"company": company})
 		if not settings:
 			frappe.msgprint(_(f"No Electronic Payment Settings found for {company}"))
 		else:
-			api_key_field = "api_key" if settings.provider == self.provider else "sending_api_key"
 			stripe.api_key = get_decrypted_password(
-				settings.doctype, settings.name, api_key_field, raise_exception=False
+				settings.doctype, settings.name, "stripe_accepting_api_key", raise_exception=False
 			)
-
-	def process_transaction(self, doc, data):
-		mop = data.mode_of_payment.replace("New ", "")
-		party = get_party_details(doc)
-		save_only = data.save_data == "Save payment data only"
-
-		if mop.startswith("Saved"):
-			if data.get("subject_to_credit_limit") and exceeds_credit_limit(doc, data):
-				return {"error": "Credit Limit exceeded for selected Mode of Payment"}
-			if party.doctype == "Customer":
-				response = self.charge_party_profile(doc, data)
-			else:
-				response = {"error": _("Not Supported.")}
-		elif mop == "ACH":
-			# TODO: update UI to handle response, handle save_data option
-			response = self.create_payment_intent(doc, data)
-		else:  # New Card
-			if data.get("save_data") == "Charge now":
-				response = self.process_credit_card(doc, data)
-			else:  # saves payment data (will delete payment profile doc after charging if for txn only)
-				party_response = self.create_party_profile(doc)
-				if party_response.get("message") == "Success":
-					data.update({"party_profile_id": party_response.get("transaction_id")})
-					pmt_profile_response = self.create_party_payment_profile(doc, data)
-					if pmt_profile_response.get("message") == "Success":
-						pp_doc = pmt_profile_response.get("payment_profile_doc")
-						data.update({"payment_profile_id": pp_doc.payment_profile_id})
-						if save_only:
-							return pmt_profile_response
-						if party.doctype == "Customer":
-							response = self.charge_party_profile(doc, data)
-						else:
-							response = {"error": _("Not Supported.")}
-					else:  # error creating the customer payment profile
-						return pmt_profile_response
-				else:  # error creating customer profile
-					return party_response
-		return response
 
 	def currency_multiplier(self, currency):
 		zero_decimal = (
@@ -227,92 +190,6 @@ class Stripe(BaseProvider):
 			try:
 				frappe.log_error(message=frappe.get_traceback(), title=f"{e.code}: {e.type}. {e.message}")
 				return {"error": f"{e.code}: {e.type}. {e.message}"}
-			except Exception as _e:  # non-Stripe error, something else went wrong
-				frappe.log_error(message=frappe.get_traceback(), title=f"{e}")
-				return {"error": f"{e}"}
-
-	def create_payment_method(self, doc, data):
-		self.get_password(doc.company)
-		try:
-			if data.mode_of_payment.replace("New ", "") == "Card":
-				card_number = data.get("card_number")
-				card_number = card_number.replace(" ", "")
-				# TODO: replace with UI data collection
-				response = stripe.PaymentMethod.create(
-					type="card",
-					card={
-						"number": card_number,
-						"exp_month": int(data.get("card_expiration_date").split("-")[1]),
-						"exp_year": int(data.get("card_expiration_date").split("-")[0]),
-						"cvc": data.get("card_cvc"),
-					},
-				)
-			elif (
-				data.mode_of_payment.replace("New ", "") == "ACH"
-			):  # TODO: replace with UI data collection / mandate / verification process
-				response = stripe.PaymentMethod.create(
-					type="us_bank_account",
-					us_bank_account={
-						"account_holder_type": frappe.get_value(
-							"Customer", doc.customer, "customer_type"
-						).lower(),  # 'individual' or 'company'
-						"routing_number": str(data.get("routing_number")),
-						"account_number": str(data.get("account_number")),
-					},
-					billing_details={"name": data.get("account_holders_name"), "email": ""},
-				)
-			else:
-				return {"error": "Unsupported payment method provided."}
-
-			return {"message": "Success", "transaction_id": response.id}
-		except Exception as e:
-			try:
-				frappe.log_error(message=frappe.get_traceback(), title=f"{e.code}: {e.type}. {e.message}")
-				return {
-					"error": f"{e.code}: {e.type}. {e.message}"
-				}  # e.code has status code, e.type is one of 4 error types, e.message is a human-readable message providing more details about the error
-			except Exception as _e:  # non-Stripe error, something else went wrong
-				frappe.log_error(message=frappe.get_traceback(), title=f"{e}")
-				return {"error": f"{e}"}
-
-	def create_payment_intent(self, doc, data):
-		# For New ACH transactions, creates an un-confirmed PaymentIntent and returns the client secret
-		self.get_password(doc.company)
-		try:
-			total_to_charge = flt(
-				doc.grand_total + (data.get("additional_charges") or 0),
-				frappe.get_precision(doc.doctype, "grand_total"),
-			)
-			customer_response = self.create_party_profile(doc)
-			if customer_response.get("message") == "Success":
-				currency = frappe.defaults.get_global_default("currency").lower()
-				response = stripe.PaymentIntent.create(
-					amount=int(total_to_charge * self.currency_multiplier(currency)),
-					currency=currency,
-					customer=customer_response.get("transaction_id"),
-					description=doc.name,
-					setup_future_usage="off_session",  # Indicates this payment method will be used in future PaymentIntents and saves to Customer. off_session = can charge customer at later time, on_session = can only charge in live session
-					payment_method_types=["us_bank_account", "card"],
-					# payment_method_options={
-					# 	"us_bank_account": {
-					# 	"financial_connections": {"permissions": ["payment_method", "balances"]},
-					# 	},
-					# },
-				)
-				return {
-					"message": "Success",
-					"transaction_id": response.id,
-					"customer_profile_id": response.customer,
-					"client_secret": response.client_secret,
-				}
-			else:  # error creating customer profile
-				return customer_response
-		except Exception as e:
-			try:
-				frappe.log_error(message=frappe.get_traceback(), title=f"{e.code}: {e.type}. {e.message}")
-				return {
-					"error": f"{e.code}: {e.type}. {e.message}"
-				}  # e.code has status code, e.type is one of 4 error types, e.message is a human-readable message providing more details about the error
 			except Exception as _e:  # non-Stripe error, something else went wrong
 				frappe.log_error(message=frappe.get_traceback(), title=f"{e}")
 				return {"error": f"{e}"}
@@ -460,6 +337,64 @@ class Stripe(BaseProvider):
 				frappe.log_error(message=frappe.get_traceback(), title=f"{e}")
 				return {"error": f"{e}"}
 
+	def process_credit_card(self, doc, data):
+		self.get_password(doc.company)
+		try:
+			pm_response = self.create_payment_method(doc, data)
+			if pm_response.get("message") == "Success":
+				currency = frappe.defaults.get_global_default("currency").lower()
+				card_number = data.get("card_number")
+				card_number = card_number.replace(" ", "")
+				payment_amount = data.get("amount") or get_payment_amount(doc, data)
+				discount_amount = 0 if data.get("amount") else get_discount_amount(doc, data)
+				if data.get("ppm_name") and not data.get("additional_charges"):
+					data.update({"additional_charges": calculate_payment_method_fees(doc, data)})
+				total_to_charge = flt(
+					payment_amount - discount_amount + data.get("additional_charges", 0),
+					frappe.get_precision(doc.doctype, "grand_total"),
+				)
+				response = stripe.PaymentIntent.create(
+					amount=int(total_to_charge * self.currency_multiplier(currency)),
+					currency=currency,
+					confirm=True,
+					description=doc.name,
+					payment_method=pm_response.get("transaction_id"),
+					# automatic_payment_methods={"enabled": True},  # Company would need to set up payment methods in their Stripe dashboard
+					# off_session=False if data.get('save_date') != 'Charge now' else True,  # Use with confirm=True and collecting payment data to charge later
+					# customer=None,  # Stripe customer ID. If provided and setup_future_usage is present, will save payment method to that customer for future use
+					# setup_future_usage='off_session',  # Indicates this payment method will be used in future PaymentIntents. Saves to Customer if present (if not, can be attached to a customer after transaction completes). off_session = can charge customer at later time, on_session = can only charge in live session
+				)
+
+				if response.status == "succeeded":
+					frappe.db.set_value(doc.doctype, doc.name, "electronic_payment_reference", str(response.id))
+					queue_method_as_admin(
+						process_electronic_payment, doc=doc, data=data, transaction_id=str(response.id)
+					)
+					return {"message": "Success", "transaction_id": response.id}
+				elif response.status == "processing":
+					# TODO: handle follow up in UI
+					return {"error": "Transaction processing"}
+				elif response.status in [
+					"requires_action",
+					"requires_confirmation",
+					"requires_capture",
+				]:
+					# TODO: requires_action needs customer authentication (handle on client-side), parameter values should bypass other statuses
+					return {"error": f'Further action required: {response.status.split("_")[-1]}'}
+				else:  # 'requires_payment_method' aka the payment attempt failed
+					return {"error": "Payment failed"}
+			else:  # error creating the payment method
+				return pm_response
+		except Exception as e:
+			try:
+				frappe.log_error(message=frappe.get_traceback(), title=f"{e.code}: {e.type}. {e.message}")
+				return {
+					"error": f"{e.code}: {e.type}. {e.message}"
+				}  # e.code has status code, e.type is one of 4 error types, e.message is a human-readable message providing more details about the error
+			except Exception as _e:  # non-Stripe error, something else went wrong
+				frappe.log_error(message=frappe.get_traceback(), title=f"{e}")
+				return {"error": f"{e}"}
+
 	def charge_party_profile(self, doc, data):
 		self.get_password(doc.company)
 		party = get_party_details(doc)
@@ -528,69 +463,11 @@ class Stripe(BaseProvider):
 	def create_transfer_to_party_profile(self, doc, data, bypass_je_pe_creation=False):
 		return {"error": _("Not supported.")}
 
-	def process_credit_card(self, doc, data):
-		self.get_password(doc.company)
-		try:
-			pm_response = self.create_payment_method(doc, data)
-			if pm_response.get("message") == "Success":
-				currency = frappe.defaults.get_global_default("currency").lower()
-				card_number = data.get("card_number")
-				card_number = card_number.replace(" ", "")
-				payment_amount = data.get("amount") or get_payment_amount(doc, data)
-				discount_amount = 0 if data.get("amount") else get_discount_amount(doc, data)
-				if data.get("ppm_name") and not data.get("additional_charges"):
-					data.update({"additional_charges": calculate_payment_method_fees(doc, data)})
-				total_to_charge = flt(
-					payment_amount - discount_amount + data.get("additional_charges", 0),
-					frappe.get_precision(doc.doctype, "grand_total"),
-				)
-				response = stripe.PaymentIntent.create(
-					amount=int(total_to_charge * self.currency_multiplier(currency)),
-					currency=currency,
-					confirm=True,
-					description=doc.name,
-					payment_method=pm_response.get("transaction_id"),
-					# automatic_payment_methods={"enabled": True},  # Company would need to set up payment methods in their Stripe dashboard
-					# off_session=False if data.get('save_date') != 'Charge now' else True,  # Use with confirm=True and collecting payment data to charge later
-					# customer=None,  # Stripe customer ID. If provided and setup_future_usage is present, will save payment method to that customer for future use
-					# setup_future_usage='off_session',  # Indicates this payment method will be used in future PaymentIntents. Saves to Customer if present (if not, can be attached to a customer after transaction completes). off_session = can charge customer at later time, on_session = can only charge in live session
-				)
-
-				if response.status == "succeeded":
-					frappe.db.set_value(doc.doctype, doc.name, "electronic_payment_reference", str(response.id))
-					queue_method_as_admin(
-						process_electronic_payment, doc=doc, data=data, transaction_id=str(response.id)
-					)
-					return {"message": "Success", "transaction_id": response.id}
-				elif response.status == "processing":
-					# TODO: handle follow up in UI
-					return {"error": "Transaction processing"}
-				elif response.status in [
-					"requires_action",
-					"requires_confirmation",
-					"requires_capture",
-				]:
-					# TODO: requires_action needs customer authentication (handle on client-side), parameter values should bypass other statuses
-					return {"error": f'Further action required: {response.status.split("_")[-1]}'}
-				else:  # 'requires_payment_method' aka the payment attempt failed
-					return {"error": "Payment failed"}
-			else:  # error creating the payment method
-				return pm_response
-		except Exception as e:
-			try:
-				frappe.log_error(message=frappe.get_traceback(), title=f"{e.code}: {e.type}. {e.message}")
-				return {
-					"error": f"{e.code}: {e.type}. {e.message}"
-				}  # e.code has status code, e.type is one of 4 error types, e.message is a human-readable message providing more details about the error
-			except Exception as _e:  # non-Stripe error, something else went wrong
-				frappe.log_error(message=frappe.get_traceback(), title=f"{e}")
-				return {"error": f"{e}"}
-
 	def refund_transaction(self, doc, data):
 		"""
 		TODO: clarify where this function is called and what data can be passed
-		Function needs: transaction ID of original charge and amount to refund
-		        (amount technically only needed if partial refund, will default to entire charge)
+		Function needs: transaction ID of original charge and amount to refund (amount technically
+		only needed if partial refund, will default to entire charge)
 		"""
 		self.get_password(doc.company)
 		orig_transaction_id = doc.electronic_payment_reference
@@ -623,6 +500,92 @@ class Stripe(BaseProvider):
 
 	def get_transaction_details(self, company, transaction_id):
 		return {"error": _("Not supported.")}
+
+	def create_payment_method(self, doc, data):
+		self.get_password(doc.company)
+		try:
+			if data.mode_of_payment.replace("New ", "") == "Card":
+				card_number = data.get("card_number")
+				card_number = card_number.replace(" ", "")
+				# TODO: replace with UI data collection
+				response = stripe.PaymentMethod.create(
+					type="card",
+					card={
+						"number": card_number,
+						"exp_month": int(data.get("card_expiration_date").split("-")[1]),
+						"exp_year": int(data.get("card_expiration_date").split("-")[0]),
+						"cvc": data.get("card_cvc"),
+					},
+				)
+			elif (
+				data.mode_of_payment.replace("New ", "") == "ACH"
+			):  # TODO: replace with UI data collection / mandate / verification process
+				response = stripe.PaymentMethod.create(
+					type="us_bank_account",
+					us_bank_account={
+						"account_holder_type": frappe.get_value(
+							"Customer", doc.customer, "customer_type"
+						).lower(),  # 'individual' or 'company'
+						"routing_number": str(data.get("routing_number")),
+						"account_number": str(data.get("account_number")),
+					},
+					billing_details={"name": data.get("account_holders_name"), "email": ""},
+				)
+			else:
+				return {"error": "Unsupported payment method provided."}
+
+			return {"message": "Success", "transaction_id": response.id}
+		except Exception as e:
+			try:
+				frappe.log_error(message=frappe.get_traceback(), title=f"{e.code}: {e.type}. {e.message}")
+				return {
+					"error": f"{e.code}: {e.type}. {e.message}"
+				}  # e.code has status code, e.type is one of 4 error types, e.message is a human-readable message providing more details about the error
+			except Exception as _e:  # non-Stripe error, something else went wrong
+				frappe.log_error(message=frappe.get_traceback(), title=f"{e}")
+				return {"error": f"{e}"}
+
+	def create_payment_intent(self, doc, data):
+		# For New ACH transactions, creates an un-confirmed PaymentIntent and returns the client secret
+		self.get_password(doc.company)
+		try:
+			total_to_charge = flt(
+				doc.grand_total + (data.get("additional_charges") or 0),
+				frappe.get_precision(doc.doctype, "grand_total"),
+			)
+			customer_response = self.create_party_profile(doc)
+			if customer_response.get("message") == "Success":
+				currency = frappe.defaults.get_global_default("currency").lower()
+				response = stripe.PaymentIntent.create(
+					amount=int(total_to_charge * self.currency_multiplier(currency)),
+					currency=currency,
+					customer=customer_response.get("transaction_id"),
+					description=doc.name,
+					setup_future_usage="off_session",  # Indicates this payment method will be used in future PaymentIntents and saves to Customer. off_session = can charge customer at later time, on_session = can only charge in live session
+					payment_method_types=["us_bank_account", "card"],
+					# payment_method_options={
+					# 	"us_bank_account": {
+					# 	"financial_connections": {"permissions": ["payment_method", "balances"]},
+					# 	},
+					# },
+				)
+				return {
+					"message": "Success",
+					"transaction_id": response.id,
+					"customer_profile_id": response.customer,
+					"client_secret": response.client_secret,
+				}
+			else:  # error creating customer profile
+				return customer_response
+		except Exception as e:
+			try:
+				frappe.log_error(message=frappe.get_traceback(), title=f"{e.code}: {e.type}. {e.message}")
+				return {
+					"error": f"{e.code}: {e.type}. {e.message}"
+				}  # e.code has status code, e.type is one of 4 error types, e.message is a human-readable message providing more details about the error
+			except Exception as _e:  # non-Stripe error, something else went wrong
+				frappe.log_error(message=frappe.get_traceback(), title=f"{e}")
+				return {"error": f"{e}"}
 
 
 def fetch_stripe_transactions(settings):

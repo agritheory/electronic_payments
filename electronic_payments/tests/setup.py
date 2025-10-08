@@ -938,7 +938,7 @@ def create_electronic_payment_settings(settings):
 			"provider": "Mercury",
 			"endpoint": "https://api-sandbox.mercury.com",
 			"api_key": os.environ.get("MERCURY_API_KEY"),
-			"merchant_id": os.environ.get("MERCURY_ACCOUNT_ID"),
+			"account_id": os.environ.get("MERCURY_ACCOUNT_ID"),
 		},
 		"s": {
 			"check": stripe_present,
@@ -950,7 +950,7 @@ def create_electronic_payment_settings(settings):
 			"provider": "Wise",
 			"endpoint": "https://api.sandbox.transferwise.tech",
 			"api_key": os.environ.get("WISE_API_KEY"),
-			"merchant_id": os.environ.get("WISE_ACCOUNT_ID"),
+			"profile_id": os.environ.get("WISE_ACCOUNT_ID"),
 		},
 	}
 	pa_code = settings.get("provider")
@@ -983,10 +983,6 @@ def create_electronic_payment_settings(settings):
 	else:
 		eps.enable_accepting = 1
 		eps.provider = provider_mapping[pa_code]["provider"]
-		eps.ref_id = provider_mapping[pa_code].get("merchant_id")
-		eps.endpoint = provider_mapping[pa_code].get("endpoint")
-		eps.api_key = provider_mapping[pa_code]["api_key"]
-		eps.transaction_key = provider_mapping[pa_code].get("transaction_key")
 		eps.deposit_account = "1201 - Primary Checking - CFC"
 		eps.accepting_fee_account = "5223 - Electronic Payments Provider Fees - CFC"
 		eps.accepting_clearing_account = "1320 - Electronic Payments Receivable - CFC"
@@ -994,8 +990,21 @@ def create_electronic_payment_settings(settings):
 			"Account", {"name": ["like", "%Sales - CFC%"]}, "name"
 		)
 
+		# Provider-specific fields
+		if pa_code == "a":
+			eps.authorize_accepting_endpoint = provider_mapping[pa_code]["endpoint"]
+			eps.authorize_accepting_api_key = provider_mapping[pa_code]["api_key"]
+			eps.authorize_accepting_transaction_key = provider_mapping[pa_code]["transaction_key"]
+		elif pa_code == "s":
+			eps.stripe_accepting_api_key = provider_mapping[pa_code]["api_key"]
+
 	if not ps_code:
 		eps.enable_sending = 0
+	elif ps_code and not provider_mapping[ps_code]["check"]:
+		eps.enable_sending = 0
+		print(
+			f"No API Keys found for given sending provider: {provider_mapping[ps_code]['provider']}. Settings will not enable sending payments - this may be changed manually in the Electronic Payments Settings doc."
+		)
 	elif ps_code == "m" and not os.environ.get("MERCURY_ACCOUNT_ID"):
 		eps.enable_sending = 0
 		print(
@@ -1006,24 +1015,30 @@ def create_electronic_payment_settings(settings):
 		print(
 			"No Wise profile ID found - this is required to create a Settings document. Settings will not enable sending payments - enter your API credentials manually, click save, then collect the ID from the displayed options."
 		)
-	elif ps_code and not provider_mapping[ps_code]["check"]:
-		eps.enable_sending = 0
-		print(
-			f"No API Keys found for given sending provider: {provider_mapping[ps_code]['provider']}. Settings will not enable sending payments - this may be changed manually in the Electronic Payments Settings doc."
-		)
 	else:
 		eps.enable_sending = 1
 		eps.sending_provider = provider_mapping[ps_code]["provider"]
-		eps.sending_ref_id = provider_mapping[ps_code].get("merchant_id")
-		eps.sending_endpoint = provider_mapping[ps_code].get("endpoint")
-		eps.sending_api_key = provider_mapping[ps_code]["api_key"]
-		eps.sending_transaction_key = provider_mapping[ps_code].get("transaction_key")
 		eps.withdrawal_account = "1201 - Primary Checking - CFC"
 		eps.sending_fee_account = "5223 - Electronic Payments Provider Fees - CFC"
 		eps.sending_clearing_account = "2130 - Electronic Payments Payable - CFC"
 		eps.sending_payment_discount_account = frappe.get_value(
 			"Account", {"name": ["like", "%Miscellaneous Expenses - CFC%"]}, "name"
 		)
+
+		# Provider-specific fields
+		if ps_code == "a":
+			eps.authorize_sending_endpoint = provider_mapping[ps_code]["endpoint"]
+			eps.authorize_sending_api_key = provider_mapping[ps_code]["api_key"]
+			eps.authorize_sending_transaction_key = provider_mapping[ps_code]["transaction_key"]
+		elif ps_code == "m":
+			eps.mercury_sending_endpoint = provider_mapping[ps_code]["endpoint"]
+			eps.mercury_sending_api_key = provider_mapping[ps_code]["api_key"]
+			eps.mercury_sending_account_id = provider_mapping[ps_code]["account_id"]
+		elif ps_code == "w":
+			eps.wise_sending_endpoint = provider_mapping[ps_code]["endpoint"]
+			eps.wise_sending_api_key = provider_mapping[ps_code]["api_key"]
+			eps.wise_sending_profile_id = provider_mapping[ps_code]["profile_id"]
+
 	eps.save()
 
 

@@ -6,17 +6,18 @@
 	"editable_grid": 1,
 	"engine": "InnoDB",
 	"field_order": [
-		"accepting_payments_tab",
+		"general_tab",
 		"company",
 		"create_ppm",
+		"accepting_payments_tab",
 		"enable_accepting",
-		"accepting_config_section",
 		"provider",
-		"ref_id",
-		"column_break_zyrs",
-		"endpoint",
-		"api_key",
-		"transaction_key",
+		"authorizenet_accepting_configuration_section",
+		"authorize_accepting_endpoint",
+		"authorize_accepting_api_key",
+		"authorize_accepting_transaction_key",
+		"stripe_accepting_configuration_section",
+		"stripe_accepting_api_key",
 		"section_break_5",
 		"deposit_account",
 		"accepting_fee_account",
@@ -28,15 +29,23 @@
 		"sending_payments_tab",
 		"section_break_avdt",
 		"enable_sending",
-		"sending_config_section",
 		"sending_provider",
-		"sending_ref_id",
+		"authorizenet_sending_configuration_section",
+		"authorize_sending_endpoint",
+		"authorize_sending_api_key",
+		"authorize_sending_transaction_key",
+		"mercury_sending_configuration_section",
+		"mercury_sending_endpoint",
+		"mercury_sending_api_key",
+		"column_break_ndye",
+		"mercury_sending_account_id",
+		"wise_sending_configuration_section",
+		"wise_sending_endpoint",
+		"wise_sending_api_key",
+		"wise_sending_profile_id",
+		"column_break_nihr",
 		"fund_wise_with_direct_debit",
 		"wise_linked_bank_account_id",
-		"column_break_cssi",
-		"sending_endpoint",
-		"sending_api_key",
-		"sending_transaction_key",
 		"wise_bank_account_type",
 		"wise_bank_account_currency",
 		"sending_payments_accounts_section",
@@ -59,23 +68,6 @@
 			"unique": 1
 		},
 		{
-			"fieldname": "api_key",
-			"fieldtype": "Password",
-			"label": "API Key",
-			"mandatory_depends_on": "enable_accepting"
-		},
-		{
-			"fieldname": "transaction_key",
-			"fieldtype": "Password",
-			"label": "Transaction Key",
-			"mandatory_depends_on": "eval:doc.enable_accepting && doc.provider === \"Authorize.net\""
-		},
-		{
-			"fieldname": "ref_id",
-			"fieldtype": "Data",
-			"label": "Merchant ID"
-		},
-		{
 			"depends_on": "enable_accepting",
 			"fieldname": "section_break_5",
 			"fieldtype": "Section Break",
@@ -94,17 +86,12 @@
 			"read_only": 1
 		},
 		{
+			"depends_on": "enable_accepting",
 			"fieldname": "provider",
 			"fieldtype": "Select",
 			"label": "Provider",
 			"mandatory_depends_on": "enable_accepting",
 			"options": "\nAuthorize.net\nStripe"
-		},
-		{
-			"fieldname": "endpoint",
-			"fieldtype": "Data",
-			"label": "Endpoint",
-			"mandatory_depends_on": "eval:doc.enable_accepting && doc.provider === \"Authorize.net\""
 		},
 		{
 			"fieldname": "deposit_account",
@@ -200,55 +187,12 @@
 			"options": "Account"
 		},
 		{
-			"depends_on": "enable_accepting",
-			"fieldname": "accepting_config_section",
-			"fieldtype": "Section Break",
-			"label": "Configuration: Accepting Payments"
-		},
-		{
-			"fieldname": "column_break_zyrs",
-			"fieldtype": "Column Break"
-		},
-		{
 			"depends_on": "enable_sending",
-			"fieldname": "sending_config_section",
-			"fieldtype": "Section Break",
-			"label": "Configuration: Sending Payments"
-		},
-		{
 			"fieldname": "sending_provider",
 			"fieldtype": "Select",
 			"label": "Sending Provider",
 			"mandatory_depends_on": "enable_sending",
 			"options": "\nAuthorize.net\nMercury\nWise"
-		},
-		{
-			"description": "Required for Mercury and Wise. For Mercury, enter the Mercury Account ID for the account making transfers. For Wise, enter the Wise Profile ID for the Company making transfers. If not known, enter API credentials and click Save. The message will display the options and their IDs, if any - copy the applicable one's ID into this field.",
-			"fieldname": "sending_ref_id",
-			"fieldtype": "Data",
-			"label": "Sending Merchant ID"
-		},
-		{
-			"fieldname": "column_break_cssi",
-			"fieldtype": "Column Break"
-		},
-		{
-			"fieldname": "sending_endpoint",
-			"fieldtype": "Data",
-			"label": "Sending Endpoint",
-			"mandatory_depends_on": "eval:doc.enable_sending && (doc.provider !== doc.sending_provider) && (doc.sending_provider === \"Authorize.net\" || doc.sending_provider === \"Mercury\" || doc.sending_provider === \"Wise\")"
-		},
-		{
-			"fieldname": "sending_api_key",
-			"fieldtype": "Password",
-			"label": "Sending API Key",
-			"mandatory_depends_on": "enable_sending"
-		},
-		{
-			"fieldname": "sending_transaction_key",
-			"fieldtype": "Password",
-			"label": "Sending Transaction Key",
-			"mandatory_depends_on": "eval:doc.enable_sending && (doc.provider !== doc.sending_provider) && (doc.sending_provider === \"Authorize.net\")"
 		},
 		{
 			"fieldname": "sending_mode_of_payment",
@@ -269,7 +213,6 @@
 		},
 		{
 			"default": "0",
-			"depends_on": "eval:doc.sending_provider === \"Wise\"",
 			"description": "Automatically fund transfers with a Direct Debit bank account linked to the company profile configured in Wise. If unchecked, Electronic Payments will initiate the transfers, but the final funding step must be completed manually via the Wise website.",
 			"fieldname": "fund_wise_with_direct_debit",
 			"fieldtype": "Check",
@@ -280,7 +223,8 @@
 			"description": "The Direct Debit bank account's Account ID in Wise. If not known, enter API credentials and click Save. The message will display the account options and their IDs, if any - copy the applicable one's ID in this field.",
 			"fieldname": "wise_linked_bank_account_id",
 			"fieldtype": "Data",
-			"label": "Wise Linked Bank Account ID"
+			"label": "Wise Linked Bank Account ID",
+			"mandatory_depends_on": "fund_wise_with_direct_debit"
 		},
 		{
 			"default": "Checking",
@@ -317,10 +261,131 @@
 			"fieldtype": "Select",
 			"label": "Use Clearing Account",
 			"options": "Use Journal Entry and Clearing Account\nUse Payment Entry"
+		},
+		{
+			"fieldname": "general_tab",
+			"fieldtype": "Tab Break",
+			"label": "General"
+		},
+		{
+			"fieldname": "authorize_accepting_endpoint",
+			"fieldtype": "Data",
+			"label": "Authorize.net Endpoint",
+			"mandatory_depends_on": "eval:doc.enable_accepting && doc.provider === \"Authorize.net\""
+		},
+		{
+			"fieldname": "authorize_accepting_api_key",
+			"fieldtype": "Password",
+			"label": "Authorize.net API Key",
+			"mandatory_depends_on": "eval:doc.enable_accepting && doc.provider === \"Authorize.net\""
+		},
+		{
+			"fieldname": "authorize_accepting_transaction_key",
+			"fieldtype": "Password",
+			"label": "Authorize.net Transaction Key",
+			"mandatory_depends_on": "eval:doc.enable_accepting && doc.provider === \"Authorize.net\""
+		},
+		{
+			"depends_on": "eval:doc.enable_sending && doc.sending_provider === \"Authorize.net\"",
+			"fieldname": "authorizenet_sending_configuration_section",
+			"fieldtype": "Section Break",
+			"label": "Authorize.net Configuration"
+		},
+		{
+			"fieldname": "authorize_sending_endpoint",
+			"fieldtype": "Data",
+			"label": "Authorize.net Endpoint",
+			"mandatory_depends_on": "eval:doc.enable_sending && doc.sending_provider === \"Authorize.net\" && (doc.provider !== doc.sending_provider)"
+		},
+		{
+			"fieldname": "authorize_sending_api_key",
+			"fieldtype": "Password",
+			"label": "Authorize.net API Key",
+			"mandatory_depends_on": "eval:doc.enable_sending && doc.sending_provider === \"Authorize.net\" && (doc.provider !== doc.sending_provider)"
+		},
+		{
+			"fieldname": "authorize_sending_transaction_key",
+			"fieldtype": "Password",
+			"label": "Authorize.net Transaction Key",
+			"mandatory_depends_on": "eval:doc.enable_sending && doc.sending_provider === \"Authorize.net\" && (doc.provider !== doc.sending_provider)"
+		},
+		{
+			"fieldname": "stripe_accepting_api_key",
+			"fieldtype": "Password",
+			"label": "Stripe API Key",
+			"mandatory_depends_on": "eval:doc.enable_accepting && doc.provider === \"Stripe\""
+		},
+		{
+			"depends_on": "eval:doc.enable_accepting && doc.provider === \"Authorize.net\"",
+			"fieldname": "authorizenet_accepting_configuration_section",
+			"fieldtype": "Section Break",
+			"label": "Authorize.net Configuration"
+		},
+		{
+			"depends_on": "eval:doc.enable_accepting && doc.provider === \"Stripe\"",
+			"fieldname": "stripe_accepting_configuration_section",
+			"fieldtype": "Section Break",
+			"label": "Stripe Configuration"
+		},
+		{
+			"depends_on": "eval:doc.enable_sending && doc.sending_provider === \"Mercury\"",
+			"fieldname": "mercury_sending_configuration_section",
+			"fieldtype": "Section Break",
+			"label": "Mercury Configuration"
+		},
+		{
+			"fieldname": "mercury_sending_endpoint",
+			"fieldtype": "Data",
+			"label": "Mercury Endpoint",
+			"mandatory_depends_on": "eval:doc.enable_sending && doc.sending_provider === \"Mercury\""
+		},
+		{
+			"fieldname": "mercury_sending_api_key",
+			"fieldtype": "Password",
+			"label": "Mercury API Key",
+			"mandatory_depends_on": "eval:doc.enable_sending && doc.sending_provider === \"Mercury\""
+		},
+		{
+			"fieldname": "column_break_ndye",
+			"fieldtype": "Column Break"
+		},
+		{
+			"depends_on": "eval:doc.enable_sending && doc.sending_provider === \"Wise\"",
+			"fieldname": "wise_sending_configuration_section",
+			"fieldtype": "Section Break",
+			"label": "Wise Configuration"
+		},
+		{
+			"fieldname": "wise_sending_endpoint",
+			"fieldtype": "Data",
+			"label": "Wise Endpoint",
+			"mandatory_depends_on": "eval:doc.enable_sending && doc.sending_provider === \"Wise\""
+		},
+		{
+			"description": "Required field - enter the Mercury Account ID for the account making transfers. If not known, enter API credentials and click Save. The message will display the options and their IDs, if any - copy the applicable one's ID into this field.",
+			"fieldname": "mercury_sending_account_id",
+			"fieldtype": "Data",
+			"label": "Mercury Account ID"
+		},
+		{
+			"fieldname": "wise_sending_api_key",
+			"fieldtype": "Password",
+			"label": "Wise API Key",
+			"mandatory_depends_on": "eval:doc.enable_sending && doc.sending_provider === \"Wise\""
+		},
+		{
+			"description": "Required field - enter the Wise Profile ID for the Company making transfers. If not known, enter API credentials and click Save. The message will display the options and their IDs, if any - copy the applicable one's ID into this field.",
+			"fieldname": "wise_sending_profile_id",
+			"fieldtype": "Data",
+			"label": "Wise Profile ID"
+		},
+		{
+			"fieldname": "column_break_nihr",
+			"fieldtype": "Column Break"
 		}
 	],
 	"links": [],
-	"modified": "2025-07-01 22:02:09.369844",
+	"modified": "2025-10-07 21:06:19.638616",
 	"modified_by": "Administrator",
 	"module": "Electronic Payments",
 	"name": "Electronic Payment Settings",

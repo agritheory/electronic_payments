@@ -1,13 +1,16 @@
+# Copyright (c) 2025, AgriTheory and contributors
+# For license information, please see license.txt
+
 import frappe
 from frappe.utils.data import flt, fmt_money
 
-from electronic_payments.electronic_payments.doctype.electronic_payment_settings.electronic_payment_settings import (
-	process,
-)
 from electronic_payments.electronic_payments.doctype.electronic_payment_settings.common import (
 	exceeds_credit_limit,
-	get_payment_amount,
 	get_discount_amount,
+	get_payment_amount,
+)
+from electronic_payments.electronic_payments.doctype.electronic_payment_settings.electronic_payment_settings import (
+	process,
 )
 
 no_cache = 1
@@ -35,6 +38,11 @@ def get_context(context):
 	has_default = False
 	for pm in frappe.get_all("Portal Payment Method", {"parent": party}, order_by="`default` DESC"):
 		payment_method = frappe.get_doc("Portal Payment Method", pm.name)
+		pm_company = frappe.get_value(
+			"Electronic Payment Profile", payment_method.electronic_payment_profile, "company"
+		)
+		if pm_company != context.doc.company:
+			continue
 		fees = payment_method.calculate_payment_method_fees(
 			context.doc, amount=(payment_amount - discount_amount)
 		)
