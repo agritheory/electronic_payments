@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "electronic_payments"
-version = "15.8.0"
+version = "15.8.1"
 description = "Electronic Payments for ERPNext"
 authors = ["AgriTheory <support@agritheory.dev>"]
 readme = "README.md"
