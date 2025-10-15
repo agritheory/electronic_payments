@@ -1,28 +1,19 @@
-[project]
-name = "electronic_payments"
-description = "Electronic Payments for ERPNext"
-authors = [
-    { name = "AgriTheory", email = "support@agritheory.dev"}
-]
-readme = "README.md"
-license = { file = "LICENSE" }
-dynamic = ["dependencies", "version", "requires-python"]
-
-[project.urls]
-homepage = "https://github.com/agritheory/electronic_payments"
-repository = "https://github.com/agritheory/electronic_payments"
-source = "https://github.com/agritheory/electronic_payments"
-changelog = "https://github.com/agritheory/electronic_payments/CHANGELOG.md"
-documentation = "https://github.com/agritheory/electronic_payments/tree/version-15/docs"
-issues = "https://github.com/agritheory/electronic_payments/issues"
-
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
-requires-poetry = ">=2.0"
-version =  "15.8.0"
+name = "electronic_payments"
+version = "15.8.0"
+description = "Electronic Payments for ERPNext"
+authors = ["AgriTheory <support@agritheory.dev>"]
+readme = "README.md"
+license = "MIT"
+homepage = "https://github.com/agritheory/electronic_payments"
+repository = "https://github.com/agritheory/electronic_payments"
+documentation = "https://github.com/agritheory/electronic_payments/tree/version-15/docs"
+urls = { Changelog = "https://github.com/agritheory/electronic_payments/CHANGELOG.md", Issues = "https://github.com/agritheory/electronic_payments/issues" }
+packages = [{ include = "electronic_payments" }]
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.14"
