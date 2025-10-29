@@ -54,9 +54,9 @@
 		"cashpro_payments_client_id",
 		"cashpro_payments_api_key",
 		"column_break_rhev",
-		"cashpro_payments_template_application_id",
-		"cashpro_payments_template_client_id",
-		"cashpro_payments_template_api_key",
+		"cashpro_payment_templates_application_id",
+		"cashpro_payment_templates_client_id",
+		"cashpro_payment_templates_api_key",
 		"sending_payments_accounts_section",
 		"withdrawal_account",
 		"sending_fee_account",
@@ -427,26 +427,26 @@
 			"fieldtype": "Column Break"
 		},
 		{
-			"fieldname": "cashpro_payments_template_application_id",
+			"fieldname": "cashpro_payment_templates_application_id",
 			"fieldtype": "Data",
-			"label": "CashPro Payments Template Application ID",
+			"label": "CashPro Payment Templates Application ID",
 			"mandatory_depends_on": "eval:doc.enable_sending && doc.sending_provider === \"CashPro\""
 		},
 		{
-			"fieldname": "cashpro_payments_template_client_id",
+			"fieldname": "cashpro_payment_templates_client_id",
 			"fieldtype": "Data",
-			"label": "CashPro Payments Template Client ID",
+			"label": "CashPro Payment Templates Client ID",
 			"mandatory_depends_on": "eval:doc.enable_sending && doc.sending_provider === \"CashPro\""
 		},
 		{
-			"fieldname": "cashpro_payments_template_api_key",
+			"fieldname": "cashpro_payment_templates_api_key",
 			"fieldtype": "Password",
-			"label": "CashPro Payments Template Api Key",
+			"label": "CashPro Payment Templates Api Key",
 			"mandatory_depends_on": "eval:doc.enable_sending && doc.sending_provider === \"CashPro\""
 		}
 	],
 	"links": [],
-	"modified": "2025-10-14 10:26:40.075661",
+	"modified": "2025-10-29 07:38:00.413637",
 	"modified_by": "Administrator",
 	"module": "Electronic Payments",
 	"name": "Electronic Payment Settings",
