@@ -1,20 +1,14 @@
 {
 	"custom_fields": [],
-	"custom_perms": [],
 	"doctype": "Mode of Payment",
 	"property_setters": [
 		{
-			"creation": "2022-08-05 13:10:55.278054",
 			"doc_type": "Mode of Payment",
-			"docstatus": 0,
 			"doctype_or_field": "DocField",
 			"field_name": "type",
 			"idx": 0,
-			"modified": "2022-08-05 13:10:55.278054",
-			"modified_by": "Administrator",
 			"module": "Electronic Payments",
 			"name": "Mode of Payment-type-options",
-			"owner": "Administrator",
 			"property": "options",
 			"property_type": "Text",
 			"value": "Cash\nBank\nGeneral\nPhone\nElectronic"

@@ -32,7 +32,7 @@ repository = "https://github.com/agritheory/electronic_payments"
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.14"
-authorizenet = "^1.1.5"
+authorizenet = {git = "https://github.com/agritheory/authorizenet.git", rev = "main"}
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.15.0"

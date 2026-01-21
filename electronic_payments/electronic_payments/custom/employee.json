@@ -6,9 +6,7 @@
 			"bold": 0,
 			"collapsible": 0,
 			"columns": 0,
-			"creation": "2023-03-08 14:51:49.658175",
 			"default": null,
-			"docstatus": 0,
 			"dt": "Employee",
 			"fetch_if_empty": 0,
 			"fieldname": "electronic_payment_profile",
@@ -27,15 +25,11 @@
 			"insert_after": "salary_mode",
 			"label": "Electronic Payment Profile",
 			"length": 0,
-			"modified": "2023-03-08 14:51:49.658175",
-			"modified_by": "Administrator",
 			"module": "Electronic Payments",
 			"name": "Employee-electronic_payment_profile",
 			"no_copy": 1,
 			"non_negative": 0,
-			"owner": "Administrator",
 			"permlevel": 0,
-			"precision": "",
 			"print_hide": 1,
 			"print_hide_if_no_value": 0,
 			"read_only": 0,
@@ -46,7 +40,6 @@
 			"unique": 0
 		}
 	],
-	"custom_perms": [],
 	"doctype": "Employee",
 	"property_setters": [],
 	"sync_on_migrate": 1
