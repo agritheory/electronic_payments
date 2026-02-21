@@ -1,13 +1,14 @@
 [project]
 name = "electronic_payments"
-version =  "15.8.1"
+version = "15.8.2"
 description = "Electronic Payments for ERPNext"
 authors = [
     { name = "AgriTheory", email = "support@agritheory.dev"}
 ]
 readme = "README.md"
 license = { file = "LICENSE" }
-dynamic = ["dependencies", "requires-python"]
+requires-python = ">=3.10"
+dynamic = ["dependencies"]
 
 [project.urls]
 homepage = "https://github.com/agritheory/electronic_payments"
@@ -21,25 +22,19 @@ issues = "https://github.com/agritheory/electronic_payments/issues"
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
-[tool.poetry]
-name = "electronic_payments"
-version = "15.8.2"
-description = "Electronic Payments for ERPNext"
-authors = ["AgriTheory <support@agritheory.dev>"]
-readme = "README.md"
-homepage = "https://github.com/agritheory/electronic_payments"
-repository = "https://github.com/agritheory/electronic_payments"
-
 [tool.poetry.dependencies]
-python = ">=3.10,<3.14"
+python = "^3.10"
 authorizenet = "^1.1.5"
 
+[tool.bench.frappe-dependencies]
+frappe = ">=15.0.0,<16.0.0"
+erpnext = ">=15.0.0,<16.0.0"
+
 [tool.poetry.group.dev.dependencies]
-mypy = "^1.15.0"
-pytest = "^8.3.5"
-pytest-cov = "^6.0.0"
+mypy = "^1.10.0"
+pytest = "^8.2.2"
+pytest-cov = "^5.0.0"
 pytest-order = "^1.2.1"
-test_utils = { git = "https://github.com/agritheory/test_utils.git" }
 
 [tool.pytest.ini_options]
 addopts = "--cov=electronic_payments --cov-report term-missing"
@@ -82,8 +77,11 @@ exclude_also = [
     "@(abc\\.)?abstractmethod",
 ]
 
+[tool.codespell]
+skip = "CHANGELOG.md"
+
 [tool.semantic_release]
-version_toml = ["pyproject.toml:tool.poetry.version"]
+version_toml = ["pyproject.toml:project.version"]
 version_variables = [
     "electronic_payments/__init__.py:__version__"
 ]

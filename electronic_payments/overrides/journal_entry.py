@@ -1,3 +1,6 @@
+# Copyright (c) 2026, AgriTheory and contributors
+# For license information, please see license.txt
+
 import frappe
 from frappe.utils import flt
 from erpnext.accounts.doctype.journal_entry.journal_entry import JournalEntry

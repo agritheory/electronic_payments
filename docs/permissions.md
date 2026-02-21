@@ -3,6 +3,11 @@ For license information, please see license.txt-->
 
 # Electronic Payments Permissions and Workflows
 
+<div class="byline">
+  AgriTheory 2025-11-03
+</div>
+
+
 ## Permissions
 
 The Electronic Payments app integrates with ERPNext's existing documents and workflows. The app doesn't introduce any new roles or permission changes, but leverages the existing setup.
