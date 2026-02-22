@@ -1,56 +1,40 @@
 {
-	"custom_fields": [],
-	"custom_perms": [],
-	"doctype": "Purchase Invoice Item",
-	"property_setters": [
-		{
-			"creation": "2023-05-22 19:20:09.815045",
-			"doc_type": "Purchase Invoice Item",
-			"docstatus": 0,
-			"doctype_or_field": "DocField",
-			"field_name": "discount_account",
-			"idx": 0,
-			"modified": "2023-05-22 19:20:09.815045",
-			"modified_by": "Administrator",
-			"module": "Electronic Payments",
-			"name": "Purchase Invoice Item-discount_account-mandatory_depends_on",
-			"owner": "Administrator",
-			"property": "mandatory_depends_on",
-			"property_type": "Code",
-			"value": ""
-		},
-		{
-			"creation": "2023-05-22 19:20:09.807010",
-			"doc_type": "Purchase Invoice Item",
-			"docstatus": 0,
-			"doctype_or_field": "DocField",
-			"field_name": "discount_account",
-			"idx": 0,
-			"modified": "2023-05-22 19:20:09.807010",
-			"modified_by": "Administrator",
-			"module": "Electronic Payments",
-			"name": "Purchase Invoice Item-discount_account-hidden",
-			"owner": "Administrator",
-			"property": "hidden",
-			"property_type": "Check",
-			"value": "1"
-		},
-		{
-			"creation": "2023-05-22 09:53:25.707861",
-			"doc_type": "Purchase Invoice Item",
-			"docstatus": 0,
-			"doctype_or_field": "DocField",
-			"field_name": "from_warehouse",
-			"idx": 0,
-			"modified": "2023-05-22 09:53:25.707861",
-			"modified_by": "Administrator",
-			"module": "Electronic Payments",
-			"name": "Purchase Invoice Item-from_warehouse-hidden",
-			"owner": "Administrator",
-			"property": "hidden",
-			"property_type": "Check",
-			"value": "1"
-		}
-	],
-	"sync_on_migrate": 1
+  "custom_fields": [],
+  "doctype": "Purchase Invoice Item",
+  "property_setters": [
+    {
+      "doc_type": "Purchase Invoice Item",
+      "doctype_or_field": "DocField",
+      "field_name": "discount_account",
+      "idx": 0,
+      "module": "Electronic Payments",
+      "name": "Purchase Invoice Item-discount_account-mandatory_depends_on",
+      "property": "mandatory_depends_on",
+      "property_type": "Code",
+      "value": ""
+    },
+    {
+      "doc_type": "Purchase Invoice Item",
+      "doctype_or_field": "DocField",
+      "field_name": "discount_account",
+      "idx": 0,
+      "module": "Electronic Payments",
+      "name": "Purchase Invoice Item-discount_account-hidden",
+      "property": "hidden",
+      "property_type": "Check",
+      "value": "1"
+    },
+    {
+      "doc_type": "Purchase Invoice Item",
+      "doctype_or_field": "DocField",
+      "field_name": "from_warehouse",
+      "idx": 0,
+      "module": "Electronic Payments",
+      "name": "Purchase Invoice Item-from_warehouse-hidden",
+      "property": "hidden",
+      "property_type": "Check",
+      "value": "1"
+    }
+  ],
+  "sync_on_migrate": 1
 }

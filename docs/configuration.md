@@ -3,6 +3,11 @@ For license information, please see license.txt-->
 
 # Electronic Payments Configuration and Settings
 
+<div class="byline">
+  AgriTheory and Tyler Matteson 2026-02-21
+</div>
+
+
 One Electronic Payment Settings document may be created for each Company in ERPNext. This document stores the provider credentials (including API keys) and selected accounts that are used in the chosen accounting workflow. Certain fields are required depending on the provider, which are noted below. The keys should be the **testing/sandbox** values when testing the functionality of the application, and only updated to live keys when using the application in production.
 
 Authorize.net, Mercury, and Wise also require an endpoint, which is different for their testing sandbox calls and real production ones.
