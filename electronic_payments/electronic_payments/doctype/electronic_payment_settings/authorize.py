@@ -380,7 +380,7 @@ class AuthorizeNet(BaseProvider):
 		)
 
 		transactionrequest = apicontractsv1.transactionRequestType()
-		transactionrequest.transactionType = "refundTransaction"
+		transactionrequest.transactionType = "authCaptureTransaction"
 		transactionrequest.amount = Decimal(str(total_to_charge))
 		transactionrequest.currencyCode = frappe.defaults.get_global_default("currency")
 		transactionrequest.payment = payment

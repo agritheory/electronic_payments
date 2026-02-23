@@ -60,6 +60,7 @@ class BaseProvider:
 
 		if mop == "Card" and data.get("save_data") == "Charge now":
 			response = self.process_credit_card(doc, data)
+			return response
 
 		if not mop.startswith("Saved"):  # new payment method
 			# find party profile (if used by provider)
