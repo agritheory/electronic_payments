@@ -3,9 +3,11 @@ For license information, please see license.txt-->
 
 # Electronic Payments Documentation
 
-The Electronic Payments application extends ERPNext[^1] with the capability to send and receive electronic payments via several vendors directly in the system. The current supported vendors (also called providers) are [Authorize.net](www.authorize.net) (accepting and sending payments), [Stripe](stripe.com) (accepting payments, with some limitations detailed in the Provider Limitations section), [Mercury](mercury.com) (sending payments), and [Wise](wise.com) (sending payments). You can configure the app to use different providers to accept vs send payments.
+The Electronic Payments application extends ERPNext[^1] with the capability to send and receive electronic payments via several vendors directly in the system. The current supported vendors (also called providers) are [Authorize.net](www.authorize.net) (accepting and sending payments), [Stripe](stripe.com) (accepting payments, with some limitations), [Mercury](mercury.com) (sending payments), and [Wise](wise.com) (sending payments, with some limitations). You can configure the app to use different providers to accept vs send payments.
 
 The current providers each have their own terms and conditions they require to use their services, including authorization requirements for certain payment methods. Before installing and using the Electronic Payments app, it is your responsibility to comply with your provider's terms, conditions, and requirements for using their services.
+
+There are also some limitations around functionality by provider - these are detailed below in the Provider Limitations section.
 
 ## Installation, Configuration, Settings, and Permissions
 
