@@ -1,3 +1,6 @@
+// Copyright (c) 2026, AgriTheory and contributors
+// For license information, please see license.txt
+
 frappe.ready(() => {
 	$('.remove-ppm').on('click', e => {
 		let portal_payment_method_name = e.currentTarget.dataset.name

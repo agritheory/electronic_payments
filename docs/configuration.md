@@ -3,6 +3,11 @@ For license information, please see license.txt-->
 
 # Electronic Payments Configuration and Settings
 
+<div class="byline">
+  AgriTheory and Heather Kusmierz 2026-02-23
+</div>
+
+
 One Electronic Payment Settings document may be created for each Company in ERPNext. This document stores the provider credentials (including API keys) and selected accounts that are used in the chosen accounting workflow. Certain fields are required depending on the provider, which are noted below. The keys should be the **testing/sandbox** values when testing the functionality of the application, and only updated to live keys when using the application in production.
 
 Some provider configurations require an endpoint, which is different for their testing sandbox calls and real production ones.

@@ -1,7 +1,13 @@
 <!-- Copyright (c) 2025, AgriTheory and contributors
 For license information, please see license.txt-->
 
+
 # Electronic Payments Documentation
+
+<div class="byline">
+  AgriTheory and Heather Kusmierz 2026-02-23
+</div>
+
 
 The Electronic Payments application extends ERPNext[^1] with the capability to send and receive electronic payments via several vendors directly in the system. The current supported vendors (also called providers) are [Authorize.net](www.authorize.net) (accepting and sending payments), [Stripe](stripe.com) (accepting payments, with some limitations), [Mercury](mercury.com) (sending payments), and [Wise](wise.com) (sending payments, with some limitations). You can configure the app to use different providers to accept vs send payments.
 

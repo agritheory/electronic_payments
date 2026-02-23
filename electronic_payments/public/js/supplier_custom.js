@@ -1,3 +1,6 @@
+// Copyright (c) 2026, AgriTheory and contributors
+// For license information, please see license.txt
+
 frappe.provide('electronic_payments')
 
 frappe.ui.form.on('Supplier', {
@@ -45,10 +48,10 @@ frappe.ui.form.on('Supplier', {
 				selected.length === 1
 					? __(
 							'Do you want to delete the selected payment method only in ERPNext, or also remove it from the external provider?'
-						)
+					  )
 					: __(
 							'Do you want to delete the selected payment methods only in ERPNext, or also remove them from the external provider?'
-						)
+					  )
 
 			const d = new frappe.ui.Dialog({
 				title: __('Delete Payment Method'),

@@ -1,72 +1,51 @@
 {
-	"custom_fields": [],
-	"custom_perms": [],
-	"doctype": "Sales Invoice Item",
-	"property_setters": [
-		{
-			"creation": "2023-05-22 19:20:09.798332",
-			"doc_type": "Sales Invoice Item",
-			"docstatus": 0,
-			"doctype_or_field": "DocField",
-			"field_name": "discount_account",
-			"idx": 0,
-			"modified": "2023-05-22 19:20:09.798332",
-			"modified_by": "Administrator",
-			"module": "Electronic Payments",
-			"name": "Sales Invoice Item-discount_account-mandatory_depends_on",
-			"owner": "Administrator",
-			"property": "mandatory_depends_on",
-			"property_type": "Code",
-			"value": ""
-		},
-		{
-			"creation": "2023-05-22 19:20:09.790255",
-			"doc_type": "Sales Invoice Item",
-			"docstatus": 0,
-			"doctype_or_field": "DocField",
-			"field_name": "discount_account",
-			"idx": 0,
-			"modified": "2023-05-22 19:20:09.790255",
-			"modified_by": "Administrator",
-			"module": "Electronic Payments",
-			"name": "Sales Invoice Item-discount_account-hidden",
-			"owner": "Administrator",
-			"property": "hidden",
-			"property_type": "Check",
-			"value": "1"
-		},
-		{
-			"creation": "2023-05-22 09:53:25.689268",
-			"doc_type": "Sales Invoice Item",
-			"docstatus": 0,
-			"doctype_or_field": "DocField",
-			"field_name": "target_warehouse",
-			"idx": 0,
-			"modified": "2023-05-22 09:53:25.689268",
-			"modified_by": "Administrator",
-			"module": "Electronic Payments",
-			"name": "Sales Invoice Item-target_warehouse-hidden",
-			"owner": "Administrator",
-			"property": "hidden",
-			"property_type": "Check",
-			"value": "1"
-		},
-		{
-			"creation": "2023-05-22 09:53:25.529023",
-			"doc_type": "Sales Invoice Item",
-			"docstatus": 0,
-			"doctype_or_field": "DocField",
-			"field_name": "barcode",
-			"idx": 0,
-			"modified": "2023-05-22 09:53:25.529023",
-			"modified_by": "Administrator",
-			"module": "Electronic Payments",
-			"name": "Sales Invoice Item-barcode-hidden",
-			"owner": "Administrator",
-			"property": "hidden",
-			"property_type": "Check",
-			"value": "0"
-		}
-	],
-	"sync_on_migrate": 1
+  "custom_fields": [],
+  "doctype": "Sales Invoice Item",
+  "property_setters": [
+    {
+      "doc_type": "Sales Invoice Item",
+      "doctype_or_field": "DocField",
+      "field_name": "discount_account",
+      "idx": 0,
+      "module": "Electronic Payments",
+      "name": "Sales Invoice Item-discount_account-mandatory_depends_on",
+      "property": "mandatory_depends_on",
+      "property_type": "Code",
+      "value": ""
+    },
+    {
+      "doc_type": "Sales Invoice Item",
+      "doctype_or_field": "DocField",
+      "field_name": "discount_account",
+      "idx": 0,
+      "module": "Electronic Payments",
+      "name": "Sales Invoice Item-discount_account-hidden",
+      "property": "hidden",
+      "property_type": "Check",
+      "value": "1"
+    },
+    {
+      "doc_type": "Sales Invoice Item",
+      "doctype_or_field": "DocField",
+      "field_name": "target_warehouse",
+      "idx": 0,
+      "module": "Electronic Payments",
+      "name": "Sales Invoice Item-target_warehouse-hidden",
+      "property": "hidden",
+      "property_type": "Check",
+      "value": "1"
+    },
+    {
+      "doc_type": "Sales Invoice Item",
+      "doctype_or_field": "DocField",
+      "field_name": "barcode",
+      "idx": 0,
+      "module": "Electronic Payments",
+      "name": "Sales Invoice Item-barcode-hidden",
+      "property": "hidden",
+      "property_type": "Check",
+      "value": "0"
+    }
+  ],
+  "sync_on_migrate": 1
 }
