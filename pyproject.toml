@@ -1,6 +1,6 @@
 [project]
 name = "electronic_payments"
-version = "15.8.2"
+version = "15.8.3"
 description = "Electronic Payments for ERPNext"
 authors = [
     { name = "AgriTheory", email = "support@agritheory.dev"}
