@@ -5,7 +5,7 @@ For license information, please see license.txt-->
 # Electronic Payments Documentation
 
 <div class="byline">
-  AgriTheory and Heather Kusmierz 2026-02-23
+  Heather Kusmierz and Tyler Matteson 2026-02-24
 </div>
 
 
@@ -22,6 +22,7 @@ There are a few prerequisite steps to get the Electronic Payments application up
 - [Installation Guide](../README.md)
 - [Configuration and Settings](./configuration.md)
 - [Default Permissions and Accounting Workflows](./permissions.md)
+- Refer to the [Network Diagrams page](./network_diagrams.md) for detailed illustrations of how user actions in ERPNext tie to provider services through their API
 - Refer to the [Example Data page](./exampledata.md) for instructions around installing fictitious demo data to experiment with using the Electronic Payments app
 
 ## App Feature Overview
