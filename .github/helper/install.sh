@@ -47,6 +47,7 @@ bench get-app electronic_payments "${GITHUB_WORKSPACE}" --skip-assets
 
 printf '%s\n' 'frappe' 'erpnext' 'payments' 'webshop' 'electronic_payments' > ~/frappe-bench/sites/apps.txt
 bench setup requirements --python
+bench setup requirements --dev
 bench use test_site
 
 bench start &> bench_run_logs.txt &

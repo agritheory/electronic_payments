@@ -1,3 +1,6 @@
+# Copyright (c) 2026, AgriTheory and contributors
+# For license information, please see license.txt
+
 """Leave this here for future reference when implementing API driven authorize reports"""
 
 # import frappe
