@@ -23,8 +23,8 @@ requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.dependencies]
-python = "^3.10"
-authorizenet = "^1.1.5"
+python = ">=3.10,<3.14"
+authorizenet = {git = "https://github.com/agritheory/authorizenet.git", rev = "main"}
 
 [tool.bench.frappe-dependencies]
 frappe = ">=15.0.0,<16.0.0"
