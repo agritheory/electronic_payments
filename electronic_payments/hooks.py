@@ -83,7 +83,7 @@ after_install = "electronic_payments.install.after_install"
 # ------------
 
 # before_migrate = "electronic_payments.uninstall.before_uninstall"
-after_migrate = "electronic_payments.customize.load_customizations"
+# after_migrate = "electronic_payments.customize.load_customizations"
 
 
 # Desk Notifications
