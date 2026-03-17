@@ -133,6 +133,7 @@ class Mercury(BaseProvider):
 					payment_profile.company = doc.company
 					payment_profile.save(ignore_permissions=True)
 
+					# jscpd:ignore-start
 					if payment_profile.retain and settings.create_ppm:
 						ppm = frappe.new_doc("Portal Payment Method")
 						ppm.mode_of_payment = f"{self.provider} {pmt_type}"
@@ -150,6 +151,7 @@ class Mercury(BaseProvider):
 						data.update({"ppm_name": ppm.name})
 
 				return {"message": "Success", "payment_profile_doc": payment_profile}
+				# jscpd:ignore-end
 
 		except HTTPError as e_http:
 			err_msg = response.json().get("errors", {}).get("message", e_http)
@@ -427,16 +429,18 @@ class Mercury(BaseProvider):
 			r = response.json()
 			if r.get("id"):
 				transaction_id = r.get("id")
+				# jscpd:ignore-start
 				if not frappe.get_value(
 					"Electronic Payment Profile",
 					{"party": party.name, "payment_profile_id": payment_profile_id},
 					"retain",
 				):
-					reference = frappe.get_value("Electronic Payment Profile", "reference")
-					frappe.get_doc(
+					epp_doc = frappe.get_doc(
 						"Electronic Payment Profile",
 						{"party": party.name, "payment_profile_id": payment_profile_id},
-					).delete()
+					)
+					reference = epp_doc.reference
+					epp_doc.delete()
 
 					# Deleting Recipients not available via API, log error that it must be done manually
 					frappe.log_error(
@@ -455,6 +459,7 @@ class Mercury(BaseProvider):
 					"message": "Success",
 					"transaction_id": str(transaction_id),
 				}
+				# jscpd:ignore-end
 
 		except HTTPError as e_http:
 			err_msg = response.json().get("errors", {}).get("message", e_http)

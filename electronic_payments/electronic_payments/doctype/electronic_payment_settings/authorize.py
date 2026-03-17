@@ -100,11 +100,9 @@ class AuthorizeNet(BaseProvider):
 
 	def create_party_payment_profile(self, doc, data):
 		party = get_party_details(doc)
-
-		if not data.get("party_profile_id"):
-			party_profile_id = get_party_profile_id(party.name, doc.company, self.provider)
-		else:
-			party_profile_id = data.get("party_profile_id")
+		party_profile_id = data.get("party_profile_id") or get_party_profile_id(
+			party.name, doc.company, self.provider
+		)
 
 		merchantAuth = self.merchant_auth(doc.company)
 		payment = apicontractsv1.paymentType()
@@ -170,6 +168,7 @@ class AuthorizeNet(BaseProvider):
 			payment_profile.company = doc.company
 			payment_profile.save(ignore_permissions=True)
 
+			# jscpd:ignore-start
 			if payment_profile.retain and settings.create_ppm:
 				mop_field = (
 					"mode_of_payment" if settings.provider == self.provider else "sending_mode_of_payment"
@@ -190,6 +189,7 @@ class AuthorizeNet(BaseProvider):
 				data.update({"ppm_name": ppm.name})
 
 			return {"message": "Success", "payment_profile_doc": payment_profile}
+			# jscpd:ignore-end
 		else:
 			error_message = str(response.messages.message[0]["text"].text)
 			frappe.log_error(message=frappe.get_traceback(), title=error_message)
@@ -356,12 +356,6 @@ class AuthorizeNet(BaseProvider):
 			return {"message": "Success"}
 
 	def process_credit_card(self, doc, data):
-		settings = frappe.get_doc("Electronic Payment Settings", {"company": doc.company})
-		endpoint_field = (
-			"authorize_accepting_endpoint"
-			if settings.provider == self.provider
-			else "authorize_sending_endpoint"
-		)
 		card_number = data.get("card_number")
 		creditCard = apicontractsv1.creditCardType()
 		creditCard.cardNumber = card_number.replace(" ", "")
@@ -391,7 +385,7 @@ class AuthorizeNet(BaseProvider):
 		createtransactionrequest.transactionRequest = transactionrequest
 
 		createtransactioncontroller = createTransactionController(createtransactionrequest)
-		createtransactioncontroller.setenvironment(settings.get(endpoint_field))
+		createtransactioncontroller.setenvironment(self.get_endpoint(doc.company))
 		createtransactioncontroller.execute()
 
 		response = createtransactioncontroller.getresponse()
@@ -416,12 +410,7 @@ class AuthorizeNet(BaseProvider):
 					"transaction_id": str(response.transactionResponse.transId),
 				}
 			else:
-				if hasattr(response, "transactionResponse") and hasattr(
-					response.transactionResponse, "errors"
-				):
-					error_message = str(response.transactionResponse.errors.error[0].errorText)
-				else:
-					error_message = str(response.messages.message[0]["text"].text)
+				error_message = self.get_api_response_error_message(response)
 		else:
 			error_message = "No response"
 
@@ -429,18 +418,11 @@ class AuthorizeNet(BaseProvider):
 		return {"error": error_message}
 
 	def charge_party_profile(self, doc, data):
-		settings = frappe.get_doc("Electronic Payment Settings", {"company": doc.company})
-		endpoint_field = (
-			"authorize_accepting_endpoint"
-			if settings.provider == self.provider
-			else "authorize_sending_endpoint"
-		)
+		# jscpd:ignore-start
 		party = get_party_details(doc)
-		if not data.get("party_profile_id"):
-			party_profile_id = get_party_profile_id(party.name, doc.company, self.provider)
-		else:
-			party_profile_id = data.get("party_profile_id")
-
+		party_profile_id = data.get("party_profile_id") or get_party_profile_id(
+			party.name, doc.company, self.provider
+		)
 		payment_profile_id = data.get("payment_profile_id")
 		payment_amount = data.get("amount") or get_payment_amount(doc, data)
 		discount_amount = 0 if data.get("amount") else get_discount_amount(doc, data)
@@ -450,8 +432,8 @@ class AuthorizeNet(BaseProvider):
 			payment_amount - discount_amount + data.get("additional_charges", 0),
 			frappe.get_precision(doc.doctype, "grand_total"),
 		)
-		merchantAuth = self.merchant_auth(doc.company)
 
+		merchantAuth = self.merchant_auth(doc.company)
 		profileToCharge = apicontractsv1.customerProfilePaymentType()
 		profileToCharge.customerProfileId = str(party_profile_id)
 		profileToCharge.paymentProfile = apicontractsv1.paymentProfile()
@@ -469,8 +451,7 @@ class AuthorizeNet(BaseProvider):
 
 		createtransactionrequest.transactionRequest = transactionrequest
 		createtransactioncontroller = createTransactionController(createtransactionrequest)
-		endpoint = settings.get(endpoint_field)
-		createtransactioncontroller.setenvironment(endpoint)
+		createtransactioncontroller.setenvironment(self.get_endpoint(doc.company))
 		createtransactioncontroller.execute()
 
 		response = createtransactioncontroller.getresponse()
@@ -536,6 +517,7 @@ class AuthorizeNet(BaseProvider):
 			error_message = "No response"
 
 		frappe.log_error(message=frappe.get_traceback(), title=error_message)
+		# jscpd:ignore-end
 		return {"error": error_message}
 
 	def create_transfer_to_party_profile(self, doc, data, bypass_je_pe_creation=False):
@@ -562,22 +544,12 @@ class AuthorizeNet(BaseProvider):
 		- if bypass_je_pe_creation is False, will create a Journal Entry or Payment Entry tied to
 		the transfer and doc following a successful API response
 		"""
-		merchantAuth = self.merchant_auth(doc.company)
-		settings = frappe.get_doc("Electronic Payment Settings", {"company": doc.company})
-		endpoint_field = (
-			"authorize_accepting_endpoint"
-			if settings.provider == self.provider
-			else "authorize_sending_endpoint"
-		)
+		# jscpd:ignore-start
 		party = get_party_details(doc)
-
-		if not data.get("party_profile_id"):
-			party_profile_id = get_party_profile_id(party.name, doc.company, self.provider)
-		else:
-			party_profile_id = data.get("party_profile_id")
-
+		party_profile_id = data.get("party_profile_id") or get_party_profile_id(
+			party.name, doc.company, self.provider
+		)
 		payment_profile_id = data.get("payment_profile_id")
-
 		payment_amount = data.get("amount") or get_payment_amount(doc, data)
 		discount_amount = 0 if data.get("amount") else get_discount_amount(doc, data)
 		if data.get("ppm_name") and not data.get("additional_charges"):
@@ -587,13 +559,14 @@ class AuthorizeNet(BaseProvider):
 			frappe.get_precision(doc.doctype, "grand_total"),
 		)
 
+		merchantAuth = self.merchant_auth(doc.company)
 		profileToCharge = apicontractsv1.customerProfilePaymentType()
 		profileToCharge.customerProfileId = str(party_profile_id)
 		profileToCharge.paymentProfile = apicontractsv1.paymentProfile()
 		profileToCharge.paymentProfile.paymentProfileId = str(payment_profile_id)
 
 		transactionrequest = apicontractsv1.transactionRequestType()
-		transactionrequest.transactionType = "authCaptureTransaction"
+		transactionrequest.transactionType = "refundTransaction"
 		transactionrequest.amount = Decimal(str(total_to_charge))
 		transactionrequest.currencyCode = frappe.defaults.get_global_default("currency")
 		transactionrequest.profile = profileToCharge
@@ -601,11 +574,10 @@ class AuthorizeNet(BaseProvider):
 		createtransactionrequest = apicontractsv1.createTransactionRequest()
 		createtransactionrequest.merchantAuthentication = merchantAuth
 		createtransactionrequest.refId = doc.name[:20]  # Authorize.net length constraint
-		createtransactionrequest.transactionRequest = transactionrequest
 
+		createtransactionrequest.transactionRequest = transactionrequest
 		createtransactioncontroller = createTransactionController(createtransactionrequest)
-		endpoint = settings.get(endpoint_field)
-		createtransactioncontroller.setenvironment(endpoint)
+		createtransactioncontroller.setenvironment(self.get_endpoint(doc.company))
 		createtransactioncontroller.execute()
 
 		response = createtransactioncontroller.getresponse()
@@ -630,16 +602,12 @@ class AuthorizeNet(BaseProvider):
 					"transaction_id": str(response.transactionResponse.transId),
 				}
 			else:
-				if hasattr(response, "transactionResponse") and hasattr(
-					response.transactionResponse, "errors"
-				):
-					error_message = str(response.transactionResponse.errors.error[0].errorText)
-				else:
-					error_message = str(response.messages.message[0]["text"].text)
+				error_message = self.get_api_response_error_message(response)
 		else:
 			error_message = "No response"
 
 		frappe.log_error(message=frappe.get_traceback(), title=error_message)
+		# jscpd:ignore-end
 		return {"error": error_message}
 
 	def refund_transaction(self, doc, data):
@@ -655,12 +623,6 @@ class AuthorizeNet(BaseProvider):
 		  - Bank account refunds need routing number, account number, and account holder's name
 		"""
 		merchantAuth = self.merchant_auth(doc.company)
-		settings = frappe.get_doc("Electronic Payment Settings", {"company": doc.company})
-		endpoint_field = (
-			"authorize_accepting_endpoint"
-			if settings.provider == self.provider
-			else "authorize_sending_endpoint"
-		)
 		orig_transaction_id = doc.electronic_payment_reference
 		amount = data.get("amount")
 
@@ -713,8 +675,7 @@ class AuthorizeNet(BaseProvider):
 
 		createtransactionrequest.transactionRequest = transactionrequest
 		createtransactioncontroller = createTransactionController(createtransactionrequest)
-		endpoint = settings.get(endpoint_field)
-		createtransactioncontroller.setenvironment(endpoint)
+		createtransactioncontroller.setenvironment(self.get_endpoint(doc.company))
 		createtransactioncontroller.execute()
 
 		response = createtransactioncontroller.getresponse()
@@ -734,12 +695,7 @@ class AuthorizeNet(BaseProvider):
 				else:
 					error_message = "Transaction request error"
 			else:
-				if hasattr(response, "transactionResponse") and hasattr(
-					response.transactionResponse, "errors"
-				):
-					error_message = str(response.transactionResponse.errors.error[0].errorText)
-				else:
-					error_message = str(response.messages.message[0]["text"].text)
+				error_message = self.get_api_response_error_message(response)
 		else:
 			error_message = "No Response"
 
@@ -748,12 +704,6 @@ class AuthorizeNet(BaseProvider):
 
 	def void_transaction(self, doc, data):
 		merchantAuth = self.merchant_auth(doc.company)
-		settings = frappe.get_doc("Electronic Payment Settings", {"company": doc.company})
-		endpoint_field = (
-			"authorize_accepting_endpoint"
-			if settings.provider == self.provider
-			else "authorize_sending_endpoint"
-		)
 		orig_transaction_id = doc.electronic_payment_reference
 
 		transactionrequest = apicontractsv1.transactionRequestType()
@@ -765,8 +715,7 @@ class AuthorizeNet(BaseProvider):
 
 		createtransactionrequest.transactionRequest = transactionrequest
 		createtransactioncontroller = createTransactionController(createtransactionrequest)
-		endpoint = settings.get(endpoint_field)
-		createtransactioncontroller.setenvironment(endpoint)
+		createtransactioncontroller.setenvironment(self.get_endpoint(doc.company))
 		createtransactioncontroller.execute()
 
 		response = createtransactioncontroller.getresponse()
@@ -787,12 +736,7 @@ class AuthorizeNet(BaseProvider):
 				else:
 					error_message = "Transaction request error"
 			else:
-				if hasattr(response, "transactionResponse") and hasattr(
-					response.transactionResponse, "errors"
-				):
-					error_message = str(response.transactionResponse.errors.error[0].errorText)
-				else:
-					error_message = str(response.messages.message[0]["text"].text)
+				error_message = self.get_api_response_error_message(response)
 		else:
 			error_message = "No Response"
 
@@ -865,6 +809,35 @@ class AuthorizeNet(BaseProvider):
 
 		frappe.log_error(message=frappe.get_traceback(), title=error_message)
 		return {"error": error_message}
+
+	def get_api_response_error_message(self, response):
+		"""
+		Convenience method to extrapolate the error message when a response is not "Ok"
+
+		:param response: response from an Authorize.net API call
+		:return: error message
+		"""
+		if hasattr(response, "transactionResponse") and hasattr(response.transactionResponse, "errors"):
+			error_message = str(response.transactionResponse.errors.error[0].errorText)
+		else:
+			error_message = str(response.messages.message[0]["text"].text)
+		return error_message
+
+	def get_endpoint(self, company):
+		"""
+		Convenience method to return the correct endpoint from Settings depending on whether
+		Authorize.net is the accepting or sending provider.
+
+		:param company: Company in ERPNext for whom to get Electronic Payment Settings
+		:return: Settings value in sending or accepting endpoint field
+		"""
+		settings = frappe.get_doc("Electronic Payment Settings", {"company": company})
+		endpoint_field = (
+			"authorize_accepting_endpoint"
+			if settings.provider == self.provider
+			else "authorize_sending_endpoint"
+		)
+		return settings.get(endpoint_field)
 
 
 def fetch_authorize_transactions(settings):

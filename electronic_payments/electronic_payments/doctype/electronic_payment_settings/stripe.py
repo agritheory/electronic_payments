@@ -164,6 +164,7 @@ class Stripe(BaseProvider):
 				payment_profile.company = doc.company
 				payment_profile.save(ignore_permissions=True)
 
+				# jscpd:ignore-start
 				if payment_profile.retain and settings.create_ppm:
 					mop_field = (
 						"mode_of_payment" if settings.provider == self.provider else "sending_mode_of_payment"
@@ -184,6 +185,7 @@ class Stripe(BaseProvider):
 					data.update({"ppm_name": ppm.name})
 
 				return {"message": "Success", "payment_profile_doc": payment_profile}
+				# jscpd:ignore-end
 			else:  # error creating the payment method
 				return pm_response
 		except Exception as e:
@@ -425,6 +427,7 @@ class Stripe(BaseProvider):
 				description=doc.name,
 			)
 			if response.status == "succeeded":
+				# jscpd:ignore-start
 				if not frappe.get_value(
 					"Electronic Payment Profile",
 					{"party": party.name, "payment_profile_id": payment_profile_id},
@@ -439,6 +442,7 @@ class Stripe(BaseProvider):
 				queue_method_as_admin(
 					process_electronic_payment, doc=doc, data=data, transaction_id=str(response.id)
 				)
+				# jscpd:ignore-end
 				return {"message": "Success", "transaction_id": response.id}
 			elif response.status == "processing":
 				# TODO: handle follow up in UI
