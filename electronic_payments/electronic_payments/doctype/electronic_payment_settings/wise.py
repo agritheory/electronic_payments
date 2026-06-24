@@ -173,6 +173,7 @@ class Wise(BaseProvider):
 				payment_profile.company = doc.company
 				payment_profile.save(ignore_permissions=True)
 
+				# jscpd:ignore-start
 				if payment_profile.retain and settings.create_ppm:
 					ppm = frappe.new_doc("Portal Payment Method")
 					ppm.mode_of_payment = f"{self.provider} {mop}"
@@ -190,7 +191,7 @@ class Wise(BaseProvider):
 					data.update({"ppm_name": ppm.name})
 
 				return {"message": "Success", "payment_profile_doc": payment_profile}
-
+				# jscpd:ignore-end
 		except HTTPError as e_http:
 			err_msg = " ".join([err.get("message") for err in response.json().get("errors", [])])
 			frappe.log_error(
@@ -339,6 +340,7 @@ class Wise(BaseProvider):
 			r = response.json()
 			if r.get("id"):
 				transaction_id = r.get("id")
+				# jscpd:ignore-start
 				if not frappe.get_value(
 					"Electronic Payment Profile",
 					{"party": party.name, "payment_profile_id": payment_profile_id},
@@ -381,6 +383,7 @@ class Wise(BaseProvider):
 					"message": "Success",
 					"transaction_id": str(transaction_id),
 				}
+				# jscpd:ignore-end
 
 		except HTTPError as e_http:
 			err_msg = " ".join([err.get("message") for err in response.json().get("errors", [])])
