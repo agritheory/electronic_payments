@@ -1,6 +1,6 @@
 [project]
 name = "electronic_payments"
-version = "15.8.5"
+version = "15.8.6"
 description = "Electronic Payments for ERPNext"
 readme = "README.md"
 requires-python = ">=3.14,<3.15"
