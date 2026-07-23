@@ -232,7 +232,7 @@ def setup_accounts():
 
 	fee = frappe.new_doc("Account")  # provider fee expense account
 	fee.account_name = "Electronic Payments Provider Fees"
-	fee.account_number = "5223"
+	fee.account_number = "5226"
 	# fee.account_type = ""
 	fee.parent_account = "5200 - Indirect Expenses - CFC"
 	fee.currency = "USD"
