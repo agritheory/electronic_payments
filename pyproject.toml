@@ -21,7 +21,7 @@ homepage = "https://github.com/agritheory/electronic_payments"
 repository = "https://github.com/agritheory/electronic_payments"
 source = "https://github.com/agritheory/electronic_payments"
 changelog = "https://github.com/agritheory/electronic_payments/CHANGELOG.md"
-documentation = "https://github.com/agritheory/electronic_payments/tree/version-15/docs"
+documentation = "https://github.com/agritheory/electronic_payments/tree/version-16/docs"
 issues = "https://github.com/agritheory/electronic_payments/issues"
 
 [tool.black]
