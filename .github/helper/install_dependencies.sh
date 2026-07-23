@@ -7,7 +7,7 @@ if grep -lr --exclude-dir=node_modules "^<<<<<<< " "${GITHUB_WORKSPACE}"
     exit 1
 fi
 
-sudo apt update -y && sudo apt install redis-server libcups2-dev mariadb-client
+sudo apt update -y && sudo apt install redis-server libcups2-dev mariadb-client libxml2-dev libxslt1-dev
 if [ "${DB:-mariadb}" = "postgres" ]; then
   sudo apt install -y postgresql-client libpq-dev
 fi
