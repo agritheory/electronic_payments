@@ -7,9 +7,9 @@ An application with electronic payments utilities for ERPNext.
 
 ### Installation Guide
 
-First, set up a new bench and substitute a path to the python version to use. Python should be 3.10 latest for `version-15`. These instructions use [pyenv](https://github.com/pyenv/pyenv) for managing environments.
+First, set up a new bench and substitute a path to the python version to use. Python should be 3.14 latest for `version-15`. These instructions use [pyenv](https://github.com/pyenv/pyenv) for managing environments.
 ```shell
-bench init --frappe-branch version-15 {{ bench name }} --python ~/.pyenv/versions/3.10.13/bin/python3
+bench init --frappe-branch version-16 {{ bench name }} --python ~/.pyenv/versions/3.14/bin/python3
 ```
 
 Create a new site in that bench
@@ -21,10 +21,10 @@ bench use {{ site name }}
 
 Download apps
 ```shell
-bench get-app erpnext --branch version-15
-bench get-app payments --branch version-15
-bench get-app webshop --branch version-15
-bench get-app electronic_payments --branch version-15 git@github.com:agritheory/electronic_payments.git 
+bench get-app erpnext --branch version-16
+bench get-app payments --branch version-16
+bench get-app webshop --branch version-16
+bench get-app electronic_payments --branch version-16 git@github.com:agritheory/electronic_payments.git 
 ```
 
 Install the apps to your site
