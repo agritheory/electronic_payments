@@ -4,6 +4,10 @@ on:
   pull_request:
     branches:
       - version-15
+      - version-16
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   diff_print_format:
@@ -11,7 +15,7 @@ jobs:
     name: Print Format Diff
     steps:
       - name: Checkout the code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
