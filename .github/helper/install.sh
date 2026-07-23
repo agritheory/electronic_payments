@@ -50,6 +50,8 @@ sed -i 's/schedule:/# schedule:/g' Procfile
 sed -i 's/socketio:/# socketio:/g' Procfile
 sed -i 's/redis_socketio:/# redis_socketio:/g' Procfile
 
+export UV_OVERRIDE="${GITHUB_WORKSPACE}/.github/helper/lxml_override.txt"
+
 bench get-app erpnext https://github.com/frappe/erpnext --branch ${BRANCH_NAME} --resolve-deps --skip-assets
 bench get-app payments https://github.com/frappe/payments --branch ${BRANCH_NAME} --skip-assets
 bench get-app webshop https://github.com/frappe/webshop --branch ${BRANCH_NAME} --skip-assets
