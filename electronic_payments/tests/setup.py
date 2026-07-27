@@ -984,7 +984,7 @@ def create_electronic_payment_settings(settings):
 		eps.enable_accepting = 1
 		eps.provider = provider_mapping[pa_code]["provider"]
 		eps.deposit_account = "1201 - Primary Checking - CFC"
-		eps.accepting_fee_account = "5223 - Electronic Payments Provider Fees - CFC"
+		eps.accepting_fee_account = "5226 - Electronic Payments Provider Fees - CFC"
 		eps.accepting_clearing_account = "1320 - Electronic Payments Receivable - CFC"
 		eps.accepting_payment_discount_account = frappe.get_value(
 			"Account", {"name": ["like", "%Sales - CFC%"]}, "name"
@@ -1019,7 +1019,7 @@ def create_electronic_payment_settings(settings):
 		eps.enable_sending = 1
 		eps.sending_provider = provider_mapping[ps_code]["provider"]
 		eps.withdrawal_account = "1201 - Primary Checking - CFC"
-		eps.sending_fee_account = "5223 - Electronic Payments Provider Fees - CFC"
+		eps.sending_fee_account = "5226 - Electronic Payments Provider Fees - CFC"
 		eps.sending_clearing_account = "2130 - Electronic Payments Payable - CFC"
 		eps.sending_payment_discount_account = frappe.get_value(
 			"Account", {"name": ["like", "%Miscellaneous Expenses - CFC%"]}, "name"

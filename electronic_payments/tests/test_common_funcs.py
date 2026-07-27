@@ -42,7 +42,7 @@ def create_electronic_payment_settings(
 	eps.authorize_accepting_endpoint = "www.example.com"
 	eps.use_clearing_account = clearing_acct
 	eps.deposit_account = "1201 - Primary Checking - CFC"
-	eps.accepting_fee_account = "5223 - Electronic Payments Provider Fees - CFC"
+	eps.accepting_fee_account = "5226 - Electronic Payments Provider Fees - CFC"
 	eps.accepting_clearing_account = "1320 - Electronic Payments Receivable - CFC"
 	eps.accepting_payment_discount_account = frappe.get_value(
 		"Account", {"name": ["like", "%Sales - CFC%"]}, "name"
@@ -233,7 +233,7 @@ def test_receiving_payment_create_payment_entry_basic():
 	| ---------------------------------------------- | -------:| -------:|
 	| 1310 - Accounts Receivable - CFC               |         | $100.00 |
 	| 1201 - Primary Checking - CFC                  | $102.00 |         |
-	| 5223 - Electronic Payments Provider Fees - CFC |         |   $2.00 |
+	| 5226 - Electronic Payments Provider Fees - CFC |         |   $2.00 |
 	"""
 	settings = create_electronic_payment_settings("Authorize.net", "Use Payment Entry")
 	party = "Andromeda Fruit Market"
@@ -374,7 +374,7 @@ def test_receiving_payment_create_payment_entry_discount():
 	| 4110 - Sales - CFC                             |   $2.30 |         |
 	| 5205 - Freight and Forwarding Charges - CFC    |         |         |
 	| 5214 - Sales Expenses - CFC                    |         |         |
-	| 5223 - Electronic Payments Provider Fees - CFC |         |   $2.00 |
+	| 5226 - Electronic Payments Provider Fees - CFC |         |   $2.00 |
 
 
 	Payment Entry accounting, assuming discount gets allocated to taxes:
@@ -391,7 +391,7 @@ def test_receiving_payment_create_payment_entry_discount():
 	| 4110 - Sales - CFC                             |   $2.00 |         |
 	| 5205 - Freight and Forwarding Charges - CFC    |   $0.20 |         |
 	| 5214 - Sales Expenses - CFC                    |   $0.10 |         |
-	| 5223 - Electronic Payments Provider Fees - CFC |         |   $2.00 |
+	| 5226 - Electronic Payments Provider Fees - CFC |         |   $2.00 |
 	"""
 	settings = create_electronic_payment_settings("Authorize.net", "Use Payment Entry")
 	party = "Andromeda Fruit Market"
@@ -533,7 +533,7 @@ def test_receiving_payment_create_journal_entry_basic():
 	| ---------------------------------------------- | -------:| -------:|
 	| 1310 - Accounts Receivable - CFC               |         | $100.00 |
 	| 1320 - Electronic Payments Receivable - CFC    | $102.00 |         |
-	| 5223 - Electronic Payments Provider Fees - CFC |         |   $2.00 |
+	| 5226 - Electronic Payments Provider Fees - CFC |         |   $2.00 |
 	"""
 	settings = create_electronic_payment_settings("Authorize.net")
 	party = "Betelgeuse Bakery Suppliers"
@@ -655,7 +655,7 @@ def test_receiving_payment_create_journal_entry_discount():
 	| 4110 - Sales - CFC                             |   $2.30 |         |
 	| 5205 - Freight and Forwarding Charges - CFC    |         |         |
 	| 5214 - Sales Expenses - CFC                    |         |         |
-	| 5223 - Electronic Payments Provider Fees - CFC |         |   $2.00 |
+	| 5226 - Electronic Payments Provider Fees - CFC |         |   $2.00 |
 
 
 	Journal Entry accounting, assuming discount gets allocated to taxes:
@@ -672,7 +672,7 @@ def test_receiving_payment_create_journal_entry_discount():
 	| 4110 - Sales - CFC                             |   $2.00 |         |
 	| 5205 - Freight and Forwarding Charges - CFC    |   $0.20 |         |
 	| 5214 - Sales Expenses - CFC                    |   $0.10 |         |
-	| 5223 - Electronic Payments Provider Fees - CFC |         |   $2.00 |
+	| 5226 - Electronic Payments Provider Fees - CFC |         |   $2.00 |
 	"""
 	settings = create_electronic_payment_settings("Authorize.net")
 	party = "Betelgeuse Bakery Suppliers"
@@ -895,7 +895,7 @@ def test_sending_payment_create_payment_entry_discount():
 	| 5221 - Miscellaneous Expenses - CFC            |         |   $2.30 |
 	| 5205 - Freight and Forwarding Charges - CFC    |         |         |
 	| 5207 - Marketing Expenses - CFC                |         |         |
-	| 5223 - Electronic Payments Provider Fees - CFC |  $2.00  |         |
+	| 5226 - Electronic Payments Provider Fees - CFC |  $2.00  |         |
 
 	Payment Entry accounting, assuming discount gets allocated to taxes:
 	- 2% discount of $2.30, $2.00 allocated to items, remaining $0.30 split to taxes by relative amount
@@ -908,7 +908,7 @@ def test_sending_payment_create_payment_entry_discount():
 	| 5221 - Miscellaneous Expenses - CFC            |         |   $2.00 |
 	| 5205 - Freight and Forwarding Charges - CFC    |         |   $0.20 |
 	| 5207 - Marketing Expenses - CFC                |         |   $0.10 |
-	| 5223 - Electronic Payments Provider Fees - CFC |  $2.00  |         |
+	| 5226 - Electronic Payments Provider Fees - CFC |  $2.00  |         |
 	"""
 	settings = create_electronic_payment_settings("Authorize.net", "Use Payment Entry")
 	party = "Sphere Cellular"
@@ -1155,7 +1155,7 @@ def test_sending_payment_create_journal_entry_discount():
 	| 5221 - Miscellaneous Expenses - CFC            |         |   $2.30 |
 	| 5205 - Freight and Forwarding Charges - CFC    |         |         |
 	| 5207 - Marketing Expenses - CFC                |         |         |
-	| 5223 - Electronic Payments Provider Fees - CFC |  $2.00  |         |
+	| 5226 - Electronic Payments Provider Fees - CFC |  $2.00  |         |
 
 	Journal Entry accounting, assuming discount gets allocated to taxes:
 	- Grand total of $115
@@ -1171,7 +1171,7 @@ def test_sending_payment_create_journal_entry_discount():
 	| 5221 - Miscellaneous Expenses - CFC            |         |   $2.00 |
 	| 5205 - Freight and Forwarding Charges - CFC    |         |   $0.20 |
 	| 5207 - Marketing Expenses - CFC                |         |   $0.10 |
-	| 5223 - Electronic Payments Provider Fees - CFC |  $2.00  |         |
+	| 5226 - Electronic Payments Provider Fees - CFC |  $2.00  |         |
 	"""
 	settings = create_electronic_payment_settings("Authorize.net")
 	party = "Sphere Cellular"
