@@ -64,6 +64,24 @@ def create_electronic_payment_settings(
 	return eps
 
 
+def sum_gl_amount(voucher_no, account, field):
+	"""
+	Sums a debit/credit field across all GL Entries for a voucher/account pair. A Payment Entry
+	with a provider fee posts two separate GL Entries against the deposit/withdrawal account (one
+	for the base payment, one offsetting the fee tax row), so a single frappe.get_doc lookup would
+	only see one of them.
+	"""
+	return flt(
+		sum(
+			frappe.get_all(
+				"GL Entry",
+				filters={"voucher_no": voucher_no, "account": account},
+				pluck=field,
+			)
+		)
+	)
+
+
 def create_party_payment_method(party, party_type, service_charge=False):
 	"""
 	Helper function to create dummy Portal Payment Method for given party
@@ -277,8 +295,8 @@ def test_receiving_payment_create_payment_entry_basic():
 	)
 	assert flt(gl2.credit, precision) == data.additional_charges
 
-	gl3 = frappe.get_doc("GL Entry", {"voucher_no": pe.name, "account": settings.deposit_account})
-	assert flt(gl3.debit, precision) == flt(doc.grand_total + data.additional_charges, precision)
+	deposit_debit = sum_gl_amount(pe.name, settings.deposit_account, "debit")
+	assert flt(deposit_debit, precision) == flt(doc.grand_total + data.additional_charges, precision)
 
 
 @pytest.mark.order(21)
@@ -445,10 +463,10 @@ def test_receiving_payment_create_payment_entry_discount():
 	)
 	assert abs(flt(gl3.debit, precision) - flt(pt.discounted_amount, precision)) < epsilon
 
-	gl4 = frappe.get_doc("GL Entry", {"voucher_no": pe.name, "account": settings.deposit_account})
+	deposit_debit = sum_gl_amount(pe.name, settings.deposit_account, "debit")
 	assert (
 		abs(
-			flt(gl4.debit, precision)
+			flt(deposit_debit, precision)
 			- (
 				flt(
 					doc.grand_total + data.additional_charges - flt(pt.discounted_amount, precision), precision
@@ -1002,8 +1020,8 @@ def test_sending_payment_create_payment_entry_discount():
 	)
 	assert flt(gl3.credit, precision) == flt(pt.discounted_amount, precision)
 
-	gl4 = frappe.get_doc("GL Entry", {"voucher_no": pe.name, "account": settings.withdrawal_account})
-	assert flt(gl4.credit, precision) == doc.grand_total + data.additional_charges - flt(
+	withdrawal_credit = sum_gl_amount(pe.name, settings.withdrawal_account, "credit")
+	assert flt(withdrawal_credit, precision) == doc.grand_total + data.additional_charges - flt(
 		pt.discounted_amount, precision
 	)
 
