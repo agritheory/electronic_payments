@@ -523,10 +523,10 @@ def test_receiving_payment_create_payment_entry_discount():
 	)
 	assert abs(flt(gl2.credit, precision) - data.additional_charges) < epsilon
 
-	gl3 = frappe.get_doc("GL Entry", {"voucher_no": pe.name, "account": settings.deposit_account})
+	deposit_debit = sum_gl_amount(pe.name, settings.deposit_account, "debit")
 	assert (
 		abs(
-			flt(gl3.debit, precision)
+			flt(deposit_debit, precision)
 			- (doc.grand_total + data.additional_charges - flt(pt.discounted_amount, precision))
 		)
 		< epsilon
@@ -1068,8 +1068,8 @@ def test_sending_payment_create_payment_entry_discount():
 	gl2 = frappe.get_doc("GL Entry", {"voucher_no": pe.name, "account": settings.sending_fee_account})
 	assert flt(gl2.debit, precision) == data.additional_charges
 
-	gl3 = frappe.get_doc("GL Entry", {"voucher_no": pe.name, "account": settings.withdrawal_account})
-	assert flt(gl3.credit, precision) == doc.grand_total + data.additional_charges - flt(
+	withdrawal_credit = sum_gl_amount(pe.name, settings.withdrawal_account, "credit")
+	assert flt(withdrawal_credit, precision) == doc.grand_total + data.additional_charges - flt(
 		pt.discounted_amount, precision
 	)
 
