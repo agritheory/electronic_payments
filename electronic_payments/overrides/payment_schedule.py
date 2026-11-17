@@ -3,6 +3,7 @@
 
 import frappe
 import json
+from frappe.utils import flt
 
 from electronic_payments.electronic_payments.doctype.electronic_payment_settings.common import (
 	get_discount_amount,
@@ -31,6 +32,8 @@ def update_payment_schedule_for_electronic_payment(doc, method=None):
 		if not ref.get("electronic_payments_payment_term"):
 			continue
 		if is_pe and ref.get("payment_term"):  # already updates via Payment Entry mechanism
+			if method == "on_submit":
+				reconcile_payment_term_discount(doc, ref)
 			continue
 
 		# Replicate code flow in erpnext.accounts.doctype.payment_entry.payment_entry update_payment_schedule
@@ -77,3 +80,45 @@ def update_payment_schedule_for_electronic_payment(doc, method=None):
 			frappe.qb.update(ps).set(ps.outstanding, ps.outstanding + pre_discount_payment_amount).where(
 				ps.name == ref.electronic_payments_payment_term
 			).run()
+
+
+def reconcile_payment_term_discount(doc, ref):
+	"""Reconcile the applied discount with ERPNext's account-based detection.
+
+	ERPNext only recognize deductions on company discount/round-off
+	and invoice tax accounts. Electronic Payments supports separate discount accounts.
+	ERPNext already settles the gross allocation; adjust only its cash/discount split
+	and persist the reference discount so its cancellation reverses the same amounts.
+	"""
+	discounts = doc.flags.get("electronic_payment_discounts", {})
+	term_name = ref.electronic_payments_payment_term
+	if not doc.get("payment_term_discounts_calculated") or term_name not in discounts:
+		return
+
+	term = frappe.get_doc("Payment Schedule", term_name)
+	discount = flt(discounts[term_name], term.precision("discounted_amount"))
+	difference = flt(discount - flt(ref.payment_term_discount), term.precision("discounted_amount"))
+	if not difference:
+		return
+
+	conversion_rate = frappe.db.get_value(term.parenttype, term.parent, "conversion_rate")
+	allocated = doc.get_allocated_amount_in_transaction_currency(
+		ref.allocated_amount, ref.reference_doctype, ref.reference_name
+	)
+	base_precision = term.precision("base_paid_amount")
+	base_difference = flt(
+		flt((allocated - flt(ref.payment_term_discount)) * conversion_rate, base_precision)
+		- flt((allocated - discount) * conversion_rate, base_precision),
+		base_precision,
+	)
+
+	ps = frappe.qb.DocType("Payment Schedule")
+	(
+		frappe.qb.update(ps)
+		.set(ps.discounted_amount, ps.discounted_amount + difference)
+		.set(ps.paid_amount, ps.paid_amount - difference)
+		.set(ps.base_paid_amount, ps.base_paid_amount - base_difference)
+		.where(ps.name == term_name)
+		.run()
+	)
+	ref.db_set("payment_term_discount", discount)

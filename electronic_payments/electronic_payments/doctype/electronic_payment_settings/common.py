@@ -218,6 +218,8 @@ def create_payment_entry(doc, data, transaction_id):
 		)
 
 	pe.save(ignore_permissions=True)
+	if data.get("payment_term"):
+		pe.flags.electronic_payment_discounts = {data.payment_term: discount_amount}
 	pe.submit()
 
 
